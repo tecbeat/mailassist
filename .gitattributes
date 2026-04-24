@@ -1,0 +1,44 @@
+# Force consistent line endings across platforms.
+# Prevents the classic "exec format error / no such file or directory" issue
+# when shell scripts authored on Windows are run inside a Linux container.
+
+# Default: auto-detect text vs binary, normalise to LF in the repo
+* text=auto eol=lf
+
+# Shell scripts and entrypoints MUST use LF
+*.sh        text eol=lf
+*.bash      text eol=lf
+
+# Source files normalised to LF
+*.py        text eol=lf
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.js        text eol=lf
+*.jsx       text eol=lf
+*.json      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.toml      text eol=lf
+*.md        text eol=lf
+*.j2        text eol=lf
+*.html      text eol=lf
+*.css       text eol=lf
+*.ini       text eol=lf
+Dockerfile  text eol=lf
+
+# Windows scripts keep CRLF
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+
+# Binary files
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.svg       binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.eot       binary

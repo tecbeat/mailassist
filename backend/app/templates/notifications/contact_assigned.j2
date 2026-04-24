@@ -1,0 +1,12 @@
+Contact Assigned
+
+From: {{ sender_name | default("") }} <{{ sender | default("unknown") }}>
+Subject: {{ subject | default("No subject") }}
+Account: {{ account_email | default("") }}
+
+{% if contact_name %}Assigned to: {{ contact_name }}{% endif %}
+{% if confidence %}Confidence: {{ (confidence * 100) | round }}%{% endif %}
+{% if is_new_contact_suggestion %}
+This is a suggestion for a new contact.
+{% endif %}
+{% if reasoning %}Reason: {{ reasoning }}{% endif %}

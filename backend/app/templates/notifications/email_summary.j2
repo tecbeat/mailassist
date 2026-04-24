@@ -1,0 +1,18 @@
+Email Summary ({{ urgency | default("normal") | upper }})
+
+From: {{ sender_name | default("") }} <{{ sender | default("unknown") }}>
+Subject: {{ subject | default("No subject") }}
+Account: {{ account_email | default("") }}
+
+{{ summary | default("No summary available.") }}
+
+{% if key_points %}
+Key Points:
+{% for point in key_points %}
+- {{ point }}
+{% endfor %}
+{% endif %}
+
+{% if action_required %}
+Action Required: {{ action_description | default("") }}
+{% endif %}

@@ -1,0 +1,7 @@
+mailassist Notification
+
+From: {{ sender_name | default("") }} <{{ sender | default("unknown") }}>
+Subject: {{ subject | default("No subject") }}
+Account: {{ account_email | default("") }}
+
+{{ action_taken | default("An event was processed.") }}

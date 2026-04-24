@@ -1,0 +1,9 @@
+Auto-Reply Draft Created
+
+From: {{ sender_name | default("") }} <{{ sender | default("unknown") }}>
+Subject: {{ subject | default("No subject") }}
+Account: {{ account_email | default("") }}
+
+A draft reply has been created and is waiting for your review in the Drafts folder.
+
+{{ action_taken | default("") }}

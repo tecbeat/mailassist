@@ -1,0 +1,1 @@
+"""mailassist application package."""

@@ -1,0 +1,7 @@
+Approval Needed
+
+From: {{ sender_name | default("") }} <{{ sender | default("unknown") }}>
+Subject: {{ subject | default("No subject") }}
+Account: {{ account_email | default("") }}
+
+{{ approvals_created }} action(s) require your approval. Please review them in the approval queue.
