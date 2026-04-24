@@ -1,0 +1,17 @@
+---
+include:
+  - project: 'maintenance/teccave_pipeline'
+    ref: main
+    file: '/.pipeline_defs/.default_pipeline.yml'
+
+#  - project: 'maintenance/teccave_pipeline'
+#    ref: main
+#    file: '/.pipeline_defs/.manage_lxc.yml'
+
+#  - project: 'maintenance/teccave_pipeline'
+#    ref: main
+#    file: '/.pipeline_defs/.build_image.yml'
+
+#  - project: 'maintenance/teccave_pipeline'
+#    ref: main
+#    file: '/.pipeline_defs/.build_package.yml'

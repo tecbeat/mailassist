@@ -1,0 +1,24 @@
+---
+repo:
+  description: The repository description goes here!
+  command: ""
+  feature:
+    Please fill in: 'Describe the features of the service'
+
+# container:
+#   lxc_id: ~
+#   ostemplate: debian-12-standard_12.7-1_amd64.tar.zst
+#   allocation:
+#     cpu: ~
+#     mem: ~
+#     size_gb: ~
+
+# service:
+#   deployment_type: "docker"
+#   name: ~
+#   port: ~
+#   return_code: ~
+#   enable_tls: ~
+
+# secrets:
+#   path: ~
