@@ -11,12 +11,18 @@ updater:
 
 # ---------------------------------------------------------------------------
 # Run the backend pytest suite on every non-main branch.
+#
+# Placed in the ``prepare`` stage (before ``build``) so that a red test
+# suite gates the image build — no point in spending time on Kaniko when
+# the code is already known to be broken.
+#
 # Uses a clean python:3.13-slim base and installs the project with the
 # ``[dev]`` extra via uv.  The conftest sets the env vars pytest needs.
 # ---------------------------------------------------------------------------
 test:
-  stage: test
+  stage: prepare
   image: python:3.13-slim
+  needs: []
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
       when: on_success
