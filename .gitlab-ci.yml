@@ -31,12 +31,16 @@ test:
     - pip install --no-cache-dir uv
   script:
     - cd backend
-    # hatchling refuses to build the editable wheel without the README
-    # declared in pyproject.toml; create an empty one for the install step.
-    - touch README.md
     - uv venv .venv
-    - uv pip install --python .venv/bin/python -e ".[dev]"
-    - .venv/bin/python -m pytest tests/ -v
+    # Install only runtime + dev dependencies, NOT the project itself —
+    # hatchling refuses to build the wheel because the package layout
+    # (project ``mailassist`` with source dir ``app/``) does not match its
+    # auto-detection heuristics.  The Dockerfile takes the same approach
+    # via ``uv pip compile`` + ``uv pip install -r``.  ``app`` is imported
+    # via PYTHONPATH below.
+    - uv pip compile pyproject.toml --extra dev -o /tmp/requirements.txt
+    - uv pip install --python .venv/bin/python -r /tmp/requirements.txt
+    - PYTHONPATH=. .venv/bin/python -m pytest tests/ -v
   tags:
     - teccave
 
@@ -47,6 +51,12 @@ test:
 # ---------------------------------------------------------------------------
 integration_test:
   extends: .test_image
+  # Override the entrypoint of the production image so the GitLab runner
+  # can execute its own ``sh -c`` shell instead of being intercepted by
+  # ``docker-entrypoint.sh`` (which would interpret ``sh`` as a role).
+  image:
+    name: ${CI_REGISTRY_IMAGE}:${VERSION}
+    entrypoint: [""]
   services:
     - name: postgres:16-alpine
       alias: postgres
