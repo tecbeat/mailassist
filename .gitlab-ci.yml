@@ -31,6 +31,9 @@ test:
     - pip install --no-cache-dir uv
   script:
     - cd backend
+    # hatchling refuses to build the editable wheel without the README
+    # declared in pyproject.toml; create an empty one for the install step.
+    - touch README.md
     - uv venv .venv
     - uv pip install --python .venv/bin/python -e ".[dev]"
     - .venv/bin/python -m pytest tests/ -v
@@ -74,3 +77,27 @@ integration_test:
     - kill "$APP_PID" 2>/dev/null || true
     - if [ "$OK" != "1" ]; then echo "App did not return 200 from /health within 60s"; exit 1; fi
     - echo "Integration test passed."
+
+# ---------------------------------------------------------------------------
+# Override the shared ``cleanup_image`` job so it waits for ``integration_test``
+# before deleting the freshly built test image.
+#
+# In the upstream pipeline ``cleanup_image`` only needs ``test_build_image``,
+# so in DAG mode it runs in parallel with ``integration_test`` and the
+# Kaniko-pushed tag is gone (``manifest unknown``) before the runner can
+# pull it as the test image.
+#
+# We keep the original ``rules: when: always`` semantics by inheriting from
+# ``.cleanup_image``; only the ``needs:`` list is replaced.
+# ---------------------------------------------------------------------------
+cleanup_image:
+  needs:
+    - job: versioner
+      artifacts: true
+    - job: test_build_image
+      artifacts: false
+    - job: integration_test
+      artifacts: false
+    - job: cleanup_lxc
+      artifacts: false
+      optional: true
