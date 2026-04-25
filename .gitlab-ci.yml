@@ -71,6 +71,11 @@ integration_test:
     APP_SECRET_KEY: "ci-integration-test-secret-key-min-32-chars-long"
   script:
     - echo "Starting application..."
+    # The image's ``app`` package lives at ``/app/app``; the GitLab runner
+    # checks out the repo into ``/builds/...`` and sets that as CWD, so we
+    # have to switch back to ``/app`` before launching uvicorn or it fails
+    # with ``ModuleNotFoundError: No module named 'app'``.
+    - cd /app
     - docker-entrypoint.sh app &
     - APP_PID=$!
     - OK=0
