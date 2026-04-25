@@ -1,0 +1,13 @@
+Calendar Event Detected
+
+From: {{ sender_name | default("") }} <{{ sender | default("unknown") }}>
+Subject: {{ subject | default("No subject") }}
+Account: {{ account_email | default("") }}
+
+{% if calendar_event %}
+Event: {{ calendar_event.title }}
+Start: {{ calendar_event.start }}
+{% if calendar_event.location %}Location: {{ calendar_event.location }}{% endif %}
+{% endif %}
+
+This event has been queued for your approval before being added to your calendar.

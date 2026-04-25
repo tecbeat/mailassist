@@ -1,0 +1,83 @@
+[project]
+name = "mailassist"
+version = "0.1.0"
+description = "Self-hosted, AI-powered email management with IMAP, CardDAV and CalDAV"
+requires-python = ">=3.13"
+readme = "README.md"
+
+dependencies = [
+    "fastapi==0.115.12",
+    "uvicorn[standard]==0.34.2",
+    "sqlalchemy[asyncio]==2.0.40",
+    "alembic==1.15.2",
+    "asyncpg==0.30.0",
+    "pydantic==2.11.3",
+    "pydantic-settings>=2.9.1",
+    "arq>=0.26.1",
+    "authlib==1.6.0",
+    "httpx==0.28.1",
+    "cryptography==44.0.3",
+    "litellm>=1.67.4",
+    "imap-tools>=1.12.0",
+    "apprise>=1.9.2",
+    "caldav>=1.4.0",
+    "vobject>=0.9.8",
+    "jinja2>=3.1.6",
+    "python-multipart>=0.0.20",
+    "structlog>=25.1.0",
+    "redis[hiredis]>=5.2.1",
+    "nh3>=0.2.21",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.11.7",
+    "mypy>=1.15.0",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=6.1.1",
+    "pre-commit>=4.2.0",
+    "factory-boy>=3.3.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+    "RUF", # ruff-specific rules
+]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/templates/*", "tests/*"]
+
+[tool.coverage.report]
+fail_under = 80

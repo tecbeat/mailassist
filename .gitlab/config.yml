@@ -1,24 +1,31 @@
 ---
 repo:
-  description: The repository description goes here!
-  command: ""
+  description: "MailAssist - Self-hosted, AI-powered email management platform with IMAP, CardDAV, CalDAV and pluggable AI pipeline."
+  command: "docker compose up -d"
   feature:
-    Please fill in: 'Describe the features of the service'
+    AI Processing Pipeline: "Configurable 11-plugin pipeline (rules, spam, newsletter, labeling, smart folders, coupons, calendar, auto-reply, summary, contacts, notifications) with per-plugin AI provider assignment."
+    Multi-Account IMAP: "Connect multiple mail accounts with envelope-encrypted credentials, per-account polling, folder exclusion and real-time IMAP IDLE."
+    Approval System: "Per-plugin approval modes (auto / approval / disabled); AI actions requiring confirmation are queued for user review."
+    AI Provider Management: "OpenAI, Ollama and any OpenAI-compatible endpoint with health tracking, automatic pause on failures and per-provider timeouts."
+    Contact & Calendar Sync: "CardDAV contact sync with auto-matching and write-back, CalDAV event extraction and sync."
+    Customizable Prompts: "Jinja2 prompt templates for every plugin, editable in the UI with CodeMirror."
+    OIDC Authentication: "SSO via any OpenID Connect provider (Authentik, Keycloak, etc.) with PKCE."
 
-# container:
-#   lxc_id: ~
-#   ostemplate: debian-12-standard_12.7-1_amd64.tar.zst
-#   allocation:
-#     cpu: ~
-#     mem: ~
-#     size_gb: ~
+container:
+  lxc_id: 108
+  ostemplate: debian-13-standard_13.1-2_amd64.tar.zst
+  allocation:
+    cpu: 2
+    mem: 4096
+    size_gb: 30
 
-# service:
-#   deployment_type: "docker"
-#   name: ~
-#   port: ~
-#   return_code: ~
-#   enable_tls: ~
+service:
+  deployment_type: "docker"
+  name: mailassist
+  port: 8080
+  return_code: 200
+  enable_tls: true
 
-# secrets:
-#   path: ~
+secrets:
+  - path: .env
+    type: file

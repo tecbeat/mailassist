@@ -1,0 +1,12 @@
+Coupon Codes Found
+
+From: {{ sender_name | default("") }} <{{ sender | default("unknown") }}>
+Subject: {{ subject | default("No subject") }}
+Account: {{ account_email | default("") }}
+
+{% if coupon_codes %}
+Extracted coupon codes:
+{% for code in coupon_codes %}
+- {{ code }}
+{% endfor %}
+{% endif %}
