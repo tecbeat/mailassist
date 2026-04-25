@@ -216,6 +216,16 @@ class TestFetchRawMailResponse:
         ), patch(
             "app.workers.pipeline_orchestrator.list_folders",
             AsyncMock(return_value=["INBOX"]),
+        ), patch(
+            # ``fetch_raw_mail`` now consults the Valkey folder cache before
+            # listing folders.  Without these patches the test runs against
+            # an uninitialised Valkey client, the ``except`` branch fires and
+            # ``folders`` returns ``[]``.
+            "app.workers.pipeline_orchestrator.get_cached_folders",
+            AsyncMock(return_value=None),
+        ), patch(
+            "app.workers.pipeline_orchestrator.set_cached_folders",
+            AsyncMock(),
         ):
             from app.workers.pipeline_orchestrator import fetch_raw_mail
 

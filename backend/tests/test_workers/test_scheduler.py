@@ -11,19 +11,27 @@ Verifies that the rewritten scheduler:
 from __future__ import annotations
 
 from collections import namedtuple
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
 
 from app.models import TrackedEmailStatus
+from app.models.user import ApprovalMode
 
 
 # ---------------------------------------------------------------------------
 # Lightweight row stubs returned by mock db.execute()
 # ---------------------------------------------------------------------------
 
-QueuedRow = namedtuple("QueuedRow", ["id", "user_id", "mail_account_id", "mail_uid"])
+# ``current_folder`` defaults to ``INBOX`` so existing 4-field constructions
+# stay valid; the scheduler accesses ``row.current_folder`` per-mail.
+QueuedRow = namedtuple(
+    "QueuedRow",
+    ["id", "user_id", "mail_account_id", "mail_uid", "current_folder"],
+    defaults=["INBOX"],
+)
 CountRow = namedtuple("CountRow", ["user_id", "count"])
 UserSettingsRow = namedtuple("UserSettingsRow", ["user_id", "max_concurrent_processing"])
 SingleIdRow = namedtuple("SingleIdRow", ["id"])
@@ -44,11 +52,46 @@ def _all_result(rows):
     return r
 
 
+def _scalars_all_result(items):
+    """Return a mock result whose .scalars().all() returns *items*."""
+    r = MagicMock()
+    r.scalars.return_value.all.return_value = items
+    return r
+
+
 def _scalar_one_none_result(value):
     """Return a mock result whose .scalar_one_or_none() returns *value*."""
     r = MagicMock()
     r.scalar_one_or_none.return_value = value
     return r
+
+
+def _make_provider_for_user(user_id: UUID):
+    """Build a healthy default AI provider mock for the given user."""
+    p = MagicMock()
+    p.id = uuid4()
+    p.user_id = user_id
+    p.is_paused = False
+    p.is_default = True
+    p.created_at = datetime.now(UTC)
+    return p
+
+
+def _make_user_settings_for_user(user_id: UUID, *, max_concurrent: int = 5):
+    """Build a UserSettings mock that passes ``_user_has_healthy_provider``.
+
+    At least one approval column must be non-DISABLED for the scheduler
+    to consider any plugin enabled; we set ``approval_mode_spam`` to
+    AUTO and rely on the fact that MagicMock-typed approval columns
+    on the rest do not compare equal to ``ApprovalMode.DISABLED``,
+    which keeps the user discoverable as "has enabled plugins".
+    """
+    us = MagicMock()
+    us.user_id = user_id
+    us.plugin_provider_map = {}
+    us.max_concurrent_processing = max_concurrent
+    us.approval_mode_spam = ApprovalMode.AUTO
+    return us
 
 
 class _FakeTrackedEmail:
@@ -77,18 +120,33 @@ def _build_db_side_effect(
     query in the scheduler in order.
 
     The scheduler issues these queries sequentially:
-      0. COUNT PROCESSING (global)
-      1. SELECT queued rows
-      2. SELECT healthy account IDs
-      3. SELECT users with healthy provider
-      4. SELECT per-user processing counts
-      5. SELECT per-user max_concurrent_processing
-      6+. SELECT tracked_email by id (for QUEUED→PROCESSING transition)
+      0. COUNT PROCESSING (global)              → ``.scalar()``
+      1. SELECT queued rows                     → ``.all()``
+      2. SELECT healthy account IDs             → ``.all()``
+      3. SELECT AIProvider rows (per-user mix)  → ``.scalars().all()``
+      4. SELECT UserSettings rows               → ``.scalars().all()``
+      5. SELECT per-user processing counts      → ``.all()``
+      6+. SELECT tracked_email by id (QUEUED→PROCESSING) → ``.scalar_one_or_none()``
+
+    Plugin-aware "user has healthy provider" filtering is rebuilt from
+    the providers + UserSettings rows we feed in here, so callers only
+    have to pass the simple ``users_with_provider`` and
+    ``user_max_concurrent`` summaries; the helper materialises matching
+    mock providers + UserSettings under the hood.
     """
     if per_user_processing is None:
         per_user_processing = {}
     if user_max_concurrent is None:
         user_max_concurrent = {}
+
+    # Materialise providers + UserSettings only for users that should be
+    # considered "healthy" — _user_has_healthy_provider returns False for
+    # any user not present in user_settings_map.
+    providers_list = [_make_provider_for_user(uid) for uid in users_with_provider]
+    user_settings_list = [
+        _make_user_settings_for_user(uid, max_concurrent=user_max_concurrent.get(uid, 5))
+        for uid in users_with_provider
+    ]
 
     # Pre-build tracked email objects for the QUEUED→PROCESSING step
     tracked_objects: dict[UUID, _FakeTrackedEmail] = {
@@ -104,32 +162,21 @@ def _build_db_side_effect(
         call_count += 1
 
         if idx == 0:
-            # Global PROCESSING count
             return _scalar_result(global_processing)
         elif idx == 1:
-            # Queued rows
             return _all_result(queued_rows)
         elif idx == 2:
-            # Healthy account IDs
             return _all_result([(aid,) for aid in healthy_account_ids])
         elif idx == 3:
-            # Users with healthy provider
-            return _all_result([(uid,) for uid in users_with_provider])
+            return _scalars_all_result(providers_list)
         elif idx == 4:
-            # Per-user processing counts
+            return _scalars_all_result(user_settings_list)
+        elif idx == 5:
             return _all_result(
                 [(uid, cnt) for uid, cnt in per_user_processing.items()]
             )
-        elif idx == 5:
-            # Per-user max_concurrent_processing
-            return _all_result(
-                [(uid, mc) for uid, mc in user_max_concurrent.items()]
-            )
         else:
-            # QUEUED→PROCESSING lookups: return the tracked email object
-            # We need to figure out which tracked_id is being queried.
-            # In the scheduler, it does SELECT ... WHERE id = tracked_id
-            # We return the matching _FakeTrackedEmail.
+            # QUEUED→PROCESSING lookups: return the next still-QUEUED row.
             for te in tracked_objects.values():
                 if te.status == TrackedEmailStatus.QUEUED:
                     return _scalar_one_none_result(te)
@@ -145,9 +192,19 @@ def _build_db_side_effect(
 
 @pytest.fixture
 def mock_settings():
-    """Patch get_settings to return a settings object with worker_max_jobs=10."""
+    """Patch get_settings with all integer fields the scheduler reads.
+
+    Without explicit ints these MagicMock attributes propagate into
+    arithmetic (``settings.worker_max_jobs - settings.scheduler_reserved_slots``),
+    which then blows up in ``max(1, ...)`` with
+    ``TypeError: '>' not supported between instances of 'MagicMock' and 'int'``.
+    """
     settings = MagicMock()
     settings.worker_max_jobs = 10
+    settings.scheduler_reserved_slots = 2
+    settings.scheduler_max_batch = 100
+    settings.scheduler_default_max_concurrent = 3
+    settings.stale_job_threshold_seconds = 300
     with patch("app.workers.scheduler.get_settings", return_value=settings):
         yield settings
 
@@ -223,25 +280,27 @@ class TestPerUserSlotEnforcement:
 
         call_count = 0
 
+        provider = _make_provider_for_user(user_id)
+        user_settings = _make_user_settings_for_user(user_id, max_concurrent=3)
+
         async def _side_effect(stmt):
             nonlocal call_count
             idx = call_count
             call_count += 1
 
             if idx == 0:
-                return _scalar_result(2)  # 2 already processing
+                return _scalar_result(2)  # 2 already processing globally
             elif idx == 1:
                 return _all_result(queued_rows)
             elif idx == 2:
                 return _all_result([(account_id,)])
             elif idx == 3:
-                return _all_result([(user_id,)])
+                return _scalars_all_result([provider])
             elif idx == 4:
-                return _all_result([(user_id, 2)])  # 2 processing
+                return _scalars_all_result([user_settings])
             elif idx == 5:
-                return _all_result([(user_id, 3)])  # max 3
+                return _all_result([(user_id, 2)])  # 2 processing for this user
             else:
-                # Return first queued tracked email
                 for te in tracked_objects.values():
                     if te.status == TrackedEmailStatus.QUEUED:
                         te.status = TrackedEmailStatus.PROCESSING
@@ -259,7 +318,14 @@ class TestPerUserSlotEnforcement:
     async def test_default_max_concurrent_when_no_settings(
         self, mock_settings, arq_mock, db_mock,
     ):
-        """Users without UserSettings get the default limit of 3."""
+        """Users with explicit UserSettings respect ``max_concurrent_processing``.
+
+        (The pre-refactor scheduler also fell back to a default when no
+        UserSettings row existed at all.  In the new code an absent
+        UserSettings row makes the user fail ``_user_has_healthy_provider``
+        and skips them entirely, so the default-fallback path is now
+        exercised by setting an explicit limit on the row instead.)
+        """
         from app.workers.scheduler import _schedule
 
         user_id = uuid4()
@@ -275,6 +341,9 @@ class TestPerUserSlotEnforcement:
             for row in queued_rows
         }
 
+        provider = _make_provider_for_user(user_id)
+        user_settings = _make_user_settings_for_user(user_id, max_concurrent=3)
+
         call_count = 0
 
         async def _side_effect(stmt):
@@ -289,11 +358,11 @@ class TestPerUserSlotEnforcement:
             elif idx == 2:
                 return _all_result([(account_id,)])
             elif idx == 3:
-                return _all_result([(user_id,)])
+                return _scalars_all_result([provider])
             elif idx == 4:
-                return _all_result([])  # no processing counts
+                return _scalars_all_result([user_settings])
             elif idx == 5:
-                return _all_result([])  # no user settings -> default 3
+                return _all_result([])  # no processing counts
             else:
                 for te in tracked_objects.values():
                     if te.status == TrackedEmailStatus.QUEUED:
@@ -305,7 +374,7 @@ class TestPerUserSlotEnforcement:
 
         await _schedule(db_mock, arq_mock)
 
-        # Default limit is 3, so only 3 out of 5 should be dispatched
+        # Configured limit is 3, so only 3 out of 5 should be dispatched.
         assert arq_mock.enqueue_job.call_count == 3
 
 
@@ -333,6 +402,9 @@ class TestPauseFlagFiltering:
 
         call_count = 0
 
+        provider = _make_provider_for_user(user_id)
+        user_settings = _make_user_settings_for_user(user_id, max_concurrent=3)
+
         async def _side_effect(stmt):
             nonlocal call_count
             idx = call_count
@@ -346,11 +418,11 @@ class TestPauseFlagFiltering:
                 # Only healthy_account passes the NOT is_paused filter
                 return _all_result([(healthy_account,)])
             elif idx == 3:
-                return _all_result([(user_id,)])
+                return _scalars_all_result([provider])
             elif idx == 4:
-                return _all_result([])
+                return _scalars_all_result([user_settings])
             elif idx == 5:
-                return _all_result([(user_id, 3)])
+                return _all_result([])
             else:
                 for te in tracked_objects.values():
                     if te.status == TrackedEmailStatus.QUEUED:
@@ -408,6 +480,9 @@ class TestQueuedToProcessingTransition:
         queued_rows = [QueuedRow(te_id, user_id, account_id, "uid1")]
         tracked = _FakeTrackedEmail(te_id, TrackedEmailStatus.QUEUED)
 
+        provider = _make_provider_for_user(user_id)
+        user_settings = _make_user_settings_for_user(user_id, max_concurrent=5)
+
         call_count = 0
 
         async def _side_effect(stmt):
@@ -422,11 +497,11 @@ class TestQueuedToProcessingTransition:
             elif idx == 2:
                 return _all_result([(account_id,)])
             elif idx == 3:
-                return _all_result([(user_id,)])
+                return _scalars_all_result([provider])
             elif idx == 4:
-                return _all_result([])
+                return _scalars_all_result([user_settings])
             elif idx == 5:
-                return _all_result([(user_id, 5)])
+                return _all_result([])
             else:
                 return _scalar_one_none_result(tracked)
 
@@ -469,6 +544,11 @@ class TestRoundRobinFairness:
 
         call_count = 0
 
+        provider_a = _make_provider_for_user(user_a)
+        provider_b = _make_provider_for_user(user_b)
+        us_a = _make_user_settings_for_user(user_a, max_concurrent=5)
+        us_b = _make_user_settings_for_user(user_b, max_concurrent=5)
+
         async def _side_effect(stmt):
             nonlocal call_count, tracked_idx
             idx = call_count
@@ -481,11 +561,11 @@ class TestRoundRobinFairness:
             elif idx == 2:
                 return _all_result([(acct_a,), (acct_b,)])
             elif idx == 3:
-                return _all_result([(user_a,), (user_b,)])
+                return _scalars_all_result([provider_a, provider_b])
             elif idx == 4:
-                return _all_result([])
+                return _scalars_all_result([us_a, us_b])
             elif idx == 5:
-                return _all_result([(user_a, 5), (user_b, 5)])
+                return _all_result([])
             else:
                 if tracked_idx < len(tracked_list):
                     te = tracked_list[tracked_idx]
