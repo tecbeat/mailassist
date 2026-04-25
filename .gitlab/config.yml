@@ -20,12 +20,13 @@ container:
     size_gb: 30
 
 service:
-  deployment_type: "docker"
   name: mailassist
   port: 8080
-  return_code: 200
-  enable_tls: true
+  domain:
+      protocol: https
+      access: public
 
 secrets:
   - path: .env
     type: file
+
