@@ -23,7 +23,7 @@ service:
   name: mailassist
   port: 8080
   domain:
-      protocol: https
+    - protocol: https
       access: public
 
 secrets:

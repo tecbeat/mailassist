@@ -1145,8 +1145,14 @@ class TestPluginExecutorPipelineStop:
 
     @pytest.mark.asyncio
     async def test_inactive_provider_returns_transient_error(self):
-        """When the resolved provider is paused, outcome is
-        transient_error with break_pipeline=True and the provider ID."""
+        """When the resolved provider is paused (formerly "inactive"),
+        outcome is transient_error with break_pipeline=True and the
+        provider ID.
+
+        ``is_active`` was collapsed into ``is_paused`` during the provider
+        refactor, so the executor now reports ``provider_paused:<plugin>``
+        for both former cases.
+        """
         from app.workers.plugin_executor import execute_plugin
 
         plugin = self._make_plugin()
@@ -1168,7 +1174,7 @@ class TestPluginExecutorPipelineStop:
         assert outcome.transient_error is True
         assert outcome.break_pipeline is True
         assert outcome.skipped is False
-        assert "provider_inactive" in outcome.transient_error_reason
+        assert "provider_paused" in outcome.transient_error_reason
         assert outcome.failed_provider_id == str(provider.id)
 
     @pytest.mark.asyncio

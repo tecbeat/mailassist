@@ -3,3 +3,116 @@ include:
   - project: 'maintenance/teccave_pipeline'
     ref: main
     file: '/.pipeline_defs/.build_image.yml'
+
+# Disable the updater job from the shared pipeline.
+updater:
+  rules:
+    - when: never
+
+# ---------------------------------------------------------------------------
+# Run the backend pytest suite on every non-main branch.
+#
+# Placed in the ``prepare`` stage (before ``build``) so that a red test
+# suite gates the image build — no point in spending time on Kaniko when
+# the code is already known to be broken.
+#
+# Uses a clean python:3.13-slim base and installs the project with the
+# ``[dev]`` extra via uv.  The conftest sets the env vars pytest needs.
+# ---------------------------------------------------------------------------
+test:
+  stage: prepare
+  image: python:3.13-slim
+  needs: []
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+      when: on_success
+    - when: never
+  before_script:
+    - pip install --no-cache-dir uv
+  script:
+    - cd backend
+    - uv venv .venv
+    # Install only runtime + dev dependencies, NOT the project itself —
+    # hatchling refuses to build the wheel because the package layout
+    # (project ``mailassist`` with source dir ``app/``) does not match its
+    # auto-detection heuristics.  The Dockerfile takes the same approach
+    # via ``uv pip compile`` + ``uv pip install -r``.  ``app`` is imported
+    # via PYTHONPATH below.
+    - uv pip compile pyproject.toml --extra dev -o /tmp/requirements.txt
+    - uv pip install --python .venv/bin/python -r /tmp/requirements.txt
+    - PYTHONPATH=. .venv/bin/python -m pytest tests/ -v
+  tags:
+    - teccave
+
+# ---------------------------------------------------------------------------
+# Integration test: start the freshly built image's app role and verify
+# the FastAPI server answers HTTP.  Postgres + Valkey run as CI services
+# so the lifespan migrations succeed and /health can return 200.
+# ---------------------------------------------------------------------------
+integration_test:
+  extends: .test_image
+  # Override the entrypoint of the production image so the GitLab runner
+  # can execute its own ``sh -c`` shell instead of being intercepted by
+  # ``docker-entrypoint.sh`` (which would interpret ``sh`` as a role).
+  image:
+    name: ${CI_REGISTRY_IMAGE}:${VERSION}
+    entrypoint: [""]
+  services:
+    - name: postgres:16-alpine
+      alias: postgres
+    - name: valkey/valkey:8-alpine
+      alias: valkey
+  variables:
+    POSTGRES_USER: mailassist
+    POSTGRES_PASSWORD: mailassist
+    POSTGRES_DB: mailassist
+    DATABASE_URL: "postgresql+asyncpg://mailassist:mailassist@postgres:5432/mailassist"
+    VALKEY_URL: "redis://valkey:6379/0"
+    APP_SECRET_KEY: "ci-integration-test-secret-key-min-32-chars-long"
+  script:
+    - echo "Starting application..."
+    # The image's ``app`` package lives at ``/app/app``; the GitLab runner
+    # checks out the repo into ``/builds/...`` and sets that as CWD, so we
+    # have to switch back to ``/app`` before launching uvicorn or it fails
+    # with ``ModuleNotFoundError: No module named 'app'``.
+    - cd /app
+    - docker-entrypoint.sh app &
+    - APP_PID=$!
+    - OK=0
+    - |
+      for i in $(seq 1 60); do
+        CODE=$(curl -sS -o /dev/null -w "%{http_code}" "http://localhost:8000/health" || echo "000")
+        echo "[$i] /health -> ${CODE}"
+        if [ "$CODE" = "200" ]; then
+          OK=1
+          break
+        fi
+        sleep 1
+      done
+    - kill "$APP_PID" 2>/dev/null || true
+    - if [ "$OK" != "1" ]; then echo "App did not return 200 from /health within 60s"; exit 1; fi
+    - echo "Integration test passed."
+
+# ---------------------------------------------------------------------------
+# Override the shared ``cleanup_image`` job so it waits for ``integration_test``
+# before deleting the freshly built test image.
+#
+# In the upstream pipeline ``cleanup_image`` only needs ``test_build_image``,
+# so in DAG mode it runs in parallel with ``integration_test`` and the
+# Kaniko-pushed tag is gone (``manifest unknown``) before the runner can
+# pull it as the test image.
+#
+# We keep the original ``rules: when: always`` semantics by inheriting from
+# ``.cleanup_image``; only the ``needs:`` list is replaced.
+# ---------------------------------------------------------------------------
+cleanup_image:
+  needs:
+    - job: versioner
+      artifacts: true
+    - job: test_build_image
+      artifacts: false
+    - job: integration_test
+      artifacts: false
+    - job: cleanup_lxc
+      artifacts: false
+      optional: true

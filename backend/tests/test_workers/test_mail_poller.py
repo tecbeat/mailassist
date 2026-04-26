@@ -86,6 +86,7 @@ async def test_poller_uses_search_uids_and_fetch_envelopes():
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=3) as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
+        patch("app.workers.mail_poller.is_idle_active", return_value=False),
     ):
         mock_search.return_value = ["501", "502", "503"]
         mock_get_new.return_value = ["501", "502", "503"]
@@ -101,8 +102,9 @@ async def test_poller_uses_search_uids_and_fetch_envelopes():
 
         await _poll_single_account(mock_db, account)
 
-        # search_uids called with UNSEEN for normal polling
-        mock_search.assert_called_once_with(mock_conn, folder="INBOX", criteria="UNSEEN")
+        # Normal polling now searches with ALL (not UNSEEN) so mails marked
+        # read by another client are still picked up.  See mail_poller docstring.
+        mock_search.assert_called_once_with(mock_conn, folder="INBOX", criteria="ALL")
 
         # fetch_envelopes called with the UIDs
         mock_envelopes.assert_called_once()
@@ -116,7 +118,13 @@ async def test_poller_uses_search_uids_and_fetch_envelopes():
 
 @pytest.mark.asyncio
 async def test_poller_skips_idle_enabled_accounts():
-    """Poller should skip accounts with idle_enabled after initial scan."""
+    """Poller should skip accounts whose IDLE monitor is actively running.
+
+    Note: the poller no longer skips on the ``idle_enabled`` flag alone —
+    it only skips when ``is_idle_active(account_id)`` reports the IDLE
+    monitor is *actually* connected, so an outage of the IDLE manager
+    does not silently halt polling.
+    """
     account = _make_account(initial_scan_done=True)
     account.idle_enabled = True
 
@@ -126,6 +134,7 @@ async def test_poller_skips_idle_enabled_accounts():
         patch("app.workers.mail_poller.connect_imap") as mock_connect,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
+        patch("app.workers.mail_poller.is_idle_active", return_value=True),
     ):
         mock_timed.return_value.__aenter__ = AsyncMock()
         mock_timed.return_value.__aexit__ = AsyncMock(return_value=False)
@@ -155,6 +164,7 @@ async def test_poller_subtracts_already_tracked_uids():
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=2) as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
+        patch("app.workers.mail_poller.is_idle_active", return_value=False),
     ):
         mock_search.return_value = ["100", "200", "300", "400"]
         mock_get_new.return_value = ["200", "400"]
@@ -189,6 +199,7 @@ async def test_poller_handles_empty_mailbox():
         patch("app.workers.mail_poller._insert_tracked_batch") as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
+        patch("app.workers.mail_poller.is_idle_active", return_value=False),
     ):
         mock_search.return_value = []
         mock_timed.return_value.__aenter__ = AsyncMock()
@@ -208,8 +219,13 @@ async def test_poller_handles_empty_mailbox():
 
 
 @pytest.mark.asyncio
-async def test_normal_polling_uses_inbox_unseen():
-    """After initial scan, poller should search INBOX with UNSEEN."""
+async def test_normal_polling_uses_inbox_all():
+    """After initial scan, poller should search INBOX with ALL.
+
+    The poller switched from ``UNSEEN`` to ``ALL`` so emails marked read
+    by another client (e.g. mobile) are still picked up — the per-folder
+    DB diff in ``_get_new_uids`` filters out the already-tracked ones.
+    """
     account = _make_account(initial_scan_done=True)
     mock_conn = _make_mock_conn()
     mock_db = AsyncMock()
@@ -223,6 +239,7 @@ async def test_normal_polling_uses_inbox_unseen():
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=1),
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
+        patch("app.workers.mail_poller.is_idle_active", return_value=False),
     ):
         mock_search.return_value = ["10"]
         mock_get_new.return_value = ["10"]
@@ -234,7 +251,7 @@ async def test_normal_polling_uses_inbox_unseen():
 
         await _poll_single_account(mock_db, account)
 
-        mock_search.assert_called_once_with(mock_conn, folder="INBOX", criteria="UNSEEN")
+        mock_search.assert_called_once_with(mock_conn, folder="INBOX", criteria="ALL")
 
 
 @pytest.mark.asyncio
@@ -253,6 +270,7 @@ async def test_initial_scan_skipped_when_scan_existing_false():
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=2),
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
+        patch("app.workers.mail_poller.is_idle_active", return_value=False),
     ):
         mock_search.return_value = ["20", "21"]
         mock_get_new.return_value = ["20", "21"]
@@ -264,9 +282,10 @@ async def test_initial_scan_skipped_when_scan_existing_false():
 
         await _poll_single_account(mock_db, account)
 
-        # Should mark initial_scan_done immediately and poll INBOX UNSEEN
+        # Should mark initial_scan_done immediately and poll INBOX with
+        # the regular ALL criterion (not UNSEEN — see normal-polling test).
         assert account.initial_scan_done is True
-        mock_search.assert_called_once_with(mock_conn, folder="INBOX", criteria="UNSEEN")
+        mock_search.assert_called_once_with(mock_conn, folder="INBOX", criteria="ALL")
 
 
 @pytest.mark.asyncio
@@ -290,6 +309,9 @@ async def test_initial_scan_iterates_all_folders():
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=1) as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
+        patch("app.workers.mail_poller.is_idle_active", return_value=False),
+        patch("app.workers.mail_poller.get_cached_folders", new_callable=AsyncMock, return_value=None),
+        patch("app.workers.mail_poller.set_cached_folders", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["INBOX", "Sent", "Archive", "Trash", "Spam"]
         mock_search.return_value = ["100"]
@@ -343,6 +365,9 @@ async def test_initial_scan_excludes_all_folders():
         patch("app.workers.mail_poller._insert_tracked_batch") as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
+        patch("app.workers.mail_poller.is_idle_active", return_value=False),
+        patch("app.workers.mail_poller.get_cached_folders", new_callable=AsyncMock, return_value=None),
+        patch("app.workers.mail_poller.set_cached_folders", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["INBOX", "Sent"]
         mock_timed.return_value.__aenter__ = AsyncMock()
@@ -375,6 +400,9 @@ async def test_initial_scan_sets_correct_current_folder():
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=1) as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
+        patch("app.workers.mail_poller.is_idle_active", return_value=False),
+        patch("app.workers.mail_poller.get_cached_folders", new_callable=AsyncMock, return_value=None),
+        patch("app.workers.mail_poller.set_cached_folders", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["Archive"]
         mock_search.return_value = ["50"]
@@ -508,6 +536,9 @@ async def test_initial_scan_passes_folder_to_get_new_uids():
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=1),
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
+        patch("app.workers.mail_poller.is_idle_active", return_value=False),
+        patch("app.workers.mail_poller.get_cached_folders", new_callable=AsyncMock, return_value=None),
+        patch("app.workers.mail_poller.set_cached_folders", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["INBOX", "Sent"]
         mock_search.return_value = ["77"]
