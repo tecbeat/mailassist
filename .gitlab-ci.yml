@@ -8,6 +8,18 @@ templater:
   rules:
     - when: never
 
+updater:
+  needs:
+    - job: versioner
+      artifacts: false
+    - job: templater
+      artifacts: true
+      optional: true
+    - job: changelogger
+      artifacts: true
+    - job: releaser
+      artifacts: false
+
 test:
   stage: prepare
   image: python:3.13-slim
