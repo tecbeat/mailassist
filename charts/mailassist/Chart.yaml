@@ -1,0 +1,8 @@
+apiVersion: v2
+name: mailassist
+description: Helm chart for MailAssist — AI-powered email management
+type: application
+version: 0.1.0         # Wird von CI/CD überschrieben
+appVersion: "v0.1.4-beta"  # Wird von CI/CD überschrieben
+maintainers:
+  - name: Samuel Assmann

@@ -1,0 +1,110 @@
+{{- /*
+ConfigMap for non-sensitive application configuration.
+Maps all config.* values from values.yaml to UPPER_SNAKE_CASE env vars.
+Includes dynamically generated DATABASE_URL and VALKEY_URL.
+*/ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mailassist.fullname" . }}-config
+  labels:
+    {{- include "mailassist.labels" . | nindent 4 }}
+data:
+  # -- Application
+  APP_NAME: {{ .Values.config.appName | quote }}
+  DEBUG: {{ .Values.config.debug | quote }}
+
+  # -- OIDC / SSO
+  OIDC_ISSUER_URL: {{ .Values.config.oidcIssuerUrl | quote }}
+  OIDC_CLIENT_ID: {{ .Values.config.oidcClientId | quote }}
+  OIDC_REDIRECT_URI: {{ .Values.config.oidcRedirectUri | quote }}
+  OIDC_SCOPES: {{ .Values.config.oidcScopes | quote }}
+
+  # -- CORS
+  CORS_ALLOWED_ORIGINS: {{ .Values.config.corsAllowedOrigins | quote }}
+
+  # -- Session
+  SESSION_TTL_SECONDS: {{ .Values.config.sessionTtlSeconds | quote }}
+
+  # -- Rate Limiting
+  AUTH_RATE_LIMIT: {{ .Values.config.authRateLimit | quote }}
+  API_RATE_LIMIT: {{ .Values.config.apiRateLimit | quote }}
+
+  # -- AI
+  AI_MAX_TOKENS: {{ .Values.config.aiMaxTokens | quote }}
+  AI_TEMPERATURE: {{ .Values.config.aiTemperature | quote }}
+  AI_TIMEOUT_SECONDS: {{ .Values.config.aiTimeoutSeconds | quote }}
+  AI_TOKEN_USAGE_TTL_DAYS: {{ .Values.config.aiTokenUsageTtlDays | quote }}
+  AI_PAUSE_COOLDOWN_SECONDS: {{ .Values.config.aiPauseCooldownSeconds | quote }}
+
+  # -- Mail / IMAP
+  IMAP_TIMEOUT_SECONDS: {{ .Values.config.imapTimeoutSeconds | quote }}
+  IMAP_PAUSE_COOLDOWN_SECONDS: {{ .Values.config.imapPauseCooldownSeconds | quote }}
+  MAX_EMAIL_BODY_SIZE: {{ .Values.config.maxEmailBodySize | quote }}
+  MAX_JOBS_PER_USER_PER_MINUTE: {{ .Values.config.maxJobsPerUserPerMinute | quote }}
+
+  # -- Polling
+  POLL_CONCURRENCY: {{ .Values.config.pollConcurrency | quote }}
+  POLL_INITIAL_SCAN_BATCH: {{ .Values.config.pollInitialScanBatch | quote }}
+
+  # -- Caching
+  CONTACT_CACHE_TTL_SECONDS: {{ .Values.config.contactCacheTtlSeconds | quote }}
+  IMAP_FOLDER_CACHE_TTL_SECONDS: {{ .Values.config.imapFolderCacheTtlSeconds | quote }}
+
+  # -- Contact Sync
+  CONTACT_SYNC_MAX_ERRORS: {{ .Values.config.contactSyncMaxErrors | quote }}
+
+  # -- Database Pool
+  DB_POOL_SIZE: {{ .Values.config.dbPoolSize | quote }}
+  DB_MAX_OVERFLOW: {{ .Values.config.dbMaxOverflow | quote }}
+  DB_POOL_RECYCLE: {{ .Values.config.dbPoolRecycle | quote }}
+
+  # -- Worker
+  WORKER_MAX_JOBS: {{ .Values.config.workerMaxJobs | quote }}
+  WORKER_JOB_TIMEOUT: {{ .Values.config.workerJobTimeout | quote }}
+
+  # -- Scheduler
+  SCHEDULER_MAX_BATCH: {{ .Values.config.schedulerMaxBatch | quote }}
+  SCHEDULER_RESERVED_SLOTS: {{ .Values.config.schedulerReservedSlots | quote }}
+  SCHEDULER_DEFAULT_MAX_CONCURRENT: {{ .Values.config.schedulerDefaultMaxConcurrent | quote }}
+
+  # -- Health Monitoring
+  HEARTBEAT_TTL_SECONDS: {{ .Values.config.heartbeatTtlSeconds | quote }}
+  STALE_JOB_THRESHOLD_SECONDS: {{ .Values.config.staleJobThresholdSeconds | quote }}
+  PROVIDER_RECOVERY_COOLDOWN_SECONDS: {{ .Values.config.providerRecoveryCooldownSeconds | quote }}
+  CRON_LAST_RUN_TTL_SECONDS: {{ .Values.config.cronLastRunTtlSeconds | quote }}
+  PROBE_TIMEOUT_SECONDS: {{ .Values.config.probeTimeoutSeconds | quote }}
+
+  # -- Pipeline
+  PIPELINE_PROGRESS_TTL_SECONDS: {{ .Values.config.pipelineProgressTtlSeconds | quote }}
+  APPROVAL_EXPIRY_DAYS: {{ .Values.config.approvalExpiryDays | quote }}
+
+  # -- Cron
+  CRON_INTERVAL_MINUTES: {{ .Values.config.cronIntervalMinutes | quote }}
+
+  # -- Draft Cleanup
+  DRAFT_EXPIRY_DAYS: {{ .Values.config.draftExpiryDays | quote }}
+  DRAFT_SENT_FOLDER_NAMES: {{ .Values.config.draftSentFolderNames | quote }}
+  DRAFT_FOLDER_NAMES: {{ .Values.config.draftFolderNames | quote }}
+  DRAFT_LOOKBACK_DAYS: {{ .Values.config.draftLookbackDays | quote }}
+  DRAFT_MAX_SENT_SCAN: {{ .Values.config.draftMaxSentScan | quote }}
+
+  # -- Calendar
+  ICAL_PRODUCT_ID: {{ .Values.config.icalProductId | quote }}
+
+  # -- Rules Engine
+  RULES_MAX_PATTERN_LENGTH: {{ .Values.config.rulesMaxPatternLength | quote }}
+  RULES_MAX_TEXT_LENGTH: {{ .Values.config.rulesMaxTextLength | quote }}
+
+  # -- Valkey Timeouts
+  VALKEY_SOCKET_TIMEOUT: {{ .Values.config.valkeySocketTimeout | quote }}
+  VALKEY_SOCKET_CONNECT_TIMEOUT: {{ .Values.config.valkeySocketConnectTimeout | quote }}
+
+  # -- Dynamically generated connection URLs
+  DATABASE_URL: {{ include "mailassist.databaseUrl" . | quote }}
+  VALKEY_URL: {{ include "mailassist.valkeyUrl" . | quote }}
+
+  # -- Ollama (conditional)
+  {{- if .Values.ollama.enabled }}
+  OLLAMA_URL: {{ .Values.ollama.url | quote }}
+  {{- end }}

@@ -1,0 +1,42 @@
+# =============================================================================
+# CI Test Values — External Databases
+# =============================================================================
+# Disables internal PostgreSQL and Valkey StatefulSets and uses external
+# database URLs instead. Validates that the chart renders correctly when
+# both `postgresql.enabled` and `valkey.enabled` are set to false.
+# =============================================================================
+
+# =============================================================================
+# PostgreSQL — Disabled, use external database
+# =============================================================================
+postgresql:
+  enabled: false
+
+externalDatabase:
+  url: "postgresql+asyncpg://mailer:password@db.example.com:5432/mailer"
+
+# =============================================================================
+# Valkey — Disabled, use external instance
+# =============================================================================
+valkey:
+  enabled: false
+
+externalValkey:
+  url: "redis://:password@valkey.example.com:6379/0"
+
+# =============================================================================
+# Secrets — Required values
+# =============================================================================
+secrets:
+  appSecretKey: "ci-test-secret-key-min-32-characters-long"
+  postgresPassword: "ci-test-postgres-password"
+  valkeyPassword: "ci-test-valkey-password"
+
+# =============================================================================
+# Config — Required values
+# =============================================================================
+config:
+  oidcIssuerUrl: "https://sso.example.com"
+  oidcClientId: "mailassist-ci"
+  oidcRedirectUri: "https://mail.example.com/auth/callback"
+  corsAllowedOrigins: "https://mail.example.com"

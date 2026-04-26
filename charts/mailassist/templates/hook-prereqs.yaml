@@ -1,0 +1,259 @@
+{{/*
+Hook prerequisites for the migration Job.
+Created at hook-weight -10 (before the Job at -5) so that the ServiceAccount,
+Secret, ConfigMap, PostgreSQL, and Valkey are available when the Job starts.
+Uses before-hook-creation so stale hook resources are replaced on re-install.
+*/}}
+
+{{/* ---- ServiceAccount ---- */}}
+{{- if .Values.serviceAccount.create -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "mailassist.serviceAccountName" . }}
+  labels:
+    {{- include "mailassist.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+    {{- with .Values.serviceAccount.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
+---
+{{/* ---- Secret ---- */}}
+{{- if not .Values.secrets.existingSecret }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "mailassist.fullname" . }}
+  labels:
+    {{- include "mailassist.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+type: Opaque
+data:
+  APP_SECRET_KEY: {{ .Values.secrets.appSecretKey | b64enc | quote }}
+  {{- if .Values.secrets.appSecretKeyOld }}
+  APP_SECRET_KEY_OLD: {{ .Values.secrets.appSecretKeyOld | b64enc | quote }}
+  {{- end }}
+  POSTGRES_PASSWORD: {{ .Values.secrets.postgresPassword | b64enc | quote }}
+  VALKEY_PASSWORD: {{ .Values.secrets.valkeyPassword | b64enc | quote }}
+  OIDC_CLIENT_SECRET: {{ .Values.secrets.oidcClientSecret | b64enc | quote }}
+{{- end }}
+---
+{{/* ---- ConfigMap (minimal — only what the migration job needs) ---- */}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mailassist.fullname" . }}-config
+  labels:
+    {{- include "mailassist.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+data:
+  DATABASE_URL: {{ include "mailassist.databaseUrl" . | quote }}
+  VALKEY_URL: {{ include "mailassist.valkeyUrl" . | quote }}
+---
+{{/* ---- PostgreSQL StatefulSet ---- */}}
+{{- if .Values.postgresql.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "mailassist.postgresql.fullname" . }}
+  labels:
+    {{- include "mailassist.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  replicas: 1
+  serviceName: {{ include "mailassist.postgresql.fullname" . }}
+  selector:
+    matchLabels:
+      {{- include "mailassist.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgresql
+  template:
+    metadata:
+      labels:
+        {{- include "mailassist.labels" . | nindent 8 }}
+        app.kubernetes.io/component: postgresql
+    spec:
+      containers:
+        - name: postgresql
+          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          imagePullPolicy: {{ .Values.postgresql.image.pullPolicy }}
+          ports:
+            - name: postgresql
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.postgresql.auth.username | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgresql.auth.database | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mailassist.secretName" . }}
+                  key: POSTGRES_PASSWORD
+          {{- with .Values.postgresql.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.postgresql.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- if .Values.postgresql.persistence.storageClass }}
+        storageClassName: {{ .Values.postgresql.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.postgresql.persistence.size }}
+{{- end }}
+---
+{{/* ---- PostgreSQL Service ---- */}}
+{{- if .Values.postgresql.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mailassist.postgresql.fullname" . }}
+  labels:
+    {{- include "mailassist.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: postgresql
+      protocol: TCP
+      name: postgresql
+  selector:
+    {{- include "mailassist.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+{{- end }}
+---
+{{/* ---- Valkey StatefulSet ---- */}}
+{{- if .Values.valkey.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "mailassist.valkey.fullname" . }}
+  labels:
+    {{- include "mailassist.labels" . | nindent 4 }}
+    app.kubernetes.io/component: valkey
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  replicas: 1
+  serviceName: {{ include "mailassist.valkey.fullname" . }}
+  selector:
+    matchLabels:
+      {{- include "mailassist.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: valkey
+  template:
+    metadata:
+      labels:
+        {{- include "mailassist.labels" . | nindent 8 }}
+        app.kubernetes.io/component: valkey
+    spec:
+      containers:
+        - name: valkey
+          image: "{{ .Values.valkey.image.repository }}:{{ .Values.valkey.image.tag }}"
+          imagePullPolicy: {{ .Values.valkey.image.pullPolicy }}
+          command:
+            - valkey-server
+          args:
+            - "--requirepass"
+            - "$(VALKEY_PASSWORD)"
+            - "--maxmemory"
+            - {{ .Values.valkey.config.maxmemory | quote }}
+            - "--maxmemory-policy"
+            - {{ .Values.valkey.config.maxmemoryPolicy | quote }}
+            - "--appendonly"
+            - {{ .Values.valkey.config.appendonly | quote }}
+          ports:
+            - name: valkey
+              containerPort: 6379
+              protocol: TCP
+          env:
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mailassist.secretName" . }}
+                  key: VALKEY_PASSWORD
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - "valkey-cli -a $VALKEY_PASSWORD ping"
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          resources:
+            {{- toYaml .Values.valkey.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- if .Values.valkey.persistence.storageClass }}
+        storageClassName: {{ .Values.valkey.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.valkey.persistence.size }}
+{{- end }}
+---
+{{/* ---- Valkey Service ---- */}}
+{{- if .Values.valkey.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mailassist.valkey.fullname" . }}
+  labels:
+    {{- include "mailassist.labels" . | nindent 4 }}
+    app.kubernetes.io/component: valkey
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+      targetPort: valkey
+      protocol: TCP
+      name: valkey
+  selector:
+    {{- include "mailassist.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: valkey
+{{- end }}

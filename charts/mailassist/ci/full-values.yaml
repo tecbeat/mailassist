@@ -1,0 +1,92 @@
+# =============================================================================
+# CI Test Values — Full (All Features Enabled)
+# =============================================================================
+# Enables every optional feature for comprehensive CI testing.
+# Used by `helm lint` and `helm template` to validate the chart renders
+# correctly when all options are active.
+# =============================================================================
+
+# -- Image Pull Secrets for private registries
+imagePullSecrets:
+  - name: registry-credentials
+
+# =============================================================================
+# Secrets — All required values
+# =============================================================================
+secrets:
+  appSecretKey: "ci-test-secret-key-min-32-characters-long"
+  postgresPassword: "ci-test-postgres-password"
+  valkeyPassword: "ci-test-valkey-password"
+  oidcClientSecret: "ci-test-oidc-client-secret"
+
+# =============================================================================
+# Config — All required values
+# =============================================================================
+config:
+  oidcIssuerUrl: "https://sso.example.com"
+  oidcClientId: "mailassist-ci"
+  oidcRedirectUri: "https://mail.example.com/auth/callback"
+  corsAllowedOrigins: "https://mail.example.com"
+
+# =============================================================================
+# App Deployment — Custom annotations, labels, nodeSelector, HPA
+# =============================================================================
+app:
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+  podLabels:
+    environment: ci
+    team: platform
+  nodeSelector:
+    kubernetes.io/os: linux
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+# =============================================================================
+# Worker Deployment — Custom annotations and labels
+# =============================================================================
+worker:
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+  podLabels:
+    environment: ci
+    team: platform
+
+# =============================================================================
+# Ingress — Enabled with host, className, annotations, and TLS
+# =============================================================================
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: mail.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: mail-example-com-tls
+      hosts:
+        - mail.example.com
+
+# =============================================================================
+# ServiceAccount — Custom annotations
+# =============================================================================
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/mailassist"
+
+# =============================================================================
+# Ollama — Enabled with external URL
+# =============================================================================
+ollama:
+  enabled: true
+  url: "http://ollama.example.com:11434"

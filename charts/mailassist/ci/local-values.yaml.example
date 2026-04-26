@@ -1,0 +1,26 @@
+# =============================================================================
+# CI Test Values — Local Integration Test (TEMPLATE)
+# =============================================================================
+# Copy this file to local-values.yaml and fill in your secrets.
+#   cp local-values.yaml.example local-values.yaml
+#
+# Uses the locally built image (mailassist:local-test) with Never pull policy.
+# Build first: docker build -t mailassist:local-test .
+# =============================================================================
+
+image:
+  repository: mailassist
+  tag: "local-test"
+  pullPolicy: Never
+
+secrets:
+  appSecretKey: "CHANGE-ME-min-32-characters-long-secret"
+  postgresPassword: "CHANGE-ME"
+  valkeyPassword: "CHANGE-ME"
+  oidcClientSecret: "CHANGE-ME"
+
+config:
+  oidcIssuerUrl: "http://host.docker.internal:8180/realms/master"
+  oidcClientId: "mailassist"
+  oidcRedirectUri: "http://localhost:8080/auth/callback"
+  corsAllowedOrigins: "http://localhost:8080"

@@ -67,6 +67,25 @@ frontend_unittest:
   tags:
     - teccave
 
+helm_lint:
+  stage: lint
+  image:
+    name: alpine/helm:3.17.3
+    entrypoint: [""]
+  needs: []
+  tags:
+    - teccave
+  script:
+    - helm lint charts/mailassist/
+    - helm lint charts/mailassist/ -f charts/mailassist/ci/default-values.yaml
+    - helm lint charts/mailassist/ -f charts/mailassist/ci/full-values.yaml
+    - helm lint charts/mailassist/ -f charts/mailassist/ci/external-db-values.yaml
+    - helm lint charts/mailassist/ -f charts/mailassist/ci/existing-secret-values.yaml
+    - helm template test charts/mailassist/ --debug > /dev/null
+  rules:
+    - changes:
+        - charts/**/*
+
 integration_systemtest:
   stage: systemtest
   image:
