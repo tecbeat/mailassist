@@ -51,9 +51,9 @@ test:
     - teccave
 
 # ---------------------------------------------------------------------------
-# Frontend type checking — catches type errors before the Docker build.
+# Frontend tests — runs vitest on every non-main branch push.
 # ---------------------------------------------------------------------------
-frontend_typecheck:
+frontend_test:
   stage: prepare
   image: node:24-alpine
   needs: []
@@ -65,6 +65,7 @@ frontend_typecheck:
     - cd frontend
     - npm ci --ignore-scripts
     - npx tsc --noEmit
+    - npx vitest run
   tags:
     - teccave
 
