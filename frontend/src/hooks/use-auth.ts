@@ -34,8 +34,13 @@ export function useAuth() {
 
   const logout = useCallback(() => {
     logoutMutation.mutate(undefined, {
-      onSettled: () => {
-        window.location.href = "/auth/login";
+      onSettled: (response) => {
+        const endSessionUrl = (response?.data as Record<string, unknown>)?.end_session_url;
+        if (typeof endSessionUrl === "string") {
+          window.location.href = endSessionUrl;
+        } else {
+          window.location.href = "/auth/login";
+        }
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mutate reference is stable

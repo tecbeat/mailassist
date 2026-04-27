@@ -269,26 +269,53 @@ async def callback(
 
 @router.post("/logout")
 async def logout(request: Request) -> JSONResponse:
-    """Clear session and optionally trigger OIDC end_session."""
+    """Clear session and trigger OIDC end_session if supported.
+
+    Returns ``end_session_url`` in the JSON body so the frontend can
+    redirect the user to the IdP logout page.
+    """
     session_client = get_session_client()
     session_id = request.cookies.get("session_id")
 
+    id_token: str | None = None
+
     if session_id:
+        # Retrieve session before deleting so we can extract the id_token
+        session_raw = await session_client.get(f"session:{session_id}")
+        if session_raw:
+            try:
+                session_obj = json.loads(session_raw)
+                encryption = get_encryption()
+                decrypted = encryption.decrypt(session_obj["encrypted_tokens"].encode())
+                tokens = json.loads(decrypted)
+                id_token = tokens.get("id_token")
+            except Exception:
+                logger.warning("logout_token_decrypt_failed")
         await session_client.delete(f"session:{session_id}")
 
-    response = JSONResponse(content={"message": "Logged out"})
-    response.delete_cookie("session_id")
-
-    # Attempt OIDC end_session if supported
+    # Build OIDC end_session URL if supported
+    end_session_url: str | None = None
     try:
         oidc_config = await _get_oidc_config()
-        end_session_url = oidc_config.get("end_session_endpoint")
-        if end_session_url:
-            logger.info("oidc_end_session_available", url=end_session_url)
-    except Exception:
-        pass
+        base_url = oidc_config.get("end_session_endpoint")
+        if base_url:
+            from urllib.parse import urlencode
 
-    logger.info("user_logged_out")
+            params: dict[str, str] = {"post_logout_redirect_uri": "/"}
+            if id_token:
+                params["id_token_hint"] = id_token
+            end_session_url = f"{base_url}?{urlencode(params)}"
+    except Exception:
+        logger.warning("logout_oidc_discovery_failed")
+
+    body: dict[str, str | None] = {"message": "Logged out"}
+    if end_session_url:
+        body["end_session_url"] = end_session_url
+
+    response = JSONResponse(content=body)
+    response.delete_cookie("session_id")
+
+    logger.info("user_logged_out", has_end_session=end_session_url is not None)
     return response
 
 
