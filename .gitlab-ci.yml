@@ -35,7 +35,13 @@ test:
     - uv venv .venv
     - uv pip compile pyproject.toml --extra dev -o /tmp/requirements.txt
     - uv pip install --python .venv/bin/python -r /tmp/requirements.txt
-    - PYTHONPATH=. .venv/bin/python -m pytest tests/ -v
+    - PYTHONPATH=. .venv/bin/python -m pytest tests/ -v --cov=app --cov-report=term-missing:skip-covered --cov-report=html:htmlcov
+  artifacts:
+    paths:
+      - backend/htmlcov/
+    when: always
+    expire_in: 7 days
+  coverage: '/(?i)total.*?(\d+(?:\.\d+)?\%)/'
   tags:
     - teccave
 

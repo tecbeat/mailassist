@@ -295,6 +295,7 @@ class TestProcessMailStatusTransitions:
             ),
             patch("app.workers.mail_processor.get_session", fake_get_session),
             patch("app.workers.mail_processor.get_event_bus") as mock_event_bus,
+            patch("app.workers.mail_processor._update_tracked_metadata", new_callable=AsyncMock),
         ):
             mock_event_bus.return_value.emit = AsyncMock()
 
@@ -553,6 +554,7 @@ class TestProcessMailStatusTransitions:
                 "app.workers.mail_processor._pause_provider",
                 new_callable=AsyncMock,
             ) as mock_pause_provider,
+            patch("app.workers.mail_processor._update_tracked_metadata", new_callable=AsyncMock),
         ):
             from app.workers.mail_processor import process_mail
 
@@ -885,6 +887,7 @@ class TestSavepointRollback:
                 "app.workers.mail_processor._pause_provider",
                 new_callable=AsyncMock,
             ) as mock_pause_provider,
+            patch("app.workers.mail_processor._update_tracked_metadata", new_callable=AsyncMock),
         ):
             from app.workers.mail_processor import process_mail
 
@@ -965,6 +968,7 @@ class TestSavepointRollback:
                 "app.workers.mail_processor._pause_provider",
                 new_callable=AsyncMock,
             ) as mock_pause_provider,
+            patch("app.workers.mail_processor._update_tracked_metadata", new_callable=AsyncMock),
         ):
             from app.workers.mail_processor import process_mail
 
@@ -1050,6 +1054,7 @@ class TestSavepointRollback:
                 "app.workers.mail_processor._pause_account",
                 new_callable=AsyncMock,
             ) as mock_pause_account,
+            patch("app.workers.mail_processor._update_tracked_metadata", new_callable=AsyncMock),
         ):
             from app.workers.mail_processor import process_mail
 

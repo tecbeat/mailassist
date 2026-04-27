@@ -85,7 +85,7 @@ async def test_callback_creates_session_after_commit(
         patch("app.api.auth.get_session_client", return_value=fake_session_client),
         patch("app.api.auth.get_session", fake_get_session),
         patch("app.api.auth.get_encryption") as mock_enc,
-        patch("app.api.auth._create_oauth_client") as mock_oauth,
+        patch("app.api.auth._exchange_code_for_token", return_value=fake_token),
         patch("httpx.AsyncClient") as mock_http_cls,
     ):
         # Configure mocks
@@ -97,11 +97,6 @@ async def test_callback_creates_session_after_commit(
         mock_enc_instance = MagicMock()
         mock_enc_instance.encrypt.return_value = b"encrypted"
         mock_enc.return_value = mock_enc_instance
-
-        # Mock OAuth token exchange
-        oauth_client = AsyncMock()
-        oauth_client.fetch_token = AsyncMock(return_value=fake_token)
-        mock_oauth.return_value = oauth_client
 
         # Mock userinfo HTTP call
         mock_resp = MagicMock()
@@ -157,7 +152,7 @@ async def test_callback_no_session_on_commit_failure(
         patch("app.api.auth.get_session_client", return_value=fake_session_client),
         patch("app.api.auth.get_session", fake_get_session),
         patch("app.api.auth.get_encryption") as mock_enc,
-        patch("app.api.auth._create_oauth_client") as mock_oauth,
+        patch("app.api.auth._exchange_code_for_token", return_value=fake_token),
         patch("httpx.AsyncClient") as mock_http_cls,
     ):
         settings = MagicMock()
@@ -169,10 +164,6 @@ async def test_callback_no_session_on_commit_failure(
         mock_enc_instance = MagicMock()
         mock_enc_instance.encrypt.return_value = b"encrypted"
         mock_enc.return_value = mock_enc_instance
-
-        oauth_client = AsyncMock()
-        oauth_client.fetch_token = AsyncMock(return_value=fake_token)
-        mock_oauth.return_value = oauth_client
 
         mock_resp = MagicMock()
         mock_resp.json.return_value = fake_userinfo
