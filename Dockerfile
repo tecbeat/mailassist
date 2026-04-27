@@ -22,6 +22,10 @@ RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser -m appuser
 
 WORKDIR /app
 
+# Ensure venv binaries (uvicorn, alembic, arq) are on PATH
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+
 # Install Python dependencies (cached layer -- only rebuilds on pyproject.toml/uv.lock change)
 COPY backend/pyproject.toml backend/uv.lock backend/README.md ./
 RUN uv sync --frozen --no-dev --no-editable
