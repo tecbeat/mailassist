@@ -25,10 +25,6 @@ import { useToast } from "@/components/ui/toast";
 import { PageHeader } from "@/components/layout/page-header";
 import { SortToggle } from "@/components/sort-toggle";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
-import {
-  PluginSettingsDialog,
-  PluginSettingsButton,
-} from "@/components/plugin-settings-dialog";
 import { SearchableCardList } from "@/components/searchable-card-list";
 import { FilterListItem } from "@/components/filter-list-item";
 import { useSearchableList } from "@/hooks/use-searchable-list";
@@ -87,7 +83,6 @@ export default function CouponsPage() {
     };
   }, []);
   const [deleteTarget, setDeleteTarget] = useState<ExtractedCouponResponse | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -158,11 +153,6 @@ export default function CouponsPage() {
       <PageHeader
         title="Coupons"
         description="Coupons and promotional offers extracted from your emails."
-        actions={
-          <div className="flex items-center gap-2">
-            <PluginSettingsButton onClick={() => setSettingsOpen(true)} />
-          </div>
-        }
       />
 
       {/* Coupon List Card */}
@@ -326,18 +316,6 @@ export default function CouponsPage() {
           />
         </CardContent>
       </Card>
-
-      {/* Settings Dialog */}
-      <PluginSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        title="Coupon Extraction Settings"
-        description="Configure coupon extraction behavior."
-      >
-        <div className="py-4 text-center text-sm text-muted-foreground">
-          No additional settings available for this plugin yet.
-        </div>
-      </PluginSettingsDialog>
 
       <DeleteConfirmDialog
         open={!!deleteTarget}

@@ -19,10 +19,6 @@ import { useToast } from "@/components/ui/toast";
 import { PageHeader } from "@/components/layout/page-header";
 import { SortToggle } from "@/components/sort-toggle";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
-import {
-  PluginSettingsDialog,
-  PluginSettingsButton,
-} from "@/components/plugin-settings-dialog";
 import { SearchableCardList } from "@/components/searchable-card-list";
 import { FilterListItem } from "@/components/filter-list-item";
 import { useSearchableList } from "@/hooks/use-searchable-list";
@@ -58,7 +54,6 @@ export default function NewslettersPage() {
   const list = useSearchableList();
   const [sortOrder, setSortOrder] = useState<string>("newest");
   const [deleteTarget, setDeleteTarget] = useState<DetectedNewsletterResponse | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -97,11 +92,6 @@ export default function NewslettersPage() {
       <PageHeader
         title="Newsletters"
         description="Detected newsletters and marketing emails. Use the unsubscribe link to opt out."
-        actions={
-          <div className="flex items-center gap-2">
-            <PluginSettingsButton onClick={() => setSettingsOpen(true)} />
-          </div>
-        }
       />
 
       {/* Newsletter List Card */}
@@ -230,18 +220,6 @@ export default function NewslettersPage() {
           />
         </CardContent>
       </Card>
-
-      {/* Settings Dialog */}
-      <PluginSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        title="Newsletter Detection Settings"
-        description="Configure newsletter detection behavior."
-      >
-        <div className="py-4 text-center text-sm text-muted-foreground">
-          No additional settings available for this plugin yet.
-        </div>
-      </PluginSettingsDialog>
 
       <DeleteConfirmDialog
         open={!!deleteTarget}

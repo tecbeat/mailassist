@@ -11,10 +11,6 @@ import {
 } from "@/services/api/mail-accounts/mail-accounts";
 
 import { PageHeader } from "@/components/layout/page-header";
-import {
-  PluginSettingsDialog,
-  PluginSettingsButton,
-} from "@/components/plugin-settings-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -40,7 +36,6 @@ import { FolderTreePanel } from "./folder-tree-panel";
 export default function SmartFoldersPage() {
   usePageTitle("Smart Folders");
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const accountsQuery = useListMailAccountsApiMailAccountsGet();
   const mailAccounts = unwrapResponse<MailAccountResponse[]>(accountsQuery.data);
@@ -72,11 +67,6 @@ export default function SmartFoldersPage() {
       <PageHeader
         title="Smart Folders"
         description="Manage your IMAP folder structure. Drag folders to reorganize, exclude folders from AI processing, or delete unused folders."
-        actions={
-          <div className="flex items-center gap-2">
-            <PluginSettingsButton onClick={() => setSettingsOpen(true)} />
-          </div>
-        }
       />
 
       <div className="flex flex-col gap-6 lg:flex-row">
@@ -175,17 +165,6 @@ export default function SmartFoldersPage() {
         </div>
       </div>
 
-      {/* Settings Dialog */}
-      <PluginSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        title="Smart Folders Settings"
-        description="Configure smart folder behavior."
-      >
-        <div className="py-4 text-center text-sm text-muted-foreground">
-          No additional settings available for this plugin yet.
-        </div>
-      </PluginSettingsDialog>
     </div>
   );
 }
