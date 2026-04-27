@@ -137,7 +137,7 @@ describe("DashboardPage", () => {
     expect(screen.getAllByText("Pending Approvals").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("Tokens Used")).toBeInTheDocument();
     expect(screen.getByText("Unhealthy Accounts")).toBeInTheDocument();
-    expect(screen.getByText("Unhealthy AI Providers")).toBeInTheDocument();
+    expect(screen.getByText("AI Provider Issues")).toBeInTheDocument();
     expect(screen.getByText("Failed Mails")).toBeInTheDocument();
   });
 
@@ -195,16 +195,16 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Invoice #1234")).toBeInTheDocument();
   });
 
-  it("shows 'all caught up' when no pending approvals", () => {
+  it("hides approvals section when no pending approvals", () => {
     mockApprovalsHook.mockReturnValue(
       querySuccess(createMockApprovalList([])),
     );
 
     render(<DashboardPage />);
 
-    expect(
-      screen.getByText("No pending approvals. You're all caught up!"),
-    ).toBeInTheDocument();
+    // The approvals section returns null when empty, so "Pending Approvals"
+    // should only appear in the stat card, not as a section heading
+    expect(screen.getAllByText("Pending Approvals")).toHaveLength(1);
   });
 
   it("renders 'View all' link to approvals page", () => {
