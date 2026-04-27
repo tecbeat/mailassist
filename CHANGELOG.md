@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.2.2) - 2026-04-27
+
+### 🐛 Bug Fixes
+
+- Align dashboard test assertions with actual component text - ([76bda5f](https://git.teccave.de/tecbeat/mailassist/commit/76bda5f3dde8d3a276e41c279d573807972a42aa))
+- Add missing dashboard hook mocks to test file - ([cee52a8](https://git.teccave.de/tecbeat/mailassist/commit/cee52a8fa09f7eff63d70f88971f27346e005af6))
+
+### ⚙️ Miscellaneous Tasks
+
+- Add frontend tests (vitest) to pipeline - ([2c640b4](https://git.teccave.de/tecbeat/mailassist/commit/2c640b4c01efe55238001fe0e3d68c1e24193ede))
+
 ## [0.2.1](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.2.1) - 2026-04-27
 
 ### 🐛 Bug Fixes
