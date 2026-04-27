@@ -82,12 +82,18 @@ async def login(request: Request) -> RedirectResponse:
     oidc_config = await _get_oidc_config()
     session_client = get_session_client()
 
-    # Rate limiting: max 10 login attempts per minute per IP
+    # Rate limiting: atomic INCR+EXPIRE via Lua script (prevents permanent
+    # key without TTL if the process crashes between separate calls).
     client_ip = request.client.host if request.client else "unknown"
     rate_key = f"auth_rate:{client_ip}"
-    current_count = await session_client.incr(rate_key)
-    if current_count == 1:
-        await session_client.expire(rate_key, 60)
+    lua_script = """
+    local current = redis.call('INCR', KEYS[1])
+    if current == 1 then
+        redis.call('EXPIRE', KEYS[1], ARGV[1])
+    end
+    return current
+    """
+    current_count = await session_client.eval(lua_script, 1, rate_key, 60)
     if current_count > settings.auth_rate_limit:
         raise HTTPException(status_code=429, detail="Too many login attempts. Try again later.")
 

@@ -74,7 +74,20 @@ class FakeValkey:
         return val
 
     async def expire(self, key: str, seconds: int) -> None:
-        pass
+        self._ttls: dict[str, int]
+        if not hasattr(self, "_ttls"):
+            self._ttls = {}
+        self._ttls[key] = seconds
+
+    async def eval(self, script: str, numkeys: int, *args: Any) -> Any:
+        """Minimal Lua-script emulation for the INCR+EXPIRE pattern."""
+        # The only Lua script we use: INCR key, EXPIRE if current==1
+        key = args[0]
+        ttl = int(args[1]) if len(args) > 1 else 60
+        current = await self.incr(key)
+        if current == 1:
+            await self.expire(key, ttl)
+        return current
 
     async def keys(self, pattern: str = "*") -> list[str]:
         return list(self._store.keys())
