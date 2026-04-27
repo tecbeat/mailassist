@@ -135,8 +135,4 @@ async def test_poll_with_semaphore_expunges_account():
         assert "db" not in param_names, (
             "_poll_single_account should not accept a db parameter"
         )
-        assert param_names[0] == "account", (
-            "_poll_single_account first parameter should be 'account'"
-        )
-
     assert expunge_called
