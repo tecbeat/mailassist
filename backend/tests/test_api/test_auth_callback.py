@@ -220,7 +220,7 @@ async def test_callback_handles_idp_error_parameter():
 
     assert response.status_code == 302
     assert "/login?error=" in response.headers["location"]
-    assert "User+cancelled+login" in response.headers["location"]
+    assert "User%20cancelled%20login" in response.headers["location"]
 
 
 @pytest.mark.asyncio
