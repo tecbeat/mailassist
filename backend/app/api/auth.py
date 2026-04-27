@@ -156,7 +156,7 @@ async def callback(request: Request, code: str, state: str) -> RedirectResponse:
         resp.raise_for_status()
         userinfo = resp.json()
 
-    # Upsert user in database
+    # Upsert user in database and create session only after successful commit
     async for db in get_session():
         sub = userinfo.get("sub")
         email = userinfo.get("email", "")
@@ -184,45 +184,57 @@ async def callback(request: Request, code: str, state: str) -> RedirectResponse:
         await db.flush()
         user_id = str(user.id)
 
-    # Session fixation prevention: generate new session ID
-    session_id = secrets.token_urlsafe(48)
+        # Explicitly commit before creating the Valkey session so that a
+        # commit failure prevents ghost sessions pointing to unpersisted users.
+        try:
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            logger.error("auth_db_commit_failed", user_id=user_id, email=email)
+            raise HTTPException(
+                status_code=500,
+                detail="Authentication failed due to a server error",
+            )
 
-    # Encrypt and store tokens in Valkey session
-    encryption = get_encryption()
-    encrypted_tokens = encryption.encrypt(json.dumps({
-        "access_token": token.get("access_token"),
-        "refresh_token": token.get("refresh_token"),
-        "id_token": token.get("id_token"),
-        "expires_at": token.get("expires_at"),
-    }))
+        # Session fixation prevention: generate new session ID
+        session_id = secrets.token_urlsafe(48)
 
-    session_data = json.dumps({
-        "user_id": user_id,
-        "email": email,
-        "display_name": display_name,
-        "encrypted_tokens": encrypted_tokens.decode(),
-        "created_at": datetime.now(UTC).isoformat(),
-    })
+        # Encrypt and store tokens in Valkey session
+        encryption = get_encryption()
+        encrypted_tokens = encryption.encrypt(json.dumps({
+            "access_token": token.get("access_token"),
+            "refresh_token": token.get("refresh_token"),
+            "id_token": token.get("id_token"),
+            "expires_at": token.get("expires_at"),
+        }))
 
-    await session_client.setex(
-        f"session:{session_id}",
-        settings.session_ttl_seconds,
-        session_data,
-    )
+        session_data = json.dumps({
+            "user_id": user_id,
+            "email": email,
+            "display_name": display_name,
+            "encrypted_tokens": encrypted_tokens.decode(),
+            "created_at": datetime.now(UTC).isoformat(),
+        })
 
-    # Set session cookie and redirect to frontend
-    response = RedirectResponse(url="/", status_code=302)
-    response.set_cookie(
-        key="session_id",
-        value=session_id,
-        httponly=True,
-        secure=not settings.debug,
-        samesite="lax",
-        max_age=settings.session_ttl_seconds,
-    )
+        await session_client.setex(
+            f"session:{session_id}",
+            settings.session_ttl_seconds,
+            session_data,
+        )
 
-    logger.info("user_logged_in", user_id=user_id, email=email)
-    return response
+        # Set session cookie and redirect to frontend
+        response = RedirectResponse(url="/", status_code=302)
+        response.set_cookie(
+            key="session_id",
+            value=session_id,
+            httponly=True,
+            secure=not settings.debug,
+            samesite="lax",
+            max_age=settings.session_ttl_seconds,
+        )
+
+        logger.info("user_logged_in", user_id=user_id, email=email)
+        return response
 
 
 @router.post("/logout")
