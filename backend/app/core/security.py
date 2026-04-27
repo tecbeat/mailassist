@@ -18,6 +18,35 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 logger = structlog.get_logger()
 
+_REQUIRED_ENVELOPE_KEYS = {"version", "encrypted_dek", "encrypted_data"}
+
+
+class MalformedEnvelopeError(ValueError):
+    """Raised when an envelope blob is missing required keys or has invalid structure."""
+
+
+def _validate_envelope(envelope: object) -> dict:
+    """Validate that the parsed envelope has the required structure.
+
+    Raises MalformedEnvelopeError if the envelope is not a dict or is missing
+    required keys.
+    """
+    if not isinstance(envelope, dict):
+        raise MalformedEnvelopeError(
+            f"Envelope must be a JSON object, got {type(envelope).__name__}"
+        )
+    missing = _REQUIRED_ENVELOPE_KEYS - envelope.keys()
+    if missing:
+        raise MalformedEnvelopeError(
+            f"Envelope missing required keys: {', '.join(sorted(missing))}"
+        )
+    for key in ("encrypted_dek", "encrypted_data"):
+        if not isinstance(envelope[key], str):
+            raise MalformedEnvelopeError(
+                f"Envelope key '{key}' must be a string, got {type(envelope[key]).__name__}"
+            )
+    return envelope
+
 
 def _derive_kek(secret_key: str) -> bytes:
     """Derive a Fernet-compatible KEK from the APP_SECRET_KEY.
@@ -82,9 +111,11 @@ class EnvelopeEncryption:
 
         Tries the current KEK first, then falls back to the old KEK for rotation.
         """
-        envelope = json.loads(ciphertext)
+        envelope = _validate_envelope(json.loads(ciphertext))
         if envelope.get("version") != 1:
-            raise ValueError(f"Unsupported envelope version: {envelope.get('version')}")
+            raise MalformedEnvelopeError(
+                f"Unsupported envelope version: {envelope.get('version')}"
+            )
 
         encrypted_dek = base64.b64decode(envelope["encrypted_dek"])
         encrypted_data = base64.b64decode(envelope["encrypted_data"])
@@ -123,7 +154,7 @@ class EnvelopeEncryption:
         The actual data is not re-encrypted -- only the DEK wrapper changes.
         This is used during key rotation.
         """
-        envelope = json.loads(ciphertext)
+        envelope = _validate_envelope(json.loads(ciphertext))
         encrypted_dek = base64.b64decode(envelope["encrypted_dek"])
 
         # Decrypt DEK (may need old KEK)

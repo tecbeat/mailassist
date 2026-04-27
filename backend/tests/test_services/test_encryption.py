@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.core.security import EnvelopeEncryption, init_encryption, get_encryption
+from app.core.security import EnvelopeEncryption, MalformedEnvelopeError, init_encryption, get_encryption
 
 
 class TestEnvelopeEncryption:
@@ -84,3 +84,44 @@ class TestEnvelopeEncryption:
         enc = EnvelopeEncryption(secret_key="f" * 32)
         with pytest.raises(Exception):
             enc.decrypt(b"not-valid-ciphertext-at-all")
+
+    def test_decrypt_missing_encrypted_dek_raises(self):
+        """Envelope missing encrypted_dek raises MalformedEnvelopeError."""
+        enc = EnvelopeEncryption(secret_key="g" * 32)
+        blob = b'{"version": 1, "encrypted_data": "dGVzdA=="}'
+        with pytest.raises(MalformedEnvelopeError, match="encrypted_dek"):
+            enc.decrypt(blob)
+
+    def test_decrypt_missing_encrypted_data_raises(self):
+        """Envelope missing encrypted_data raises MalformedEnvelopeError."""
+        enc = EnvelopeEncryption(secret_key="g" * 32)
+        blob = b'{"version": 1, "encrypted_dek": "dGVzdA=="}'
+        with pytest.raises(MalformedEnvelopeError, match="encrypted_data"):
+            enc.decrypt(blob)
+
+    def test_decrypt_not_a_dict_raises(self):
+        """Envelope that is a JSON array raises MalformedEnvelopeError."""
+        enc = EnvelopeEncryption(secret_key="g" * 32)
+        with pytest.raises(MalformedEnvelopeError, match="JSON object"):
+            enc.decrypt(b'[1, 2, 3]')
+
+    def test_decrypt_non_string_key_raises(self):
+        """Envelope with non-string encrypted_dek raises MalformedEnvelopeError."""
+        enc = EnvelopeEncryption(secret_key="g" * 32)
+        blob = b'{"version": 1, "encrypted_dek": 123, "encrypted_data": "dGVzdA=="}'
+        with pytest.raises(MalformedEnvelopeError, match="must be a string"):
+            enc.decrypt(blob)
+
+    def test_decrypt_unsupported_version_raises(self):
+        """Envelope with wrong version raises MalformedEnvelopeError."""
+        enc = EnvelopeEncryption(secret_key="g" * 32)
+        blob = b'{"version": 99, "encrypted_dek": "dGVzdA==", "encrypted_data": "dGVzdA=="}'
+        with pytest.raises(MalformedEnvelopeError, match="Unsupported envelope version"):
+            enc.decrypt(blob)
+
+    def test_rotate_missing_keys_raises(self):
+        """rotate_envelope with missing keys raises MalformedEnvelopeError."""
+        enc = EnvelopeEncryption(secret_key="g" * 32)
+        blob = b'{"version": 1}'
+        with pytest.raises(MalformedEnvelopeError, match="missing required keys"):
+            enc.rotate_envelope(blob)
