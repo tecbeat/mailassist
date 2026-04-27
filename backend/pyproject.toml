@@ -76,7 +76,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 filterwarnings = [
     "error",
-    "ignore::DeprecationWarning:authlib",
+    "ignore::DeprecationWarning:authlib.*",
     "ignore::pytest.PytestUnraisableExceptionWarning",
 ]
 
