@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.7](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.7) - 2026-04-27
+
+### 🐛 Bug Fixes
+
+- Extend CSRF protection to cover all state-changing routes - ([375a5d3](https://git.teccave.de/tecbeat/mailassist/commit/375a5d3b05069dca8ed194d00d2abde14c10b783))
+
 ## [0.1.6](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.6) - 2026-04-27
 
 ### 🐛 Bug Fixes
