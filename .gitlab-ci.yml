@@ -8,20 +8,9 @@ templater:
   rules:
     - when: never
 
-updater:
-  needs:
-    - job: versioner
-      artifacts: false
-    - job: templater
-      artifacts: true
-      optional: true
-    - job: changelogger
-      artifacts: true
-    - job: releaser
-      artifacts: false
 
-test:
-  stage: prepare
+backend_unittest:
+  stage: unittest
   image: python:3.14-slim@sha256:5b3879b6f3cb77e712644d50262d05a7c146b7312d784a18eff7ff5462e77033
   needs: []
   rules:
@@ -36,7 +25,6 @@ test:
     - uv pip compile pyproject.toml --extra dev -o /tmp/requirements.txt
     - uv pip install --python .venv/bin/python -r /tmp/requirements.txt
     - PYTHONPATH=. .venv/bin/python -m pytest tests/ -v --cov=app --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-fail-under=38
-    - uv sync --frozen --extra dev
   artifacts:
     paths:
       - backend/htmlcov/
@@ -51,11 +39,8 @@ test:
   tags:
     - teccave
 
-# ---------------------------------------------------------------------------
-# Frontend tests — runs vitest on every non-main branch push.
-# ---------------------------------------------------------------------------
-frontend_test:
-  stage: prepare
+frontend_unittest:
+  stage: unittest
   image: node:24-alpine
   needs: []
   rules:
@@ -70,11 +55,20 @@ frontend_test:
   tags:
     - teccave
 
-integration_test:
-  extends: .test_image
+integration_systemtest:
+  stage: systemtest
   image:
     name: ${CI_REGISTRY_IMAGE}:${VERSION}
     entrypoint: [""]
+  needs:
+    - job: versioner
+      artifacts: true
+    - job: test_build_image
+      artifacts: false
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+      when: on_success
+    - when: never
   services:
     - name: postgres:18-alpine@sha256:54451ecb8ab38c24c3ec123f2fd501303a3a1856a5c66e98cecf2460d5e1e9d7
       alias: postgres
@@ -106,6 +100,20 @@ integration_test:
     - kill "$APP_PID" 2>/dev/null || true
     - if [ "$OK" != "1" ]; then echo "App did not return 200 from /health within 60s"; exit 1; fi
     - echo "Integration test passed."
+  tags:
+    - teccave
+
+updater:
+  needs:
+    - job: versioner
+      artifacts: false
+    - job: templater
+      artifacts: true
+      optional: true
+    - job: changelogger
+      artifacts: true
+    - job: releaser
+      artifacts: false
 
 cleanup_image:
   needs:
@@ -113,7 +121,7 @@ cleanup_image:
       artifacts: true
     - job: test_build_image
       artifacts: false
-    - job: integration_test
+    - job: integration_systemtest
       artifacts: false
     - job: cleanup_lxc
       artifacts: false
