@@ -25,7 +25,7 @@ def _make_conn(*, uids: list[str], capabilities: list[str] | None = None) -> Ima
     conn = ImapConnection(
         mailbox=mb,
         account_id=uuid4(),
-        user_id=uuid4(),
+        host="imap.example.com",
         capabilities=capabilities or ["IMAP4rev1", "MOVE", "UIDPLUS"],
     )
     return conn
