@@ -515,12 +515,47 @@ async def move_all_to_inbox(conn: ImapConnection, folder_path: str) -> list[str]
         return []
 
     moved: list[str] = []
-    for uid in uid_list:
-        result = await move_message(conn, uid, "INBOX", source=folder_path)
-        if result.success:
-            moved.append(uid)
-        else:
-            logger.warning("move_to_inbox_failed", uid=uid, folder=folder_path)
+
+    def _batch_move() -> list[str]:
+        """Move all UIDs in a single batch to avoid per-message expunge.
+
+        Uses UID MOVE if supported, otherwise falls back to
+        COPY + STORE \\Deleted + single EXPUNGE for the whole batch.
+        """
+        conn.mailbox.folder.set(folder_path)
+        client = conn.mailbox.client
+        uid_set = ",".join(uid_list)
+
+        supports_move = conn.capabilities and any(
+            cap.upper() == "MOVE" for cap in conn.capabilities
+        )
+
+        if supports_move:
+            try:
+                status, _data = client.uid("MOVE", uid_set, "INBOX")
+                if status == "OK":
+                    return list(uid_list)
+            except Exception:
+                logger.warning("batch_move_failed_fallback_to_copy", folder=folder_path)
+
+        # Fallback: batch COPY, then batch flag + single EXPUNGE
+        status, _data = client.uid("COPY", uid_set, "INBOX")
+        if status != "OK":
+            logger.warning("batch_copy_failed", folder=folder_path, status=status)
+            return []
+
+        status, _ = client.uid("STORE", uid_set, "+FLAGS", "(\\Deleted)")
+        if status != "OK":
+            logger.warning("batch_delete_flag_failed", folder=folder_path, status=status)
+            return []
+
+        client.expunge()
+        return list(uid_list)
+
+    try:
+        moved = await asyncio.to_thread(_batch_move)
+    except Exception:
+        logger.exception("batch_move_to_inbox_failed", folder=folder_path)
 
     logger.info(
         "moved_all_to_inbox",

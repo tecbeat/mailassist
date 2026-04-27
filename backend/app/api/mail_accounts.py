@@ -34,6 +34,22 @@ logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/mail-accounts", tags=["mail-accounts"])
 
+# Fields that may be updated via the PATCH endpoint.  Sensitive columns
+# (id, user_id, encrypted_credentials, …) are intentionally excluded as
+# a defense-in-depth measure on top of the Pydantic schema validation.
+_UPDATABLE_FIELDS: frozenset[str] = frozenset({
+    "name",
+    "email_address",
+    "imap_host",
+    "imap_port",
+    "imap_use_ssl",
+    "polling_enabled",
+    "polling_interval_minutes",
+    "idle_enabled",
+    "scan_existing_emails",
+    "excluded_folders",
+})
+
 
 @router.get("")
 async def list_mail_accounts(
@@ -147,8 +163,10 @@ async def update_mail_account(
             existing_creds["password"] = update_data.pop("password")
         account.encrypted_credentials = encryption.encrypt(json.dumps(existing_creds))
 
-    # Apply remaining field updates
+    # Apply remaining field updates (only whitelisted columns)
     for field, value in update_data.items():
+        if field not in _UPDATABLE_FIELDS:
+            continue
         # Convert enum values to their string representation for DB storage
         if hasattr(value, "value"):
             value = value.value

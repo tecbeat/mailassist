@@ -73,10 +73,11 @@ class FakeValkey:
         self._store[key] = str(val)
         return val
 
-    async def expire(self, key: str, seconds: int) -> None:
-        self._ttls: dict[str, int]
+    async def expire(self, key: str, seconds: int, *, nx: bool = False) -> None:
         if not hasattr(self, "_ttls"):
-            self._ttls = {}
+            self._ttls: dict[str, int] = {}
+        if nx and key in self._ttls:
+            return
         self._ttls[key] = seconds
 
     async def eval(self, script: str, numkeys: int, *args: Any) -> Any:

@@ -442,11 +442,31 @@ def _repair_json(text: str) -> str:
         # Odd number of quotes means an unterminated string — close it
         cleaned = cleaned.rstrip() + '"'
 
-    # Count braces/brackets to detect missing closers
-    open_braces = cleaned.count("{") - cleaned.count("}")
-    open_brackets = cleaned.count("[") - cleaned.count("]")
-    if open_braces > 0 or open_brackets > 0:
-        cleaned += "}" * open_braces + "]" * open_brackets
+    # Close unclosed braces/brackets using a stack to preserve nesting order.
+    _CLOSERS = {"{": "}", "[": "]"}
+    in_string = False
+    escape = False
+    stack: list[str] = []
+    for ch in cleaned:
+        if escape:
+            escape = False
+            continue
+        if ch == "\\":
+            escape = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch in _CLOSERS:
+            stack.append(_CLOSERS[ch])
+        elif ch in ("}", "]"):
+            if stack and stack[-1] == ch:
+                stack.pop()
+
+    if stack:
+        cleaned += "".join(reversed(stack))
 
     return cleaned
 
@@ -527,6 +547,8 @@ async def _track_tokens(user_id: str, tokens: int) -> None:
         key = f"token_usage:{user_id}:{today}"
         await cache.incrby(key, tokens)
         ttl_seconds = get_settings().ai_token_usage_ttl_days * 86400
-        await cache.expire(key, ttl_seconds)
+        # Only set TTL when the key is new (no existing expiry) to avoid
+        # resetting the sliding window on every increment.
+        await cache.expire(key, ttl_seconds, nx=True)
     except Exception:
         logger.warning("token_tracking_failed", user_id=user_id)

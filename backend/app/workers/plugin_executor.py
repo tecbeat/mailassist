@@ -97,7 +97,8 @@ async def execute_plugin(
     approval_col = PLUGIN_TO_APPROVAL_COLUMN.get(plugin.name)
     approval_mode = ApprovalMode.AUTO  # safe default if approval_col is missing
     if approval_col and user_settings:
-        approval_mode = getattr(user_settings, approval_col, ApprovalMode.DISABLED)
+        raw = getattr(user_settings, approval_col, ApprovalMode.DISABLED)
+        approval_mode = ApprovalMode(raw) if not isinstance(raw, ApprovalMode) else raw
         if approval_mode == ApprovalMode.DISABLED:
             log.debug("plugin_disabled_by_user", plugin=plugin.name)
             outcome.skipped = True
@@ -289,7 +290,7 @@ async def _handle_blocklist(
     context: MailContext,
     pipeline: PipelineContext,
     approval_col: str | None,
-    approval_mode: str,
+    approval_mode: ApprovalMode,
     user_settings: UserSettings,
     log: structlog.stdlib.BoundLogger,
 ) -> PluginOutcome | None:
