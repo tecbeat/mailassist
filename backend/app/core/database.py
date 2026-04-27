@@ -4,6 +4,7 @@ Provides the async engine and a session dependency for FastAPI.
 """
 
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
@@ -43,6 +44,26 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     skipped the commit and the transaction was rolled back on session close.
     An unconditional ``commit()`` on a truly read-only session is essentially
     free (PostgreSQL treats it as a no-op) and avoids data-loss bugs.
+    """
+    if _session_factory is None:
+        raise RuntimeError("Database not initialized. Call init_db() first.")
+    async with _session_factory() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+
+
+@asynccontextmanager
+async def get_session_ctx() -> AsyncGenerator[AsyncSession, None]:
+    """Async context manager for obtaining a database session.
+
+    Unlike ``get_session`` (an async generator designed as a FastAPI
+    dependency), this function is safe to use with ``async with`` in
+    application code.  It guarantees that the session is committed on
+    success and rolled back + closed on error.
     """
     if _session_factory is None:
         raise RuntimeError("Database not initialized. Call init_db() first.")
