@@ -75,6 +75,14 @@ class Settings(BaseSettings):
     # Rate Limiting
     auth_rate_limit: int = Field(default=10, description="Max login attempts per minute per IP")
     api_rate_limit: int = Field(default=100, description="Max API requests per minute per user")
+    trusted_proxies: list[str] = Field(
+        default_factory=list,
+        description=(
+            "List of trusted reverse proxy IPs/CIDRs. "
+            "X-Forwarded-For is only respected when the direct client IP "
+            "is in this list. Example: ['10.0.0.0/8', '172.16.0.0/12']"
+        ),
+    )
 
     # AI defaults
     ai_max_tokens: int = Field(default=1024, description="Default max tokens for LLM responses")

@@ -13,6 +13,8 @@ import httpx
 import structlog
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from fastapi import APIRouter, HTTPException, Request
+
+from app.core.middleware import get_client_ip
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
 
@@ -84,7 +86,7 @@ async def login(request: Request) -> RedirectResponse:
 
     # Rate limiting: atomic INCR+EXPIRE via Lua script (prevents permanent
     # key without TTL if the process crashes between separate calls).
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     rate_key = f"auth_rate:{client_ip}"
     lua_script = """
     local current = redis.call('INCR', KEYS[1])

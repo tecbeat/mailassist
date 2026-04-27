@@ -197,7 +197,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 limit = settings.api_rate_limit
             else:
                 # Unauthenticated: per-IP rate limiting to protect auth endpoints
-                client_ip = _get_client_ip(request)
+                client_ip = get_client_ip(request)
                 rate_key = f"api_rate_ip:{client_ip}"
                 limit = settings.auth_rate_limit
 
@@ -249,15 +249,38 @@ async def _extract_user_id(request: Request) -> str | None:
         return None
 
 
-def _get_client_ip(request: Request) -> str:
-    """Extract the client IP address, respecting X-Forwarded-For behind a reverse proxy."""
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        # Take the first (leftmost) IP which is the original client
-        return forwarded_for.split(",")[0].strip()
-    if request.client:
-        return request.client.host
-    return "unknown"
+def get_client_ip(request: Request) -> str:
+    """Extract the client IP, only trusting X-Forwarded-For from configured proxies.
+
+    When the direct connecting IP is in ``TRUSTED_PROXIES``, the leftmost
+    entry from ``X-Forwarded-For`` is used.  Otherwise the socket peer
+    address is returned, preventing spoofed headers from bypassing rate limits.
+    """
+    import ipaddress
+
+    direct_ip = request.client.host if request.client else "unknown"
+
+    settings = get_settings()
+    if not settings.trusted_proxies:
+        return direct_ip
+
+    # Check whether the direct connection comes from a trusted proxy
+    try:
+        client_addr = ipaddress.ip_address(direct_ip)
+    except ValueError:
+        return direct_ip
+
+    is_trusted = any(
+        client_addr in ipaddress.ip_network(proxy, strict=False)
+        for proxy in settings.trusted_proxies
+    )
+
+    if is_trusted:
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            return forwarded_for.split(",")[0].strip()
+
+    return direct_ip
 
 
 # ---------------------------------------------------------------------------
