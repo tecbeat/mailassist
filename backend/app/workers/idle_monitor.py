@@ -134,6 +134,7 @@ async def check_idle_health() -> None:
             result = await db.execute(stmt)
             account = result.scalar_one_or_none()
             if account:
+                db.expunge(account)
                 logger.info("idle_task_restarting", account_id=account_id)
                 await start_idle_for_account(account)
 
@@ -151,6 +152,8 @@ async def start_idle_manager() -> None:
         )
         result = await db.execute(stmt)
         accounts = result.scalars().all()
+        for account in accounts:
+            db.expunge(account)
 
         logger.info("idle_manager_starting", account_count=len(accounts))
 
@@ -186,6 +189,8 @@ async def _idle_loop(account: MailAccount) -> None:
                 )
                 result = await db.execute(stmt)
                 account = result.scalar_one_or_none()
+                if account is not None:
+                    db.expunge(account)
 
             if account is None:
                 logger.info("idle_account_gone", account_id=account_id)
