@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_session
+from app.core.database import get_session_ctx
 from app.models import (
     AppliedLabel,
     AssignedFolder,
@@ -47,10 +47,9 @@ async def _persist(
     pattern throughout this module.
     """
     if own_session:
-        async for session in get_session():
+        async with get_session_ctx() as session:
             yield session
-            await session.commit()
-            return
+        return
     if db is not None:
         yield db
         await db.flush()
@@ -346,7 +345,7 @@ async def _sync_event_to_caldav(record: CalendarEvent) -> None:
     default_calendar: str | None = None
     encrypted_creds: bytes | None = None
 
-    async for session in get_session():
+    async with get_session_ctx() as session:
         stmt = select(CalDAVConfig).where(
             CalDAVConfig.user_id == record.user_id,
             CalDAVConfig.is_active.is_(True),
@@ -395,7 +394,7 @@ async def _sync_event_to_caldav(record: CalendarEvent) -> None:
         logger.warning("caldav_sync_failed", event_id=str(record.id), error=caldav_error)
 
     # Persist sync status
-    async for session in get_session():
+    async with get_session_ctx() as session:
         stmt = (
             select(CalendarEvent)
             .where(CalendarEvent.id == record.id)
