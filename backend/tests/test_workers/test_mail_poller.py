@@ -4,11 +4,11 @@ The poller uses ``imap-tools`` which returns real IMAP UIDs directly
 from ``mailbox.uids()`` — no sequence-number-to-UID resolution needed.
 
 Tests cover:
-* **Normal polling** (``initial_scan_done=True``): INBOX only, ``SEARCH UNSEEN``.
+* **Normal polling** (``initial_scan_done=True``): INBOX only, ``SEARCH ALL``.
 * **Initial scan** (``scan_existing_emails=True``): all folders (minus
   ``excluded_folders``), ``SEARCH ALL``.
 * **Initial scan skipped** (``scan_existing_emails=False``): immediately
-  marks ``initial_scan_done``, then INBOX ``SEARCH UNSEEN``.
+  marks ``initial_scan_done``, then INBOX ``SEARCH ALL``.
 """
 
 from __future__ import annotations
@@ -65,6 +65,17 @@ def _make_mock_conn():
     return conn
 
 
+def _mock_get_session():
+    """Return a mock get_session async generator that yields a mock db."""
+    async def _gen():
+        db = AsyncMock()
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = MagicMock(initial_scan_done=False)
+        db.execute = AsyncMock(return_value=result)
+        yield db
+    return _gen
+
+
 # ---------------------------------------------------------------------------
 # Integration tests for _poll_single_account
 # ---------------------------------------------------------------------------
@@ -75,7 +86,6 @@ async def test_poller_uses_search_uids_and_fetch_envelopes():
     """Poller should use search_uids() and fetch_envelopes() from mail.py."""
     account = _make_account()
     mock_conn = _make_mock_conn()
-    mock_db = AsyncMock()
 
     with (
         patch("app.workers.mail_poller.connect_imap", new_callable=AsyncMock, return_value=mock_conn),
@@ -85,8 +95,9 @@ async def test_poller_uses_search_uids_and_fetch_envelopes():
         patch("app.workers.mail_poller._get_new_uids", new_callable=AsyncMock) as mock_get_new,
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=3) as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
-        patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
+        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_search.return_value = ["501", "502", "503"]
         mock_get_new.return_value = ["501", "502", "503"]
@@ -97,10 +108,8 @@ async def test_poller_uses_search_uids_and_fetch_envelopes():
         }
         mock_timed.return_value.__aenter__ = AsyncMock()
         mock_timed.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_error_handler.return_value.__aenter__ = AsyncMock()
-        mock_error_handler.return_value.__aexit__ = AsyncMock(return_value=False)
 
-        await _poll_single_account(mock_db, account)
+        await _poll_single_account(account)
 
         # Normal polling now searches with ALL (not UNSEEN) so mails marked
         # read by another client are still picked up.  See mail_poller docstring.
@@ -128,20 +137,11 @@ async def test_poller_skips_idle_enabled_accounts():
     account = _make_account(initial_scan_done=True)
     account.idle_enabled = True
 
-    mock_db = AsyncMock()
-
     with (
         patch("app.workers.mail_poller.connect_imap") as mock_connect,
-        patch("app.workers.mail_poller.timed_operation") as mock_timed,
-        patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
         patch("app.workers.mail_poller.is_idle_active", return_value=True),
     ):
-        mock_timed.return_value.__aenter__ = AsyncMock()
-        mock_timed.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_error_handler.return_value.__aenter__ = AsyncMock()
-        mock_error_handler.return_value.__aexit__ = AsyncMock(return_value=False)
-
-        await _poll_single_account(mock_db, account)
+        await _poll_single_account(account)
 
         # IMAP should never be called — account skipped
         mock_connect.assert_not_called()
@@ -152,7 +152,6 @@ async def test_poller_subtracts_already_tracked_uids():
     """Poller should skip UIDs that are already in tracked_emails."""
     account = _make_account()
     mock_conn = _make_mock_conn()
-    mock_db = AsyncMock()
 
     with (
         patch("app.workers.mail_poller.connect_imap", new_callable=AsyncMock, return_value=mock_conn),
@@ -163,8 +162,9 @@ async def test_poller_subtracts_already_tracked_uids():
         patch("app.workers.mail_poller._get_new_uids", new_callable=AsyncMock) as mock_get_new,
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=2) as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
-        patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
+        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_search.return_value = ["100", "200", "300", "400"]
         mock_get_new.return_value = ["200", "400"]
@@ -174,10 +174,8 @@ async def test_poller_subtracts_already_tracked_uids():
         }
         mock_timed.return_value.__aenter__ = AsyncMock()
         mock_timed.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_error_handler.return_value.__aenter__ = AsyncMock()
-        mock_error_handler.return_value.__aexit__ = AsyncMock(return_value=False)
 
-        await _poll_single_account(mock_db, account)
+        await _poll_single_account(account)
 
         # Only new UIDs should be inserted
         mock_insert.assert_called_once()
@@ -190,7 +188,6 @@ async def test_poller_handles_empty_mailbox():
     """Poller should handle empty mailbox gracefully."""
     account = _make_account()
     mock_conn = _make_mock_conn()
-    mock_db = AsyncMock()
 
     with (
         patch("app.workers.mail_poller.connect_imap", new_callable=AsyncMock, return_value=mock_conn),
@@ -198,16 +195,15 @@ async def test_poller_handles_empty_mailbox():
         patch("app.workers.mail_poller.search_uids", new_callable=AsyncMock) as mock_search,
         patch("app.workers.mail_poller._insert_tracked_batch") as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
-        patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
+        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_search.return_value = []
         mock_timed.return_value.__aenter__ = AsyncMock()
         mock_timed.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_error_handler.return_value.__aenter__ = AsyncMock()
-        mock_error_handler.return_value.__aexit__ = AsyncMock(return_value=False)
 
-        await _poll_single_account(mock_db, account)
+        await _poll_single_account(account)
 
         # No insertion should happen for empty mailbox
         mock_insert.assert_not_called()
@@ -228,7 +224,6 @@ async def test_normal_polling_uses_inbox_all():
     """
     account = _make_account(initial_scan_done=True)
     mock_conn = _make_mock_conn()
-    mock_db = AsyncMock()
 
     with (
         patch("app.workers.mail_poller.connect_imap", new_callable=AsyncMock, return_value=mock_conn),
@@ -238,18 +233,17 @@ async def test_normal_polling_uses_inbox_all():
         patch("app.workers.mail_poller.fetch_envelopes", new_callable=AsyncMock) as mock_envelopes,
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=1),
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
-        patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
+        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_search.return_value = ["10"]
         mock_get_new.return_value = ["10"]
         mock_envelopes.return_value = {"10": (None, None, None)}
         mock_timed.return_value.__aenter__ = AsyncMock()
         mock_timed.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_error_handler.return_value.__aenter__ = AsyncMock()
-        mock_error_handler.return_value.__aexit__ = AsyncMock(return_value=False)
 
-        await _poll_single_account(mock_db, account)
+        await _poll_single_account(account)
 
         mock_search.assert_called_once_with(mock_conn, folder="INBOX", criteria="ALL")
 
@@ -259,7 +253,6 @@ async def test_initial_scan_skipped_when_scan_existing_false():
     """When scan_existing_emails=False, initial scan should be skipped."""
     account = _make_account(initial_scan_done=False, scan_existing_emails=False)
     mock_conn = _make_mock_conn()
-    mock_db = AsyncMock()
 
     with (
         patch("app.workers.mail_poller.connect_imap", new_callable=AsyncMock, return_value=mock_conn),
@@ -269,22 +262,19 @@ async def test_initial_scan_skipped_when_scan_existing_false():
         patch("app.workers.mail_poller.fetch_envelopes", new_callable=AsyncMock) as mock_envelopes,
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=2),
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
-        patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
+        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_search.return_value = ["20", "21"]
         mock_get_new.return_value = ["20", "21"]
         mock_envelopes.return_value = {"20": (None, None, None), "21": (None, None, None)}
         mock_timed.return_value.__aenter__ = AsyncMock()
         mock_timed.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_error_handler.return_value.__aenter__ = AsyncMock()
-        mock_error_handler.return_value.__aexit__ = AsyncMock(return_value=False)
 
-        await _poll_single_account(mock_db, account)
+        await _poll_single_account(account)
 
-        # Should mark initial_scan_done immediately and poll INBOX with
-        # the regular ALL criterion (not UNSEEN — see normal-polling test).
-        assert account.initial_scan_done is True
+        # Should poll INBOX with the regular ALL criterion
         mock_search.assert_called_once_with(mock_conn, folder="INBOX", criteria="ALL")
 
 
@@ -297,7 +287,6 @@ async def test_initial_scan_iterates_all_folders():
         excluded_folders=["Trash", "Spam"],
     )
     mock_conn = _make_mock_conn()
-    mock_db = AsyncMock()
 
     with (
         patch("app.workers.mail_poller.connect_imap", new_callable=AsyncMock, return_value=mock_conn),
@@ -308,10 +297,11 @@ async def test_initial_scan_iterates_all_folders():
         patch("app.workers.mail_poller.fetch_envelopes", new_callable=AsyncMock) as mock_envelopes,
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=1) as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
-        patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
         patch("app.workers.mail_poller.get_cached_folders", new_callable=AsyncMock, return_value=None),
         patch("app.workers.mail_poller.set_cached_folders", new_callable=AsyncMock),
+        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["INBOX", "Sent", "Archive", "Trash", "Spam"]
         mock_search.return_value = ["100"]
@@ -319,10 +309,8 @@ async def test_initial_scan_iterates_all_folders():
         mock_envelopes.return_value = {"100": (None, None, None)}
         mock_timed.return_value.__aenter__ = AsyncMock()
         mock_timed.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_error_handler.return_value.__aenter__ = AsyncMock()
-        mock_error_handler.return_value.__aexit__ = AsyncMock(return_value=False)
 
-        await _poll_single_account(mock_db, account)
+        await _poll_single_account(account)
 
         # list_folders should be called once
         mock_list.assert_called_once_with(mock_conn)
@@ -343,9 +331,6 @@ async def test_initial_scan_iterates_all_folders():
         insert_folders = [c[1].get("current_folder") for c in mock_insert.call_args_list]
         assert insert_folders == ["INBOX", "Sent", "Archive"]
 
-        # initial_scan_done should be set
-        assert account.initial_scan_done is True
-
 
 @pytest.mark.asyncio
 async def test_initial_scan_excludes_all_folders():
@@ -356,7 +341,6 @@ async def test_initial_scan_excludes_all_folders():
         excluded_folders=["INBOX", "Sent"],
     )
     mock_conn = _make_mock_conn()
-    mock_db = AsyncMock()
 
     with (
         patch("app.workers.mail_poller.connect_imap", new_callable=AsyncMock, return_value=mock_conn),
@@ -364,23 +348,20 @@ async def test_initial_scan_excludes_all_folders():
         patch("app.workers.mail_poller.list_folders", new_callable=AsyncMock) as mock_list,
         patch("app.workers.mail_poller._insert_tracked_batch") as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
-        patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
         patch("app.workers.mail_poller.get_cached_folders", new_callable=AsyncMock, return_value=None),
         patch("app.workers.mail_poller.set_cached_folders", new_callable=AsyncMock),
+        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["INBOX", "Sent"]
         mock_timed.return_value.__aenter__ = AsyncMock()
         mock_timed.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_error_handler.return_value.__aenter__ = AsyncMock()
-        mock_error_handler.return_value.__aexit__ = AsyncMock(return_value=False)
 
-        await _poll_single_account(mock_db, account)
+        await _poll_single_account(account)
 
         # No folders to scan after exclusion — no inserts
         mock_insert.assert_not_called()
-        # But initial_scan_done should still be set
-        assert account.initial_scan_done is True
 
 
 @pytest.mark.asyncio
@@ -388,7 +369,6 @@ async def test_initial_scan_sets_correct_current_folder():
     """Initial scan should pass the correct folder name to _insert_tracked_batch."""
     account = _make_account(initial_scan_done=False, scan_existing_emails=True)
     mock_conn = _make_mock_conn()
-    mock_db = AsyncMock()
 
     with (
         patch("app.workers.mail_poller.connect_imap", new_callable=AsyncMock, return_value=mock_conn),
@@ -399,10 +379,11 @@ async def test_initial_scan_sets_correct_current_folder():
         patch("app.workers.mail_poller.fetch_envelopes", new_callable=AsyncMock) as mock_envelopes,
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=1) as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
-        patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
         patch("app.workers.mail_poller.get_cached_folders", new_callable=AsyncMock, return_value=None),
         patch("app.workers.mail_poller.set_cached_folders", new_callable=AsyncMock),
+        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["Archive"]
         mock_search.return_value = ["50"]
@@ -410,10 +391,8 @@ async def test_initial_scan_sets_correct_current_folder():
         mock_envelopes.return_value = {"50": (None, None, None)}
         mock_timed.return_value.__aenter__ = AsyncMock()
         mock_timed.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_error_handler.return_value.__aenter__ = AsyncMock()
-        mock_error_handler.return_value.__aexit__ = AsyncMock(return_value=False)
 
-        await _poll_single_account(mock_db, account)
+        await _poll_single_account(account)
 
         mock_insert.assert_called_once()
         assert mock_insert.call_args[1]["current_folder"] == "Archive"
@@ -524,7 +503,6 @@ async def test_initial_scan_passes_folder_to_get_new_uids():
     """Initial scan should pass the folder name to _get_new_uids."""
     account = _make_account(initial_scan_done=False, scan_existing_emails=True)
     mock_conn = _make_mock_conn()
-    mock_db = AsyncMock()
 
     with (
         patch("app.workers.mail_poller.connect_imap", new_callable=AsyncMock, return_value=mock_conn),
@@ -535,10 +513,11 @@ async def test_initial_scan_passes_folder_to_get_new_uids():
         patch("app.workers.mail_poller.fetch_envelopes", new_callable=AsyncMock) as mock_envelopes,
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=1),
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
-        patch("app.workers.mail_poller.worker_error_handler") as mock_error_handler,
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
         patch("app.workers.mail_poller.get_cached_folders", new_callable=AsyncMock, return_value=None),
         patch("app.workers.mail_poller.set_cached_folders", new_callable=AsyncMock),
+        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["INBOX", "Sent"]
         mock_search.return_value = ["77"]
@@ -546,10 +525,8 @@ async def test_initial_scan_passes_folder_to_get_new_uids():
         mock_envelopes.return_value = {"77": (None, None, None)}
         mock_timed.return_value.__aenter__ = AsyncMock()
         mock_timed.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_error_handler.return_value.__aenter__ = AsyncMock()
-        mock_error_handler.return_value.__aexit__ = AsyncMock(return_value=False)
 
-        await _poll_single_account(mock_db, account)
+        await _poll_single_account(account)
 
         # _get_new_uids should be called once per folder with the folder kwarg
         assert mock_get_new.call_count == 2
