@@ -1109,12 +1109,14 @@ class TestPluginExecutorPipelineStop:
     def _make_user_settings(self, approval_mode="auto"):
         """Create a mock UserSettings with common plugin columns."""
         settings = MagicMock()
-        # All approval columns default to 'auto' (enabled, no approval)
+        # Use the real column names from PLUGIN_TO_APPROVAL_COLUMN
         for col in [
-            "approval_email_summary", "approval_labeling",
-            "approval_smart_folder", "approval_spam_detection",
-            "approval_newsletter_detection", "approval_coupon_extraction",
-            "approval_calendar_extraction", "approval_auto_reply",
+            "approval_mode_summary", "approval_mode_labeling",
+            "approval_mode_smart_folder", "approval_mode_spam",
+            "approval_mode_newsletter", "approval_mode_coupon",
+            "approval_mode_calendar", "approval_mode_auto_reply",
+            "approval_mode_rules", "approval_mode_contacts",
+            "approval_mode_notifications",
         ]:
             setattr(settings, col, approval_mode)
         settings.language = "en"
