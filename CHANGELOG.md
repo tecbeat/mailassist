@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.3.1) - 2026-04-27
+
+### 🐛 Bug Fixes
+
+- Align CI job names and stages with pipeline definition - ([9e673c9](https://git.teccave.de/tecbeat/mailassist/commit/9e673c960af43eef9bed4fa0962f287d4f38197e))
+
 ## [0.3.0](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.3.0) - 2026-04-27
 
 ### 🐛 Bug Fixes
