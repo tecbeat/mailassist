@@ -98,8 +98,8 @@ class CSRFMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         path = request.url.path
 
-        # Skip CSRF for exempt paths and non-API paths (static files, SPA)
-        if path in _CSRF_EXEMPT_PATHS or not path.startswith("/api"):
+        # Skip CSRF for explicitly exempt paths and safe (GET/HEAD/OPTIONS) methods
+        if path in _CSRF_EXEMPT_PATHS:
             return await call_next(request)
 
         # Only enforce on state-changing methods
