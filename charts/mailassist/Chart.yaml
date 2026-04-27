@@ -4,5 +4,15 @@ description: Helm chart for MailAssist — AI-powered email management
 type: application
 version: 0.1.0         # Wird von CI/CD überschrieben
 appVersion: "v0.1.4-beta"  # Wird von CI/CD überschrieben
+home: https://hub.teccave.de/tecbeat/mailassist
+sources:
+  - https://hub.teccave.de/tecbeat/mailassist
+keywords:
+  - email
+  - ai
+  - imap
+  - fastapi
+  - self-hosted
+icon: ""
 maintainers:
   - name: Samuel Assmann

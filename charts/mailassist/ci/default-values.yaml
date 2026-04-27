@@ -9,6 +9,7 @@ secrets:
   appSecretKey: "ci-test-secret-key-min-32-characters-long"
   postgresPassword: "ci-test-postgres-password"
   valkeyPassword: "ci-test-valkey-password"
+  oidcClientSecret: "ci-test-oidc-client-secret"
 
 config:
   oidcIssuerUrl: "https://sso.example.com"

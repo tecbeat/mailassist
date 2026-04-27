@@ -19,6 +19,11 @@ spec:
         {{- include "mailassist.labels" . | nindent 8 }}
         app.kubernetes.io/component: valkey
     spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        runAsNonRoot: true
+        fsGroup: 999
       containers:
         - name: valkey
           image: "{{ .Values.valkey.image.repository }}:{{ .Values.valkey.image.tag }}"
@@ -44,21 +49,31 @@ spec:
                 secretKeyRef:
                   name: {{ include "mailassist.secretName" . }}
                   key: VALKEY_PASSWORD
+          {{- with .Values.valkey.readinessProbe }}
           readinessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - "valkey-cli -a $VALKEY_PASSWORD ping"
-            initialDelaySeconds: 5
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 5
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.valkey.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
           resources:
             {{- toYaml .Values.valkey.resources | nindent 12 }}
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
   volumeClaimTemplates:
     - metadata:
         name: data

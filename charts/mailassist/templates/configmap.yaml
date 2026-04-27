@@ -1,7 +1,7 @@
 {{- /*
 ConfigMap for non-sensitive application configuration.
 Maps all config.* values from values.yaml to UPPER_SNAKE_CASE env vars.
-Includes dynamically generated DATABASE_URL and VALKEY_URL.
+DATABASE_URL and VALKEY_URL are in the Secret (they contain passwords).
 */ -}}
 apiVersion: v1
 kind: ConfigMap
@@ -99,10 +99,6 @@ data:
   # -- Valkey Timeouts
   VALKEY_SOCKET_TIMEOUT: {{ .Values.config.valkeySocketTimeout | quote }}
   VALKEY_SOCKET_CONNECT_TIMEOUT: {{ .Values.config.valkeySocketConnectTimeout | quote }}
-
-  # -- Dynamically generated connection URLs
-  DATABASE_URL: {{ include "mailassist.databaseUrl" . | quote }}
-  VALKEY_URL: {{ include "mailassist.valkeyUrl" . | quote }}
 
   # -- Ollama (conditional)
   {{- if .Values.ollama.enabled }}

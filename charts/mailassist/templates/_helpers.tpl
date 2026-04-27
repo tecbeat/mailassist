@@ -100,7 +100,7 @@ When postgresql.enabled is false, use the external URL from externalDatabase.url
 {{- if .Values.postgresql.enabled }}
 {{- printf "postgresql+asyncpg://%s:%s@%s:5432/%s" .Values.postgresql.auth.username .Values.secrets.postgresPassword (include "mailassist.postgresql.fullname" .) .Values.postgresql.auth.database }}
 {{- else }}
-{{- .Values.externalDatabase.url }}
+{{- required "externalDatabase.url is required when postgresql.enabled is false" .Values.externalDatabase.url }}
 {{- end }}
 {{- end }}
 
@@ -113,6 +113,6 @@ When valkey.enabled is false, use the external URL from externalValkey.url.
 {{- if .Values.valkey.enabled }}
 {{- printf "redis://:%s@%s:6379/0" .Values.secrets.valkeyPassword (include "mailassist.valkey.fullname" .) }}
 {{- else }}
-{{- .Values.externalValkey.url }}
+{{- required "externalValkey.url is required when valkey.enabled is false" .Values.externalValkey.url }}
 {{- end }}
 {{- end }}

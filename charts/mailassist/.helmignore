@@ -23,3 +23,5 @@
 .vscode/
 # CI test values
 ci/
+# Integration test script (not needed in packaged chart)
+test-integration.sh

@@ -86,6 +86,16 @@ worker:
     periodSeconds: 30
     timeoutSeconds: 10
     failureThreshold: 3
+  readinessProbe:
+    exec:
+      command:
+        - sh
+        - -c
+        - "python -c \"import redis; r=redis.from_url('$VALKEY_URL'); assert r.ping()\""
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 10
+    failureThreshold: 3
   podAnnotations: {}
   podLabels: {}
   nodeSelector: {}
@@ -291,6 +301,16 @@ postgresql:
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 5
+  livenessProbe:
+    exec:
+      command:
+        - pg_isready
+        - -U
+        - mailer
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 5
 
 # Externe Datenbank (wenn postgresql.enabled: false)
 externalDatabase:
@@ -322,12 +342,21 @@ valkey:
   readinessProbe:
     exec:
       command:
-        - valkey-cli
-        - -a
-        - "$(VALKEY_PASSWORD)"
-        - ping
+        - sh
+        - -c
+        - "valkey-cli -a $VALKEY_PASSWORD ping"
     initialDelaySeconds: 5
     periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+  livenessProbe:
+    exec:
+      command:
+        - sh
+        - -c
+        - "valkey-cli -a $VALKEY_PASSWORD ping"
+    initialDelaySeconds: 30
+    periodSeconds: 30
     timeoutSeconds: 5
     failureThreshold: 5
 
@@ -341,3 +370,9 @@ externalValkey:
 ollama:
   enabled: false
   url: ""
+
+# =============================================================================
+# NetworkPolicy
+# =============================================================================
+networkPolicy:
+  enabled: false
