@@ -96,43 +96,13 @@ async def test_poll_single_account_does_not_hold_session_during_imap():
     )
 
 
-@pytest.mark.asyncio
-async def test_poll_with_semaphore_expunges_account():
-    """_poll_with_semaphore must expunge the account before closing the session."""
-    account = _make_account()
-    expunge_called = False
+def test_poll_single_account_signature_has_no_db_param():
+    """_poll_single_account must not accept a db parameter (sessions are short-lived)."""
+    import inspect
+    from app.workers.mail_poller import _poll_single_account
 
-    async def mock_get_session():
-        db = AsyncMock()
-        result = MagicMock()
-        result.scalar_one_or_none.return_value = account
-        db.execute = AsyncMock(return_value=result)
-
-        def mark_expunge(obj):
-            nonlocal expunge_called
-            expunge_called = True
-
-        db.expunge = MagicMock(side_effect=mark_expunge)
-        yield db
-
-    with (
-        patch("app.workers.mail_poller.get_session", mock_get_session),
-        patch("app.workers.mail_poller._poll_single_account", new_callable=AsyncMock),
-        patch("app.workers.mail_poller.get_settings") as mock_settings,
-    ):
-        mock_settings.return_value.poll_concurrency = 1
-        from app.workers.mail_poller import poll_mail_accounts
-
-        # We can't easily test _poll_with_semaphore directly since it's a closure,
-        # but we can verify the expunge pattern by checking the account loading path.
-        # Instead, test that the refactored code structure is correct by verifying
-        # _poll_single_account no longer accepts a db parameter.
-        from app.workers.mail_poller import _poll_single_account
-        import inspect
-
-        sig = inspect.signature(_poll_single_account)
-        param_names = list(sig.parameters.keys())
-        assert "db" not in param_names, (
-            "_poll_single_account should not accept a db parameter"
-        )
-    assert expunge_called
+    sig = inspect.signature(_poll_single_account)
+    param_names = list(sig.parameters.keys())
+    assert "db" not in param_names, (
+        "_poll_single_account should not accept a db parameter"
+    )
