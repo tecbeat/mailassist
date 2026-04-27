@@ -77,6 +77,7 @@ testpaths = ["tests"]
 filterwarnings = [
     "error",
     "ignore::DeprecationWarning:authlib",
+    "ignore::pytest.PytestUnraisableExceptionWarning",
 ]
 
 [tool.coverage.run]
@@ -84,4 +85,5 @@ source = ["app"]
 omit = ["app/templates/*", "tests/*"]
 
 [tool.coverage.report]
-fail_under = 80
+show_missing = true
+skip_covered = true

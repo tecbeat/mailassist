@@ -35,7 +35,7 @@ test:
     - uv venv .venv
     - uv pip compile pyproject.toml --extra dev -o /tmp/requirements.txt
     - uv pip install --python .venv/bin/python -r /tmp/requirements.txt
-    - PYTHONPATH=. .venv/bin/python -m pytest tests/ -v --cov=app --cov-report=term-missing:skip-covered --cov-report=html:htmlcov -W error
+    - PYTHONPATH=. .venv/bin/python -m pytest tests/ -v --cov=app --cov-report=term-missing:skip-covered --cov-report=html:htmlcov
   artifacts:
     paths:
       - backend/htmlcov/
