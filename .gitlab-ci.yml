@@ -83,8 +83,9 @@ helm_lint:
     - helm lint charts/mailassist/ -f charts/mailassist/ci/existing-secret-values.yaml
     - helm template test charts/mailassist/ --debug > /dev/null
   rules:
-    - changes:
-        - charts/**/*
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+      when: on_success
+    - when: never
 
 integration_systemtest:
   stage: systemtest

@@ -4,11 +4,10 @@ Created at hook-weight -10 (before the Job at -5) so that the ServiceAccount,
 Secret, and ConfigMap are available when the Job starts.
 Uses before-hook-creation so stale hook resources are replaced on re-install.
 
-Note: PostgreSQL and Valkey StatefulSets are NOT duplicated here as hooks.
-Regular Helm resources are installed BEFORE hooks, so the real StatefulSets
-(from statefulset-postgresql.yaml and statefulset-valkey.yaml) will already
-be applied. The migration job's init-container (wait-for-postgres) handles
-the timing by waiting for PostgreSQL to become ready.
+Note: PostgreSQL and Valkey StatefulSets/Services are also hooks (weight -8)
+so they are created before the migration Job (weight -5). The migration job's
+init-container (wait-for-postgres) handles the timing by waiting for PostgreSQL
+to become ready.
 */}}
 
 {{/* ---- ServiceAccount ---- */}}
