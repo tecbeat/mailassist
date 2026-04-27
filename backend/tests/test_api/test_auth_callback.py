@@ -202,3 +202,52 @@ async def test_callback_no_session_on_commit_failure(
         # No session was created in Valkey
         session_keys = [k for k in fake_session_client._store if k.startswith("session:")]
         assert len(session_keys) == 0
+
+
+@pytest.mark.asyncio
+async def test_callback_handles_idp_error_parameter():
+    """Callback redirects to /login with error when IdP returns error param."""
+    from app.api.auth import callback
+
+    mock_request = MagicMock()
+    response = await callback(
+        mock_request,
+        code=None,
+        state=None,
+        error="access_denied",
+        error_description="User cancelled login",
+    )
+
+    assert response.status_code == 302
+    assert "/login?error=" in response.headers["location"]
+    assert "User%20cancelled%20login" in response.headers["location"]
+
+
+@pytest.mark.asyncio
+async def test_callback_handles_idp_error_without_description():
+    """Callback uses error code as message when error_description is missing."""
+    from app.api.auth import callback
+
+    mock_request = MagicMock()
+    response = await callback(
+        mock_request,
+        code=None,
+        state=None,
+        error="access_denied",
+        error_description=None,
+    )
+
+    assert response.status_code == 302
+    assert "/login?error=access_denied" in response.headers["location"]
+
+
+@pytest.mark.asyncio
+async def test_callback_rejects_missing_code_and_state():
+    """Callback raises 400 when no error, code, or state are provided."""
+    from app.api.auth import callback
+
+    mock_request = MagicMock()
+    with pytest.raises(HTTPException) as exc_info:
+        await callback(mock_request, code=None, state=None)
+
+    assert exc_info.value.status_code == 400

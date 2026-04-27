@@ -122,8 +122,30 @@ async def login(request: Request) -> RedirectResponse:
 
 
 @router.get("/callback")
-async def callback(request: Request, code: str, state: str) -> RedirectResponse:
+async def callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    error_description: str | None = None,
+) -> RedirectResponse:
     """Handle OIDC callback after user authenticates with the identity provider."""
+    if error:
+        logger.warning(
+            "oidc_callback_error",
+            error=error,
+            error_description=error_description,
+        )
+        from urllib.parse import quote
+        error_msg = error_description or error
+        return RedirectResponse(
+            url=f"/login?error={quote(error_msg)}",
+            status_code=302,
+        )
+
+    if not code or not state:
+        raise HTTPException(status_code=400, detail="Missing code or state parameter")
+
     settings = get_settings()
     oidc_config = await _get_oidc_config()
     session_client = get_session_client()
