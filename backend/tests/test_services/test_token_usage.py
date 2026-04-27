@@ -22,7 +22,7 @@ async def test_token_ttl_not_reset_on_second_increment(
     settings = MagicMock()
     settings.ai_token_usage_ttl_days = 30
 
-    with patch("app.services.ai.get_settings", return_value=settings):
+    with patch("app.core.config.get_settings", return_value=settings):
         await _track_tokens("user-1", 100)
 
     # First call should have set the TTL
@@ -35,7 +35,7 @@ async def test_token_ttl_not_reset_on_second_increment(
     # Manually change TTL to simulate time passing
     fake_valkey._ttls[key] = 12345
 
-    with patch("app.services.ai.get_settings", return_value=settings):
+    with patch("app.core.config.get_settings", return_value=settings):
         await _track_tokens("user-1", 50)
 
     # TTL should NOT have been reset (nx=True prevents it)
