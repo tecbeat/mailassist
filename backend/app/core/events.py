@@ -182,7 +182,7 @@ class EventBus:
             correlation_id=event.correlation_id,
         )
 
-        for handler in handlers:
+        for handler in list(handlers):
             try:
                 await asyncio.wait_for(
                     handler(event),
