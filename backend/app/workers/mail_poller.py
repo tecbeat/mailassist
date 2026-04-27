@@ -34,6 +34,7 @@ from app.core.config import get_settings
 from app.models import MailAccount, TrackedEmail, TrackedEmailStatus
 from app.services.mail import (
     ImapConnection,
+    check_circuit_breaker,
     connect_imap,
     fetch_envelopes,
     get_cached_folders,
@@ -45,7 +46,6 @@ from app.services.mail import (
 )
 from app.workers.utils import (
     get_backoff_seconds,
-    worker_error_handler,
 )
 from app.workers.health import timed_operation
 from app.workers.idle_monitor import is_idle_active
@@ -126,24 +126,29 @@ async def poll_mail_accounts(ctx: dict) -> None:
 
     async def _poll_with_semaphore(acct_id: str) -> None:
         async with semaphore:
+            account = None
             async for db in get_session():
                 stmt = select(MailAccount).where(MailAccount.id == UUID(acct_id))
                 result = await db.execute(stmt)
                 account = result.scalar_one_or_none()
-                if account is None or account.is_paused:
-                    return
-                await _poll_single_account(db, account)
+                if account is not None:
+                    db.expunge(account)
+            if account is None or account.is_paused:
+                return
+            await _poll_single_account(account)
 
     await asyncio.gather(*[_poll_with_semaphore(aid) for aid in account_ids])
 
 
 async def _poll_single_account(
-    db: AsyncSession,
     account: MailAccount,
     *,
     force: bool = False,
 ) -> None:
     """Poll a single mail account and insert new UIDs into tracked_emails.
+
+    DB sessions are opened only for short DB operations so that slow IMAP
+    I/O does not hold a database connection checked out from the pool.
 
     Behaviour depends on ``initial_scan_done``:
 
@@ -158,8 +163,13 @@ async def _poll_single_account(
 
     # If scan_existing_emails is off, skip the initial scan entirely
     if is_initial_scan and not account.scan_existing_emails:
-        account.initial_scan_done = True
-        await db.flush()
+        async for db in get_session():
+            stmt = select(MailAccount).where(MailAccount.id == account.id)
+            result = await db.execute(stmt)
+            acct = result.scalar_one_or_none()
+            if acct is not None:
+                acct.initial_scan_done = True
+                await db.flush()
         logger.info("initial_scan_skipped", account_id=account_id)
         is_initial_scan = False
 
@@ -179,55 +189,76 @@ async def _poll_single_account(
         search_criterion = "ALL"
         folders = None  # determined below after IMAP connect
 
-    async with worker_error_handler(db, account.id, operation="polling"):
+    conn: ImapConnection | None = None
+    try:
         async with timed_operation("imap_poll", account_id=account_id):
             conn = await connect_imap(account)
 
-            try:
-                # Resolve folder list for initial scan
-                if folders is None:
-                    all_folders = await get_cached_folders(account.id)
-                    if all_folders is None:
-                        all_folders = await list_folders(conn)
-                        await set_cached_folders(account.id, all_folders)
-                    excluded = set(account.excluded_folders or [])
-                    folders = [f for f in all_folders if f not in excluded]
-                    if not folders:
-                        logger.debug(
-                            "no_folders_to_scan",
-                            account_id=account_id,
-                            total_folders=len(all_folders),
-                            excluded=len(excluded),
-                        )
-                        account.initial_scan_done = True
-                        await db.flush()
-                        return
-
-                total_inserted = 0
-                for folder in folders:
-                    inserted = await _poll_folder(
-                        db, conn, account, folder,
-                        search_criterion=search_criterion,
-                        is_initial_scan=is_initial_scan,
-                    )
-                    total_inserted += inserted
-
-                # Mark initial scan done after all folders are processed
-                if is_initial_scan:
-                    account.initial_scan_done = True
-                    await db.flush()
-                    logger.info(
-                        "initial_scan_complete",
+            # Resolve folder list for initial scan
+            if folders is None:
+                all_folders = await get_cached_folders(account.id)
+                if all_folders is None:
+                    all_folders = await list_folders(conn)
+                    await set_cached_folders(account.id, all_folders)
+                excluded = set(account.excluded_folders or [])
+                folders = [f for f in all_folders if f not in excluded]
+                if not folders:
+                    logger.debug(
+                        "no_folders_to_scan",
                         account_id=account_id,
-                        folders_scanned=len(folders),
-                        inserted=total_inserted,
+                        total_folders=len(all_folders),
+                        excluded=len(excluded),
                     )
-            finally:
-                await safe_imap_logout(conn.mailbox)
+                    async for db in get_session():
+                        stmt = select(MailAccount).where(MailAccount.id == account.id)
+                        result = await db.execute(stmt)
+                        acct = result.scalar_one_or_none()
+                        if acct is not None:
+                            acct.initial_scan_done = True
+                            await db.flush()
+                    return
+
+            total_inserted = 0
+            for folder in folders:
+                inserted = await _poll_folder(
+                    conn, account, folder,
+                    search_criterion=search_criterion,
+                    is_initial_scan=is_initial_scan,
+                )
+                total_inserted += inserted
+
+            # Mark initial scan done after all folders are processed
+            if is_initial_scan:
+                async for db in get_session():
+                    stmt = select(MailAccount).where(MailAccount.id == account.id)
+                    result = await db.execute(stmt)
+                    acct = result.scalar_one_or_none()
+                    if acct is not None:
+                        acct.initial_scan_done = True
+                        await db.flush()
+                logger.info(
+                    "initial_scan_complete",
+                    account_id=account_id,
+                    folders_scanned=len(folders),
+                    inserted=total_inserted,
+                )
+
+        # Success — reset error state in a short session
+        async for db in get_session():
+            await update_account_sync_status(db, account.id)
+
+    except Exception as exc:
+        logger.exception("polling_failed", account_id=account_id)
+        async for db in get_session():
+            await update_account_sync_status(db, account.id, error=str(exc))
+            await check_circuit_breaker(db, account.id)
+
+    finally:
+        if conn is not None:
+            await safe_imap_logout(conn.mailbox)
 
 
 async def _poll_folder(
-    db: AsyncSession,
     conn: ImapConnection,
     account: MailAccount,
     folder: str,
@@ -237,6 +268,7 @@ async def _poll_folder(
 ) -> int:
     """Search a single IMAP folder for new messages and insert them.
 
+    Opens short-lived DB sessions for the diff query and insert only.
     Returns the number of rows inserted.
     """
     account_id = str(account.id)
@@ -263,7 +295,10 @@ async def _poll_folder(
         return 0
 
     # Filter out UIDs already tracked (server-side, per-folder)
-    new_uids = await _get_new_uids(db, account_id, uids, folder=folder)
+    # Short DB session for the diff query
+    new_uids: list[str] = []
+    async for db in get_session():
+        new_uids = await _get_new_uids(db, account_id, uids, folder=folder)
 
     logger.info(
         "messages_found",
@@ -286,14 +321,15 @@ async def _poll_folder(
     for i in range(0, len(new_uids), batch_size):
         batch = new_uids[i : i + batch_size]
 
-        # Fetch envelope metadata for the batch
+        # Fetch envelope metadata for the batch (IMAP I/O — no DB session)
         envelopes = await fetch_envelopes(conn, batch, folder=folder)
 
-        # Bulk insert into tracked_emails with correct folder
-        inserted = await _insert_tracked_batch(
-            db, account.user_id, account.id, batch, envelopes,
-            current_folder=folder,
-        )
+        # Bulk insert into tracked_emails with correct folder (short DB session)
+        async for db in get_session():
+            inserted = await _insert_tracked_batch(
+                db, account.user_id, account.id, batch, envelopes,
+                current_folder=folder,
+            )
         total_inserted += inserted
 
     logger.info(
@@ -409,6 +445,7 @@ async def _insert_tracked_batch(
 async def poll_single_account(ctx: dict, user_id: str, account_id: str) -> None:
     """Poll a specific mail account (manual trigger from API)."""
     uid = UUID(account_id)
+    account = None
 
     async for db in get_session():
         stmt = select(MailAccount).where(
@@ -418,11 +455,12 @@ async def poll_single_account(ctx: dict, user_id: str, account_id: str) -> None:
         )
         result = await db.execute(stmt)
         account = result.scalar_one_or_none()
-        if account is None:
-            logger.warning("poll_single_account_not_found", account_id=account_id)
-            return
+        if account is not None:
+            db.expunge(account)
 
-        logger.info("manual_poll_started", account_id=account_id)
-        await _poll_single_account(db, account, force=True)
-        await update_account_sync_status(db, uid)
-        await db.commit()
+    if account is None:
+        logger.warning("poll_single_account_not_found", account_id=account_id)
+        return
+
+    logger.info("manual_poll_started", account_id=account_id)
+    await _poll_single_account(account, force=True)
