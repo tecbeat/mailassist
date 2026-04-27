@@ -22,12 +22,13 @@ RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser -m appuser
 
 WORKDIR /app
 
-# Install Python dependencies (cached layer -- only rebuilds on pyproject.toml change)
-COPY backend/pyproject.toml backend/uv.lock* ./
-RUN uv sync --frozen --no-dev --no-editable 2>/dev/null || \
-    uv pip compile pyproject.toml -o /tmp/requirements.txt && \
-    uv pip install --system -r /tmp/requirements.txt && \
-    rm -f /tmp/requirements.txt
+# Ensure venv binaries (uvicorn, alembic, arq) are on PATH
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Install Python dependencies (cached layer -- only rebuilds on pyproject.toml/uv.lock change)
+COPY backend/pyproject.toml backend/uv.lock backend/README.md ./
+RUN uv sync --frozen --no-dev --no-editable
 
 # Copy Alembic config (separate layer for migration-only changes)
 COPY backend/alembic.ini ./
