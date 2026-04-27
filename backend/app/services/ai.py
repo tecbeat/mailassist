@@ -200,7 +200,7 @@ async def check_ai_circuit_breaker(
         provider.is_paused = True
         provider.paused_reason = "circuit_breaker"
         provider.paused_at = datetime.now(UTC)
-        await db.commit()
+        await db.flush()
         logger.warning(
             "ai_circuit_breaker_tripped",
             provider_id=str(provider_id),
