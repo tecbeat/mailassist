@@ -8,6 +8,18 @@ templater:
   rules:
     - when: never
 
+render_pages:
+  stage: prepare
+  image: node:22-slim
+  needs: []
+  script:
+    - cd docs && npm ci && npx docusaurus build --out-dir ../public
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 day
+  tags:
+    - teccave
 
 backend_unittest:
   stage: unittest
