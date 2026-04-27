@@ -313,16 +313,25 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
             except ValueError:
                 pass
         elif request.method in {"POST", "PUT", "PATCH"}:
-            # No Content-Length header: enforce limit by reading the body
-            body = await request.body()
-            if len(body) > _MAX_REQUEST_BODY_BYTES:
-                return JSONResponse(
-                    status_code=413,
-                    content={
-                        "error": "Request body too large",
-                        "detail": f"Maximum allowed size is {_MAX_REQUEST_BODY_BYTES} bytes (1 MB).",
-                    },
-                )
+            # No Content-Length header: read body incrementally so we can
+            # reject oversized chunked uploads *before* buffering the
+            # entire payload in memory.
+            received = 0
+            chunks: list[bytes] = []
+            async for chunk in request.stream():
+                received += len(chunk)
+                if received > _MAX_REQUEST_BODY_BYTES:
+                    return JSONResponse(
+                        status_code=413,
+                        content={
+                            "error": "Request body too large",
+                            "detail": f"Maximum allowed size is {_MAX_REQUEST_BODY_BYTES} bytes (1 MB).",
+                        },
+                    )
+                chunks.append(chunk)
+
+            # Cache the consumed body so downstream handlers can read it.
+            request._body = b"".join(chunks)  # noqa: SLF001
 
         return await call_next(request)
 
