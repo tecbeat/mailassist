@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.3.0) - 2026-04-27
+
+### 🐛 Bug Fixes
+
+- Add venv bin to PATH so uvicorn is found in container - ([6aa2715](https://git.teccave.de/tecbeat/mailassist/commit/6aa27158b88794685691f7b0839ae256b9bfc2e4))
+- Copy backend/README.md in Dockerfile for hatchling metadata validation - ([c928868](https://git.teccave.de/tecbeat/mailassist/commit/c928868e8dcfa75a7a9129edfa10fa2611cf6a3a))
+- Add hatch wheel config to resolve package discovery - ([9e5f91a](https://git.teccave.de/tecbeat/mailassist/commit/9e5f91a86c193dd6299abb3a17d8ebe349c07b00))
+- Add backend/README.md required by hatchling build - ([d268eb3](https://git.teccave.de/tecbeat/mailassist/commit/d268eb3791e0d383d01be13792458a058cab9b2d))
+
+### ⚙️ Miscellaneous Tasks
+
+- Update git ignore - ([1d2b406](https://git.teccave.de/tecbeat/mailassist/commit/1d2b406eef6e27e445055eac5d92dab917a96110))
+- Enforce reproducible builds with uv.lock - ([b6425f7](https://git.teccave.de/tecbeat/mailassist/commit/b6425f79c4343e419caed8b62138f6dc5eef12b4))
+
 ## [0.2.2](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.2.2) - 2026-04-27
 
 ### 🐛 Bug Fixes
