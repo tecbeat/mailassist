@@ -64,10 +64,10 @@ class TestCSRFCoversNonApiRoutes:
         token = get_resp.cookies.get("csrf_token")
         assert token is not None
 
+        client.cookies.set("csrf_token", token)
         resp = client.post(
             "/auth/logout",
             headers={"X-CSRF-Token": token},
-            cookies={"csrf_token": token},
         )
         assert resp.status_code == 200
 
@@ -75,10 +75,10 @@ class TestCSRFCoversNonApiRoutes:
         get_resp = client.get("/api/test")
         token = get_resp.cookies.get("csrf_token")
 
+        client.cookies.set("csrf_token", token)
         resp = client.post(
             "/auth/logout",
             headers={"X-CSRF-Token": "wrong-token"},
-            cookies={"csrf_token": token},
         )
         assert resp.status_code == 403
         assert "mismatch" in resp.json()["detail"]
