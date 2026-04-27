@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.10](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.10) - 2026-04-27
+
+### 🐛 Bug Fixes
+
+- Only trust X-Forwarded-For from configured trusted proxies - ([9a4b130](https://git.teccave.de/tecbeat/mailassist/commit/9a4b1305b4d0800100c53734b385b3f12db7b770))
+
 ## [0.1.9](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.9) - 2026-04-27
 
 ### 🐛 Bug Fixes
@@ -65,9 +71,6 @@ All notable changes to this project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - Chdir to /app before launching uvicorn in integration_test - ([b8b2f1f](https://git.teccave.de/tecbeat/mailassist/commit/b8b2f1fbd0b26129a78744fc092a3de5a786c6cf))
-- Install only deps in test job and unblock entrypoint in integration_test - ([256263c](https://git.teccave.de/tecbeat/mailassist/commit/256263ca8d3e4cb1ae8dd73c47eddde99fc91c38))
-- Stabilise test and integration_test jobs - ([577b884](https://git.teccave.de/tecbeat/mailassist/commit/577b88428d27005dbd61e4b42f122e144a14e2fb))
-- Gate image build on pytest by moving test to prepare stage - ([cffaf85](https://git.teccave.de/tecbeat/mailassist/commit/cffaf85b69fdc836692ad22821726e8704bfffae))
 
 ## [0.1.1](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.1) - 2026-04-25
 
