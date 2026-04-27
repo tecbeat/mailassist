@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@/test/test-utils";
+import { render, screen, userEvent } from "@/test/test-utils";
 import ContactsPage from "@/pages/contacts/contacts-page";
 import { envelope } from "@/test/mocks";
 
@@ -124,5 +124,29 @@ describe("Contacts Sync Now button", () => {
 
     const btn = screen.getByRole("button", { name: /sync now/i });
     expect(btn).toBeEnabled();
+  });
+
+  it("shows error toast when sync fails", async () => {
+    const mutateFn = vi.fn();
+    setupDefaults({
+      id: "00000000-0000-0000-0000-000000000001",
+      carddav_url: "https://dav.example.com",
+      address_book: "contacts",
+      sync_interval: 60,
+      last_sync_at: null,
+      is_active: true,
+    });
+    mockSyncHook.mockReturnValue({ mutate: mutateFn, isPending: false });
+
+    render(<ContactsPage />);
+
+    const btn = screen.getByRole("button", { name: /sync now/i });
+    await userEvent.click(btn);
+
+    // Verify mutate was called and extract the onError callback
+    expect(mutateFn).toHaveBeenCalledTimes(1);
+    const callArgs = mutateFn.mock.calls[0] as [unknown, { onError: () => void }];
+    expect(callArgs[1]).toHaveProperty("onError");
+    expect(typeof callArgs[1].onError).toBe("function");
   });
 });
