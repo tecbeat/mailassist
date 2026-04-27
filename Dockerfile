@@ -23,7 +23,7 @@ RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser -m appuser
 WORKDIR /app
 
 # Install Python dependencies (cached layer -- only rebuilds on pyproject.toml/uv.lock change)
-COPY backend/pyproject.toml backend/uv.lock ./
+COPY backend/pyproject.toml backend/uv.lock backend/README.md ./
 RUN uv sync --frozen --no-dev --no-editable
 
 # Copy Alembic config (separate layer for migration-only changes)
