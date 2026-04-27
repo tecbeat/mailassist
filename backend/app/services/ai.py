@@ -527,6 +527,8 @@ async def _track_tokens(user_id: str, tokens: int) -> None:
         key = f"token_usage:{user_id}:{today}"
         await cache.incrby(key, tokens)
         ttl_seconds = get_settings().ai_token_usage_ttl_days * 86400
-        await cache.expire(key, ttl_seconds)
+        # Only set TTL when the key is new (no existing expiry) to avoid
+        # resetting the sliding window on every increment.
+        await cache.expire(key, ttl_seconds, nx=True)
     except Exception:
         logger.warning("token_tracking_failed", user_id=user_id)
