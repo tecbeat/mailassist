@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### 🐛 Bug Fixes
 
+- Use atomic Lua script for login rate limiter - ([4c0029a](https://git.teccave.de/tecbeat/mailassist/commit/4c0029af9c5d9c631ebed5f68f2600073ac28923))
 - Prevent ghost session when DB commit fails in auth callback - ([a577122](https://git.teccave.de/tecbeat/mailassist/commit/a5771222db2e8e9ad32f3faac5672af3df7611da))
 
 ## [0.1.8](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.8) - 2026-04-27
@@ -67,7 +68,6 @@ All notable changes to this project will be documented in this file.
 - Install only deps in test job and unblock entrypoint in integration_test - ([256263c](https://git.teccave.de/tecbeat/mailassist/commit/256263ca8d3e4cb1ae8dd73c47eddde99fc91c38))
 - Stabilise test and integration_test jobs - ([577b884](https://git.teccave.de/tecbeat/mailassist/commit/577b88428d27005dbd61e4b42f122e144a14e2fb))
 - Gate image build on pytest by moving test to prepare stage - ([cffaf85](https://git.teccave.de/tecbeat/mailassist/commit/cffaf85b69fdc836692ad22821726e8704bfffae))
-- Add pytest and integration-test jobs for non-main branches - ([2cd74d0](https://git.teccave.de/tecbeat/mailassist/commit/2cd74d064a30c49a68bc096bb6ec63561c39349a))
 
 ## [0.1.1](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.1) - 2026-04-25
 
