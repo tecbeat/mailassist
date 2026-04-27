@@ -243,7 +243,8 @@ export default function ContactsPage() {
               variant="primary"
               loading={syncMutation.isPending}
               onClick={handleSync}
-              disabled={syncMutation.isPending}
+              disabled={syncMutation.isPending || !configData?.is_active}
+              title={!configData?.is_active ? "Configure CardDAV first" : undefined}
             >
               Sync Now
             </AppButton>
