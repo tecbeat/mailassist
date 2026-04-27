@@ -45,6 +45,24 @@ test:
   tags:
     - teccave
 
+# ---------------------------------------------------------------------------
+# Frontend type checking — catches type errors before the Docker build.
+# ---------------------------------------------------------------------------
+frontend_typecheck:
+  stage: prepare
+  image: node:24-alpine
+  needs: []
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+      when: on_success
+    - when: never
+  script:
+    - cd frontend
+    - npm ci --ignore-scripts
+    - npx tsc --noEmit
+  tags:
+    - teccave
+
 integration_test:
   extends: .test_image
   image:
