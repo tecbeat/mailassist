@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.9](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.9) - 2026-04-27
+
+### 🐛 Bug Fixes
+
+- Prevent ghost session when DB commit fails in auth callback - ([a577122](https://git.teccave.de/tecbeat/mailassist/commit/a5771222db2e8e9ad32f3faac5672af3df7611da))
+
 ## [0.1.8](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.8) - 2026-04-27
 
 ### ⚙️ Miscellaneous Tasks
