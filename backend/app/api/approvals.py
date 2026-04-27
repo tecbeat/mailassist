@@ -201,7 +201,7 @@ async def _get_pending_or_404(db, approval_id: UUID, user_id: str) -> Approval:
 
     # Check expiry
     now = datetime.now(UTC)
-    if approval.expires_at < now:
+    if approval.expires_at is not None and approval.expires_at < now:
         approval.status = ApprovalStatus.EXPIRED
         approval.resolved_at = now
         await db.flush()
