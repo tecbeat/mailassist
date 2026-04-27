@@ -14,7 +14,6 @@ dependencies = [
     "pydantic==2.13.3",
     "pydantic-settings>=2.9.1",
     "arq>=0.26.1",
-    "authlib==1.7.0",
     "httpx==0.28.1",
     "cryptography==47.0.0",
     "litellm>=1.67.4",
@@ -76,7 +75,6 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 filterwarnings = [
     "error",
-    "ignore::DeprecationWarning:authlib.*",
     "ignore::pytest.PytestUnraisableExceptionWarning",
 ]
 

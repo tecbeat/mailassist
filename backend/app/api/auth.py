@@ -1,17 +1,19 @@
 """OIDC authentication routes.
 
-Implements Authorization Code Flow with PKCE via authlib.
+Implements Authorization Code Flow with PKCE using pure httpx.
 Sessions stored in Valkey with TTL auto-expiry.
 """
 
+import base64
+import hashlib
 import secrets
 import json
 import time
 from datetime import UTC, datetime
+from urllib.parse import urlencode
 
 import httpx
 import structlog
-from authlib.integrations.httpx_client import AsyncOAuth2Client
 from fastapi import APIRouter, HTTPException, Request
 
 from app.core.middleware import get_client_ip
@@ -32,6 +34,14 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 _OIDC_CACHE_TTL_SECONDS = 3600
 _oidc_config: dict | None = None
 _oidc_config_fetched_at: float = 0.0
+
+
+def _create_pkce_pair() -> tuple[str, str]:
+    """Generate a PKCE code_verifier and its S256 code_challenge."""
+    code_verifier = secrets.token_urlsafe(64)
+    digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
+    code_challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+    return code_verifier, code_challenge
 
 
 async def _get_oidc_config() -> dict:
@@ -63,18 +73,50 @@ async def _get_oidc_config() -> dict:
     return _oidc_config
 
 
-def _create_oauth_client() -> AsyncOAuth2Client:
-    """Create an authlib OAuth2 client configured for OIDC."""
+def _build_authorization_url(
+    authorization_endpoint: str,
+    code_challenge: str,
+    state: str,
+) -> str:
+    """Build the OIDC authorization URL with PKCE parameters."""
+    settings = get_settings()
+    if not all([settings.oidc_client_id, settings.oidc_redirect_uri]):
+        raise HTTPException(status_code=503, detail="OIDC not configured")
+    params = {
+        "response_type": "code",
+        "client_id": settings.oidc_client_id,
+        "redirect_uri": settings.oidc_redirect_uri,
+        "scope": settings.oidc_scopes,
+        "state": state,
+        "code_challenge": code_challenge,
+        "code_challenge_method": "S256",
+    }
+    return f"{authorization_endpoint}?{urlencode(params)}"
+
+
+async def _exchange_code_for_token(
+    token_endpoint: str,
+    code: str,
+    code_verifier: str,
+) -> dict:
+    """Exchange an authorization code for tokens using PKCE."""
     settings = get_settings()
     if not all([settings.oidc_client_id, settings.oidc_client_secret, settings.oidc_redirect_uri]):
         raise HTTPException(status_code=503, detail="OIDC not configured")
-    return AsyncOAuth2Client(
-        client_id=settings.oidc_client_id,
-        client_secret=settings.oidc_client_secret,
-        redirect_uri=settings.oidc_redirect_uri,
-        scope=settings.oidc_scopes,
-        code_challenge_method="S256",
-    )
+    data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": settings.oidc_redirect_uri,
+        "client_id": settings.oidc_client_id,
+        "client_secret": settings.oidc_client_secret,
+        "code_verifier": code_verifier,
+    }
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(token_endpoint, data=data, timeout=10)
+        if resp.status_code != 200:
+            logger.error("oidc_token_exchange_failed", status=resp.status_code, body=resp.text)
+            raise HTTPException(status_code=401, detail="Authentication failed")
+        return resp.json()
 
 
 @router.get("/login")
@@ -100,16 +142,11 @@ async def login(request: Request) -> RedirectResponse:
         raise HTTPException(status_code=429, detail="Too many login attempts. Try again later.")
 
     # Generate PKCE code verifier and state
-    client = _create_oauth_client()
-    code_verifier = secrets.token_urlsafe(64)
+    code_verifier, code_challenge = _create_pkce_pair()
     state = secrets.token_urlsafe(32)
 
     authorization_url = oidc_config["authorization_endpoint"]
-    url, _state = client.create_authorization_url(
-        authorization_url,
-        state=state,
-        code_verifier=code_verifier,
-    )
+    url = _build_authorization_url(authorization_url, code_challenge, state)
 
     # Store state and code_verifier in Valkey (expires in 10 minutes)
     await session_client.setex(
@@ -162,15 +199,16 @@ async def callback(
     code_verifier = state_obj["code_verifier"]
 
     # Exchange authorization code for tokens
-    client = _create_oauth_client()
     token_endpoint = oidc_config["token_endpoint"]
 
     try:
-        token = await client.fetch_token(
+        token = await _exchange_code_for_token(
             token_endpoint,
             code=code,
             code_verifier=code_verifier,
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("oidc_token_exchange_failed", error=str(e))
         raise HTTPException(status_code=401, detail="Authentication failed")
