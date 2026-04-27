@@ -16,6 +16,14 @@ import {
 vi.mock("@/services/api/dashboard/dashboard", () => ({
   useGetDashboardStatsApiDashboardStatsGet: vi.fn(),
   useGetJobQueueStatusApiDashboardJobsGet: vi.fn(),
+  useGetFailedMailsApiDashboardFailedMailsGet: vi.fn(),
+  useRetryFailedMailApiDashboardFailedMailsTrackedEmailIdRetryPost: vi.fn().mockReturnValue({ mutate: vi.fn(), isPending: false }),
+  useResolveFailedMailApiDashboardFailedMailsTrackedEmailIdResolvePost: vi.fn().mockReturnValue({ mutate: vi.fn(), isPending: false }),
+  getGetFailedMailsApiDashboardFailedMailsGetQueryKey: vi.fn().mockReturnValue(["/api/dashboard/failed-mails"]),
+  getGetDashboardStatsApiDashboardStatsGetQueryKey: vi.fn().mockReturnValue(["/api/dashboard/stats"]),
+  useGetCronJobsApiDashboardCronsGet: vi.fn(),
+  useTriggerCronJobApiDashboardCronsCronNameTriggerPost: vi.fn().mockReturnValue({ mutate: vi.fn(), isPending: false }),
+  getGetCronJobsApiDashboardCronsGetQueryKey: vi.fn().mockReturnValue(["/api/dashboard/crons"]),
 }));
 
 vi.mock("@/services/api/approvals/approvals", () => ({
@@ -43,6 +51,8 @@ vi.mock("@/services/client", () => ({
 import {
   useGetDashboardStatsApiDashboardStatsGet,
   useGetJobQueueStatusApiDashboardJobsGet,
+  useGetFailedMailsApiDashboardFailedMailsGet,
+  useGetCronJobsApiDashboardCronsGet,
 } from "@/services/api/dashboard/dashboard";
 import { useListApprovalsApiApprovalsGet } from "@/services/api/approvals/approvals";
 import { useListMailAccountsApiMailAccountsGet } from "@/services/api/mail-accounts/mail-accounts";
@@ -52,6 +62,8 @@ type MockedFn = ReturnType<typeof vi.fn>;
 
 const mockStatsHook = useGetDashboardStatsApiDashboardStatsGet as MockedFn;
 const mockJobsHook = useGetJobQueueStatusApiDashboardJobsGet as MockedFn;
+const mockFailedMailsHook = useGetFailedMailsApiDashboardFailedMailsGet as MockedFn;
+const mockCronJobsHook = useGetCronJobsApiDashboardCronsGet as MockedFn;
 const mockApprovalsHook = useListApprovalsApiApprovalsGet as MockedFn;
 const mockAccountsHook = useListMailAccountsApiMailAccountsGet as MockedFn;
 const mockProvidersHook = useListProvidersApiAiProvidersGet as MockedFn;
@@ -105,6 +117,8 @@ describe("DashboardPage", () => {
     mockApprovalsHook.mockReturnValue(querySuccess(createMockApprovalList()));
     mockAccountsHook.mockReturnValue(querySuccess([]));
     mockProvidersHook.mockReturnValue(querySuccess([]));
+    mockFailedMailsHook.mockReturnValue(querySuccess({ items: [], total: 0, page: 1, per_page: 5, pages: 0 }));
+    mockCronJobsHook.mockReturnValue(querySuccess([]));
   });
 
   it("renders the page header", () => {
@@ -123,7 +137,7 @@ describe("DashboardPage", () => {
     expect(screen.getAllByText("Pending Approvals").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("Tokens Used")).toBeInTheDocument();
     expect(screen.getByText("Unhealthy Accounts")).toBeInTheDocument();
-    expect(screen.getByText("Unhealthy AI Providers")).toBeInTheDocument();
+    expect(screen.getByText("AI Provider Issues")).toBeInTheDocument();
     expect(screen.getByText("Failed Mails")).toBeInTheDocument();
   });
 
@@ -181,16 +195,16 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Invoice #1234")).toBeInTheDocument();
   });
 
-  it("shows 'all caught up' when no pending approvals", () => {
+  it("hides approvals section when no pending approvals", () => {
     mockApprovalsHook.mockReturnValue(
       querySuccess(createMockApprovalList([])),
     );
 
     render(<DashboardPage />);
 
-    expect(
-      screen.getByText("No pending approvals. You're all caught up!"),
-    ).toBeInTheDocument();
+    // The approvals section returns null when empty, so "Pending Approvals"
+    // should only appear in the stat card, not as a section heading
+    expect(screen.getAllByText("Pending Approvals")).toHaveLength(1);
   });
 
   it("renders 'View all' link to approvals page", () => {
