@@ -45,9 +45,9 @@ integration_test:
     name: ${CI_REGISTRY_IMAGE}:${VERSION}
     entrypoint: [""]
   services:
-    - name: postgres:16-alpine
+    - name: postgres:18-alpine@sha256:54451ecb8ab38c24c3ec123f2fd501303a3a1856a5c66e98cecf2460d5e1e9d7
       alias: postgres
-    - name: valkey/valkey:8-alpine
+    - name: valkey/valkey:9-alpine@sha256:e1095c6c76ee982cb2d1e07edbb7fb2a53606630a1d810d5a47c9f646b708bf5
       alias: valkey
   variables:
     POSTGRES_USER: mailassist
