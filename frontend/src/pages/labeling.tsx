@@ -20,10 +20,6 @@ import { useToast } from "@/components/ui/toast";
 import { PageHeader } from "@/components/layout/page-header";
 import { SortToggle } from "@/components/sort-toggle";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
-import {
-  PluginSettingsDialog,
-  PluginSettingsButton,
-} from "@/components/plugin-settings-dialog";
 import { SearchableCardList } from "@/components/searchable-card-list";
 import { FilterListItem } from "@/components/filter-list-item";
 import { useSearchableList } from "@/hooks/use-searchable-list";
@@ -54,7 +50,6 @@ export default function LabelingPage() {
   const list = useSearchableList();
   const [sortOrder, setSortOrder] = useState<string>("newest");
   const [deleteTarget, setDeleteTarget] = useState<AppliedLabelResponse | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -103,11 +98,6 @@ export default function LabelingPage() {
       <PageHeader
         title="Auto-Labeling"
         description="Labels assigned to emails by the AI labeling plugin."
-        actions={
-          <div className="flex items-center gap-2">
-            <PluginSettingsButton onClick={() => setSettingsOpen(true)} />
-          </div>
-        }
       />
 
       {/* Label Summary */}
@@ -239,18 +229,6 @@ export default function LabelingPage() {
           />
         </CardContent>
       </Card>
-
-      {/* Settings Dialog */}
-      <PluginSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        title="Auto-Labeling Settings"
-        description="Configure auto-labeling behavior."
-      >
-        <div className="py-4 text-center text-sm text-muted-foreground">
-          No additional settings available for this plugin yet.
-        </div>
-      </PluginSettingsDialog>
 
       <DeleteConfirmDialog
         open={!!deleteTarget}

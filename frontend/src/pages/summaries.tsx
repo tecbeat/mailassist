@@ -19,10 +19,6 @@ import { ListSkeleton } from "@/components/list-skeleton";
 import { SearchableCardList } from "@/components/searchable-card-list";
 import { FilterListItem } from "@/components/filter-list-item";
 import { useSearchableList } from "@/hooks/use-searchable-list";
-import {
-  PluginSettingsDialog,
-  PluginSettingsButton,
-} from "@/components/plugin-settings-dialog";
 import { AppButton } from "@/components/app-button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
@@ -73,7 +69,6 @@ export default function SummariesPage() {
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<string>("newest");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<EmailSummaryResponse | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -120,11 +115,6 @@ export default function SummariesPage() {
       <PageHeader
         title="Email Summaries"
         description="AI-generated email summaries."
-        actions={
-          <div className="flex items-center gap-2">
-            <PluginSettingsButton onClick={() => setSettingsOpen(true)} />
-          </div>
-        }
       />
 
       {/* Summary List Card */}
@@ -330,18 +320,6 @@ export default function SummariesPage() {
           />
         </CardContent>
       </Card>
-
-      {/* Settings Dialog */}
-      <PluginSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        title="Email Summary Settings"
-        description="Configure email summary behavior."
-      >
-        <div className="py-4 text-center text-sm text-muted-foreground">
-          No additional settings available for this plugin yet.
-        </div>
-      </PluginSettingsDialog>
 
       <DeleteConfirmDialog
         open={!!deleteTarget}

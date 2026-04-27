@@ -28,10 +28,6 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { SearchableCardList } from "@/components/searchable-card-list";
 import { FilterListItem } from "@/components/filter-list-item";
 import { useSearchableList } from "@/hooks/use-searchable-list";
-import {
-  PluginSettingsDialog,
-  PluginSettingsButton,
-} from "@/components/plugin-settings-dialog";
 import { AppButton } from "@/components/app-button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -104,7 +100,6 @@ export default function SpamPage() {
   const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = useState<BlocklistEntryResponse | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [newType, setNewType] = useState("email");
   const [newValue, setNewValue] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
@@ -190,7 +185,6 @@ export default function SpamPage() {
         description="Manage blocked senders, domains, and patterns. Blocked entries are automatically used by the spam detection plugin."
         actions={
           <div className="flex items-center gap-2">
-            <PluginSettingsButton onClick={() => setSettingsOpen(true)} />
             <AppButton icon={<Plus />} label="Add Entry" variant="primary" onClick={() => setAddDialogOpen(true)}>
               Add Entry
             </AppButton>
@@ -358,18 +352,6 @@ export default function SpamPage() {
           />
         </CardContent>
       </Card>
-
-      {/* Settings Dialog (placeholder for future settings) */}
-      <PluginSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        title="Spam Detection Settings"
-        description="Configure spam detection behavior."
-      >
-        <div className="py-4 text-center text-sm text-muted-foreground">
-          No additional settings available for this plugin yet.
-        </div>
-      </PluginSettingsDialog>
 
       {/* Delete confirm dialog */}
       <DeleteConfirmDialog
