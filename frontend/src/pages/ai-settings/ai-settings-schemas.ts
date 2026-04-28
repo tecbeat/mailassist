@@ -12,7 +12,7 @@ export const aiProviderSchema = z.object({
   api_key: z.string().optional().or(z.literal("")),
   temperature: z.number().min(0).max(2),
   max_tokens: z.number().int().min(64).max(32768),
-  timeout_seconds: z.number().int().min(5).max(600).nullable().optional(),
+  timeout_seconds: z.number().int().min(10).max(600).nullable().optional(),
 });
 
 export type AIProviderFormValues = z.infer<typeof aiProviderSchema>;
