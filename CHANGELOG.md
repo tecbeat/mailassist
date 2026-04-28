@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.0) - 2026-04-28
+
+### ⛰️  Features
+
+- *(helm)* Add Helm chart for Kubernetes deployment - ([c3ecb2e](https://git.teccave.de/tecbeat/mailassist/commit/c3ecb2e9cfd816cbc7c4fe0b9d262792c216f315))
+- Add helm_publish CI job to push chart to package registry - ([d0e7097](https://git.teccave.de/tecbeat/mailassist/commit/d0e709747d59b36275cda1201efdf7aee00198d7))
+
+### 🐛 Bug Fixes
+
+- *(ci)* Align curl folded block scalar indentation in helm_publish - ([27a2c53](https://git.teccave.de/tecbeat/mailassist/commit/27a2c53713ce8132a11af6dda477ccb3a557b253))
+- *(ci)* Pass default-values.yaml to helm template in helm_lint job - ([630b6aa](https://git.teccave.de/tecbeat/mailassist/commit/630b6aa8c10424df9f3b9c5a1886af829e58094c))
+- *(helm)* Make DB/Valkey StatefulSets hooks to prevent migrate deadlock - ([5ac6c49](https://git.teccave.de/tecbeat/mailassist/commit/5ac6c49fe8935d9a588cae7cae75de4cc223e85f))
+- *(helm)* MR#17 Review-Fixes — alle 14 Bugfixes umgesetzt - ([a5fcb5a](https://git.teccave.de/tecbeat/mailassist/commit/a5fcb5afe3bcb3f11f60951fb302407fe0e2fbb7))
+- Use deploy stage for helm_publish (publish stage does not exist) - ([b298257](https://git.teccave.de/tecbeat/mailassist/commit/b2982570962cc01f8271722d0559ab302be97667))
+
+### ⚙️ Miscellaneous Tasks
+
+- Add default pipeline - ([e32c376](https://git.teccave.de/tecbeat/mailassist/commit/e32c376a65b28c74bf4551d5f736d777cb1ed8d3))
+
 ## [0.4.0](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.4.0) - 2026-04-28
 
 ### ⛰️  Features
