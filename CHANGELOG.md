@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.1) - 2026-04-28
+
+### 🐛 Bug Fixes
+
+- Add beta tag for images - ([9169b7b](https://git.teccave.de/tecbeat/mailassist/commit/9169b7b1bd1b754c3e5260b312a927546f75598d))
+
 ## [0.5.0](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.0) - 2026-04-28
 
 ### ⛰️  Features
