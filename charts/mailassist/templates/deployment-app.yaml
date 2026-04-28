@@ -37,7 +37,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: app
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}-beta"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
