@@ -84,8 +84,40 @@ helm_lint:
     - helm template test charts/mailassist/ -f charts/mailassist/ci/default-values.yaml --debug > /dev/null
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
-      when: on_success
+      changes:
+        - charts/**/*
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+      changes:
+        - charts/**/*
     - when: never
+
+helm_publish:
+  stage: publish
+  image:
+    name: alpine/helm:3.17.3
+    entrypoint: [""]
+  needs:
+    - job: versioner
+      artifacts: true
+    - job: helm_lint
+      artifacts: false
+  tags:
+    - teccave
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+      changes:
+        - charts/**/*
+    - when: never
+  script:
+    - helm package charts/mailassist/
+        --version "${VERSION}"
+        --app-version "${VERSION}"
+    - >-
+      curl --fail-with-body
+        --request POST
+        --user "gitlab-ci-token:${CI_JOB_TOKEN}"
+        --form "chart=@mailassist-${VERSION}.tgz"
+        "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/api/stable/charts"
 
 integration_systemtest:
   stage: systemtest
