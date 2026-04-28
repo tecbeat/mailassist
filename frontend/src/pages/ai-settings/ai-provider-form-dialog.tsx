@@ -123,7 +123,7 @@ export function AIProviderFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-4">
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="provider_name">
@@ -277,7 +277,7 @@ export function AIProviderFormDialog({
             <Input
               id="timeout_seconds"
               type="number"
-              min="5"
+              min="10"
               max="600"
               placeholder="120"
               {...form.register("timeout_seconds", {
