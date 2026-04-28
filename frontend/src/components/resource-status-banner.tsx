@@ -5,10 +5,13 @@
  * action buttons (Unpause / Reset & Reactivate / Clear errors).
  */
 
+import { useState } from "react";
 import {
   PauseCircle,
   ShieldAlert,
   RotateCcw,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { AppButton } from "@/components/app-button";
 import { formatRelativeTime } from "@/lib/utils";
@@ -25,6 +28,41 @@ export interface ResourceStatusProps {
   lastErrorAt?: string | null;
   onResetHealth?: () => void;
   resetHealthLoading?: boolean;
+}
+
+/** Max characters shown before truncation. */
+const ERROR_TRUNCATE_LENGTH = 200;
+
+function CollapsibleError({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const needsTruncation = text.length > ERROR_TRUNCATE_LENGTH;
+
+  return (
+    <div className="space-y-1">
+      <div className="rounded-md bg-muted px-3 py-2 font-mono whitespace-pre-wrap break-all text-foreground/70">
+        {needsTruncation && !expanded
+          ? `${text.slice(0, ERROR_TRUNCATE_LENGTH)}…`
+          : text}
+      </div>
+      {needsTruncation && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {expanded ? (
+            <>
+              <ChevronUp className="h-3 w-3" /> Show less
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-3 w-3" /> Show more
+            </>
+          )}
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function ResourceStatusBanner({
@@ -67,11 +105,7 @@ export function ResourceStatusBanner({
               </AppButton>
             )}
           </div>
-          {lastError && (
-            <div className="rounded-md bg-muted px-3 py-2 font-mono whitespace-pre-wrap break-all text-foreground/70">
-              {lastError}
-            </div>
-          )}
+          {lastError && <CollapsibleError text={lastError} />}
         </div>
       )}
 
@@ -101,11 +135,7 @@ export function ResourceStatusBanner({
               )}
             </div>
           </div>
-          {lastError && (
-            <div className="rounded-md bg-muted px-3 py-2 font-mono whitespace-pre-wrap break-all text-foreground/70">
-              {lastError}
-            </div>
-          )}
+          {lastError && <CollapsibleError text={lastError} />}
         </div>
       )}
     </div>
