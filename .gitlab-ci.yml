@@ -3,6 +3,9 @@ include:
   - project: 'maintenance/teccave_pipeline'
     ref: main
     file: '/.pipeline_defs/.build_image.yml'
+  - project: 'maintenance/teccave_pipeline'
+    ref: main
+    file: '/.pipeline_defs/.build_helm.yml'
 
 templater:
   rules:
@@ -87,7 +90,7 @@ helm_lint:
       when: on_success
     - when: never
 
-helm_publish:
+.helm_publish:
   stage: deploy
   image:
     name: alpine/helm:3.17.3
