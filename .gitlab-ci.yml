@@ -81,7 +81,7 @@ helm_lint:
     - helm lint charts/mailassist/ -f charts/mailassist/ci/full-values.yaml
     - helm lint charts/mailassist/ -f charts/mailassist/ci/external-db-values.yaml
     - helm lint charts/mailassist/ -f charts/mailassist/ci/existing-secret-values.yaml
-    - helm template test charts/mailassist/ --debug > /dev/null
+    - helm template test charts/mailassist/ -f charts/mailassist/ci/default-values.yaml --debug > /dev/null
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
       when: on_success
