@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { useAnimatedNumber } from "@/hooks/use-animated-number";
 import {
   ShieldCheck,
   Coins,
@@ -38,6 +39,15 @@ import { DashboardFailedMailsSection } from "./dashboard-failed-mails-section";
 import { DashboardJobsSection } from "./dashboard-jobs-section";
 
 // ---------------------------------------------------------------------------
+// Animated stat value
+// ---------------------------------------------------------------------------
+
+function AnimatedStat({ value }: { value: number }) {
+  const animated = useAnimatedNumber(value);
+  return <>{formatNumber(animated)}</>;
+}
+
+// ---------------------------------------------------------------------------
 // Dashboard Page
 // ---------------------------------------------------------------------------
 
@@ -46,7 +56,9 @@ export default function DashboardPage() {
   const [period, setPeriod] = useState<TimePeriod>("24h");
 
   // --- Data fetching ---
-  const statsQuery = useGetDashboardStatsApiDashboardStatsGet();
+  const statsQuery = useGetDashboardStatsApiDashboardStatsGet({
+    query: { refetchInterval: 30_000 },
+  });
   const stats = unwrapResponse<DashboardStatsResponse>(statsQuery.data);
 
   const accountsQuery = useListMailAccountsApiMailAccountsGet();
@@ -123,7 +135,7 @@ export default function DashboardPage() {
                 {card.icon}
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatNumber(resolveValue(card))}</div>
+                <div className="text-2xl font-bold"><AnimatedStat value={resolveValue(card)} /></div>
                 {card.subtitle && (
                   <p className="text-xs text-muted-foreground">{card.subtitle}</p>
                 )}
