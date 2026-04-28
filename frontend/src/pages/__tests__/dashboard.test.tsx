@@ -213,4 +213,15 @@ describe("DashboardPage", () => {
     const viewAllLink = screen.getByText("View all");
     expect(viewAllLink.closest("a")).toHaveAttribute("href", "/approvals");
   });
+
+  it("configures stats query with 30s refetchInterval", () => {
+    render(<DashboardPage />);
+
+    // The hook is called with refetchInterval option
+    expect(mockStatsHook).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: expect.objectContaining({ refetchInterval: 30_000 }),
+      }),
+    );
+  });
 });
