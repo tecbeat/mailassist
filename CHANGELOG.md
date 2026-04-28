@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.2](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.2) - 2026-04-28
+
+### 🐛 Bug Fixes
+
+- Disable HTML5 validation on AI provider form and align timeout min with backend - ([b2961f1](https://git.teccave.de/tecbeat/mailassist/commit/b2961f1b34914d476a26e7785255df096aceeb8f))
+
 ## [0.5.1](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.1) - 2026-04-28
 
 ### 🐛 Bug Fixes
