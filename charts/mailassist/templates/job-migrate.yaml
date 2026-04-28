@@ -49,7 +49,7 @@ spec:
       {{- end }}
       containers:
         - name: migrate
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}-beta"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: ["migrate"]
           envFrom:
