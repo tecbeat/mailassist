@@ -92,7 +92,7 @@ helm_lint:
     - when: never
 
 helm_publish:
-  stage: publish
+  stage: deploy
   image:
     name: alpine/helm:3.17.3
     entrypoint: [""]
