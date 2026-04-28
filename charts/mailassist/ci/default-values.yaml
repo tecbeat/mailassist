@@ -1,0 +1,18 @@
+# =============================================================================
+# CI Test Values — Minimal (Default)
+# =============================================================================
+# Provides only the required values that are empty by default.
+# Used by `helm lint` in CI to validate the chart without warnings.
+# =============================================================================
+
+secrets:
+  appSecretKey: "ci-test-secret-key-min-32-characters-long"
+  postgresPassword: "ci-test-postgres-password"
+  valkeyPassword: "ci-test-valkey-password"
+  oidcClientSecret: "ci-test-oidc-client-secret"
+
+config:
+  oidcIssuerUrl: "https://sso.example.com"
+  oidcClientId: "mailassist-ci"
+  oidcRedirectUri: "https://mail.example.com/auth/callback"
+  corsAllowedOrigins: "https://mail.example.com"

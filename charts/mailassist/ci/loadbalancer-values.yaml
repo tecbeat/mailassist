@@ -1,0 +1,26 @@
+# =============================================================================
+# CI Test Values — LoadBalancer Service
+# =============================================================================
+# Tests LoadBalancer service type with all related options.
+# Used by `helm lint` to validate conditional template rendering.
+# =============================================================================
+
+secrets:
+  appSecretKey: "ci-test-secret-key-min-32-characters-long"
+  postgresPassword: "ci-test-postgres-password"
+  valkeyPassword: "ci-test-valkey-password"
+  oidcClientSecret: "ci-test-oidc-client-secret"
+
+config:
+  oidcIssuerUrl: "https://sso.example.com"
+  oidcClientId: "mailassist-ci"
+  oidcRedirectUri: "https://mail.example.com/auth/callback"
+  corsAllowedOrigins: "https://mail.example.com"
+
+service:
+  type: LoadBalancer
+  loadBalancerIP: "192.168.1.100"
+  externalTrafficPolicy: "Local"
+  loadBalancerSourceRanges:
+    - "10.0.0.0/8"
+    - "192.168.1.0/24"

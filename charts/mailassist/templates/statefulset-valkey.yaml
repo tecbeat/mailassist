@@ -1,0 +1,92 @@
+{{- if .Values.valkey.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "mailassist.valkey.fullname" . }}
+  labels:
+    {{- include "mailassist.labels" . | nindent 4 }}
+    app.kubernetes.io/component: valkey
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-8"
+spec:
+  replicas: 1
+  serviceName: {{ include "mailassist.valkey.fullname" . }}
+  selector:
+    matchLabels:
+      {{- include "mailassist.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: valkey
+  template:
+    metadata:
+      labels:
+        {{- include "mailassist.labels" . | nindent 8 }}
+        app.kubernetes.io/component: valkey
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        runAsNonRoot: true
+        fsGroup: 999
+      containers:
+        - name: valkey
+          image: "{{ .Values.valkey.image.repository }}:{{ .Values.valkey.image.tag }}"
+          imagePullPolicy: {{ .Values.valkey.image.pullPolicy }}
+          command:
+            - valkey-server
+          args:
+            - "--requirepass"
+            - "$(VALKEY_PASSWORD)"
+            - "--maxmemory"
+            - {{ .Values.valkey.config.maxmemory | quote }}
+            - "--maxmemory-policy"
+            - {{ .Values.valkey.config.maxmemoryPolicy | quote }}
+            - "--appendonly"
+            - {{ .Values.valkey.config.appendonly | quote }}
+          ports:
+            - name: valkey
+              containerPort: 6379
+              protocol: TCP
+          env:
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mailassist.secretName" . }}
+                  key: VALKEY_PASSWORD
+          {{- with .Values.valkey.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.valkey.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            {{- toYaml .Values.valkey.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- if .Values.valkey.persistence.storageClass }}
+        storageClassName: {{ .Values.valkey.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.valkey.persistence.size }}
+{{- end }}

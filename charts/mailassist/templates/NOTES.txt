@@ -1,0 +1,21 @@
+MailAssist has been deployed successfully!
+
+  Release:   {{ .Release.Name }}
+  Namespace: {{ .Release.Namespace }}
+
+{{- if and .Values.ingress .Values.ingress.enabled }}
+  Application URL(s):
+  {{- range .Values.ingress.hosts }}
+    {{- $host := .host }}
+    {{- range .paths }}
+    http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host }}{{ .path }}
+    {{- end }}
+  {{- end }}
+{{- else }}
+  Get the application URL by running:
+
+    export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "mailassist.name" . }},app.kubernetes.io/instance={{ .Release.Name }},app.kubernetes.io/component=app" -o jsonpath="{.items[0].metadata.name}")
+    kubectl port-forward --namespace {{ .Release.Namespace }} $POD_NAME 8000:8000
+
+  Then visit http://localhost:8000
+{{- end }}

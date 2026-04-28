@@ -94,6 +94,81 @@ npx orval                          # regenerate API client from openapi.json
 npx vitest                         # tests
 ```
 
+### Kubernetes Deployment (Helm)
+
+A Helm chart is available in `charts/mailassist/` for deploying mailassist on Kubernetes. It provisions the full stack: App, Worker, PostgreSQL, Valkey, migration jobs, and optional Ingress.
+
+#### Install from local chart
+
+```bash
+helm install mailer charts/mailassist/ \
+  -f my-values.yaml \
+  -n mailer --create-namespace
+```
+
+#### What the chart includes
+
+| Resource | Description |
+|----------|-------------|
+| App Deployment | FastAPI web server (configurable replicas, HPA optional) |
+| Worker Deployment | ARQ background worker |
+| Migration Job | Helm pre-install/pre-upgrade hook running `alembic upgrade head` |
+| PostgreSQL StatefulSet | Optional internal database (disable for external DB) |
+| Valkey StatefulSet | Optional internal cache/broker (disable for external Valkey) |
+| Ingress | Optional, supports nginx/traefik with TLS |
+| Secret + ConfigMap | All env vars from `.env.example` mapped to Helm values |
+| ServiceAccount | Optional, with annotation support |
+
+#### Key values
+
+All configuration is in `charts/mailassist/values.yaml`. Notable settings:
+
+```yaml
+# Use an external database instead of the built-in PostgreSQL
+postgresql:
+  enabled: false
+externalDatabase:
+  url: "postgresql+asyncpg://user:pass@db-host:5432/mailer"
+
+# Use an external Valkey/Redis instead of the built-in StatefulSet
+valkey:
+  enabled: false
+externalValkey:
+  url: "redis://:password@valkey-host:6379/0"
+
+# Reference an existing Kubernetes Secret instead of creating one
+secrets:
+  existingSecret: "my-existing-secret"
+
+# Enable Ingress
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: mailer.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: mailer-tls
+      hosts:
+        - mailer.example.com
+```
+
+#### Validate locally
+
+```bash
+# Lint the chart
+helm lint charts/mailassist/
+helm lint charts/mailassist/ -f charts/mailassist/ci/default-values.yaml
+
+# Render templates (dry-run)
+helm template test charts/mailassist/ --debug
+
+# Integration test (requires Docker Desktop K8s)
+./charts/mailassist/test-integration.sh
+```
+
 ### Stack
 
 **Backend** — Python 3.13, FastAPI, SQLAlchemy 2 (async) + Alembic, ARQ on Valkey, litellm for unified LLM access, imap-tools, Authlib, Pydantic 2, structlog, `cryptography` for envelope encryption.

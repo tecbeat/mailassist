@@ -30,3 +30,7 @@ frontend/tsconfig.tsbuildinfo
 scripts/
 .opencode/
 docker-compose.dev.yml
+.kiro/
+
+# Helm — lokale Werte-Dateien (enthalten ggf. Secrets)
+charts/mailassist/ci/local-values.yaml
