@@ -2,13 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.3.1](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.3.1) - 2026-04-28
+## [0.4.0](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.4.0) - 2026-04-28
+
+### ⛰️  Features
+
+- Real-time dashboard stats with auto-refresh and animated counters - ([ff60229](https://git.teccave.de/tecbeat/mailassist/commit/ff60229ae6ec9ce4bf47cf8b0b7a18bc299d0033))
 
 ### 📚 Documentation
 
 - Set up Docusaurus user documentation site - ([626f364](https://git.teccave.de/tecbeat/mailassist/commit/626f3643039fccc617395c97a3ed7b4cafd74277))
 
-## [0.3.1](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.3.1) - 2026-04-28
+## [0.3.1](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.3.1) - 2026-04-27
 
 ### 🐛 Bug Fixes
 
