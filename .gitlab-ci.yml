@@ -84,11 +84,7 @@ helm_lint:
     - helm template test charts/mailassist/ -f charts/mailassist/ci/default-values.yaml --debug > /dev/null
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
-      changes:
-        - charts/**/*
-    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
-      changes:
-        - charts/**/*
+      when: on_success
     - when: never
 
 helm_publish:
@@ -104,9 +100,8 @@ helm_publish:
   tags:
     - teccave
   rules:
-    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
-      changes:
-        - charts/**/*
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+      when: on_success
     - when: never
   script:
     - helm package charts/mailassist/
