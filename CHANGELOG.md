@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.6](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.6) - 2026-04-29
+
+### 🐛 Bug Fixes
+
+- *(deps)* Pin dependency @types/react to 19.2.14 - ([d7f74a2](https://git.teccave.de/tecbeat/mailassist/commit/d7f74a24f4934ef42f2a2284c55409997614ceae))
+
 ## [0.5.5](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.5) - 2026-04-29
 
 ### 🐛 Bug Fixes
