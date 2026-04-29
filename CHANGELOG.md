@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.8](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.8) - 2026-04-29
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Update gitlab-ci - ([d567ce7](https://git.teccave.de/tecbeat/mailassist/commit/d567ce714ae60253328dc13b2a4983b120a00752))
+
 ## [0.5.7](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.7) - 2026-04-29
 
 ### 🐛 Bug Fixes
