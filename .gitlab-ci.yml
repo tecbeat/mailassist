@@ -9,7 +9,7 @@ include:
 
 versioner:
   script:
-    - versioner --suffix '-beta'
+    - versioner --suffix beta
     - more version.env
 
 templater:
