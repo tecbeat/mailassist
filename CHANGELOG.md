@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.9](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.9) - 2026-04-29
+
+### 🐛 Bug Fixes
+
+- *(deps)* Pin dependency typescript to 6.0.3 - ([25a6dd2](https://git.teccave.de/tecbeat/mailassist/commit/25a6dd20c8d180de8eff68c22dd41277fc709e18))
+
 ## [0.5.8](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.8) - 2026-04-29
 
 ### ⚙️ Miscellaneous Tasks
