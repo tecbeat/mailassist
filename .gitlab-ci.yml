@@ -13,7 +13,7 @@ templater:
 
 render_pages:
   stage: prepare
-  image: node:22-slim
+  image: node:22-slim@sha256:d415caac2f1f77b98caaf9415c5f807e14bc8d7bdea62561ea2fef4fbd08a73c
   needs: []
   script:
     - cd docs && npm ci && npx docusaurus build --out-dir ../public
@@ -56,7 +56,7 @@ backend_unittest:
 
 frontend_unittest:
   stage: unittest
-  image: node:24-alpine
+  image: node:24-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f
   needs: []
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
