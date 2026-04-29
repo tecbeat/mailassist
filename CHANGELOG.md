@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.7](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.7) - 2026-04-29
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update postgres docker tag to v18 - ([abe16aa](https://git.teccave.de/tecbeat/mailassist/commit/abe16aab811816ded4b8dff027a5439b90dfa1df))
+
 ## [0.5.6](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.6) - 2026-04-29
 
 ### 🐛 Bug Fixes
