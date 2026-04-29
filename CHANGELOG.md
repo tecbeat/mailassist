@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.10](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.10) - 2026-04-29
+
+### 🐛 Bug Fixes
+
+- Update PostgreSQL StatefulSet volume mount for PG 18 data directory layout - ([1290e5b](https://git.teccave.de/tecbeat/mailassist/commit/1290e5b22eaf86918ca725bda1ae6bba386be48e))
+
 ## [0.5.9](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.9) - 2026-04-29
 
 ### 🐛 Bug Fixes
