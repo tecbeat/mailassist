@@ -13,7 +13,7 @@ templater:
 
 render_pages:
   stage: prepare
-  image: node:22-slim@sha256:d415caac2f1f77b98caaf9415c5f807e14bc8d7bdea62561ea2fef4fbd08a73c
+  image: node:24-slim@sha256:03eae3ef7e88a9de535496fb488d67e02b9d96a063a8967bae657744ecd513f2
   needs: []
   script:
     - cd docs && npm ci && npx docusaurus build --out-dir ../public
@@ -73,7 +73,7 @@ frontend_unittest:
 helm_lint:
   stage: lint
   image:
-    name: alpine/helm:3.20.2@sha256:9f0e9c604ed9b194548a2cff1e9b620ca2e21709fabb5be75a85a2e17ce16b63
+    name: alpine/helm:4.1.4@sha256:4b0bdd2cf18ff6bca12aba0b2c5671384dab5035c19c57f0c58b854a0baf65be
     entrypoint: [""]
   needs: []
   tags:
@@ -93,7 +93,7 @@ helm_lint:
 .helm_publish:
   stage: deploy
   image:
-    name: alpine/helm:3.20.2@sha256:9f0e9c604ed9b194548a2cff1e9b620ca2e21709fabb5be75a85a2e17ce16b63
+    name: alpine/helm:4.1.4@sha256:4b0bdd2cf18ff6bca12aba0b2c5671384dab5035c19c57f0c58b854a0baf65be
     entrypoint: [""]
   needs:
     - job: versioner
