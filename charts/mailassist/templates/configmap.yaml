@@ -2,6 +2,10 @@
 ConfigMap for non-sensitive application configuration.
 Maps all config.* values from values.yaml to UPPER_SNAKE_CASE env vars.
 DATABASE_URL and VALKEY_URL are in the Secret (they contain passwords).
+
+This is also a Helm hook (weight -10) so it exists before the migration Job
+(weight -5). hook-delete-policy: before-hook-creation ensures stale copies
+are replaced on re-install/upgrade.
 */ -}}
 apiVersion: v1
 kind: ConfigMap
@@ -9,6 +13,10 @@ metadata:
   name: {{ include "mailassist.fullname" . }}-config
   labels:
     {{- include "mailassist.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation
 data:
   # -- Application
   APP_NAME: {{ .Values.config.appName | quote }}
