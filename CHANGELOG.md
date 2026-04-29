@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.5](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.5) - 2026-04-29
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update ghcr.io/astral-sh/uv:latest docker digest to 3b7b60a - ([2e4e4e2](https://git.teccave.de/tecbeat/mailassist/commit/2e4e4e2974669c6f5623f10dd2bec8677401d542))
+
 ## [0.5.4](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.4) - 2026-04-29
 
 ### 🐛 Bug Fixes
