@@ -4,11 +4,10 @@ Created at hook-weight -10 (before the Job at -5) so that the ServiceAccount
 and Secret are available when the Job starts.
 Uses before-hook-creation so stale hook resources are replaced on re-install.
 
-Note: The ConfigMap is a regular release resource (not a hook) — it is created
-by configmap.yaml. PostgreSQL and Valkey StatefulSets/Services are also hooks
-(weight -8) so they are created before the migration Job (weight -5). The
-migration job's init-container (wait-for-postgres) handles the timing by
-waiting for PostgreSQL to become ready.
+Note: The ConfigMap (configmap.yaml) is also a hook at weight -10.
+PostgreSQL and Valkey StatefulSets/Services are hooks at weight -8.
+The migration job's init-container (wait-for-postgres) handles the timing
+by waiting for PostgreSQL to become ready.
 */}}
 
 {{/* ---- ServiceAccount ---- */}}
