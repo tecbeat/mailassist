@@ -7,6 +7,11 @@ include:
     ref: main
     file: '/.pipeline_defs/.build_helm.yml'
 
+versioner:
+  script:
+    - versioner --suffix beta
+    - more version.env
+
 templater:
   rules:
     - when: never
