@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.12](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.12) - 2026-04-29
+
+### 🐛 Bug Fixes
+
+- Make ConfigMap a Helm hook so migrate job can reference it - ([9d1da9f](https://git.teccave.de/tecbeat/mailassist/commit/9d1da9f04ebdf21efd37e1b5bd70d2d8318403ec))
+
 ## [0.5.11](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.11) - 2026-04-29
 
 ### 🐛 Bug Fixes
