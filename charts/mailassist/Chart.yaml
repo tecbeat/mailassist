@@ -2,8 +2,8 @@ apiVersion: v2
 name: mailassist
 description: Helm chart for MailAssist — AI-powered email management
 type: application
-version: 0.1.0         # Wird von CI/CD überschrieben
-appVersion: "v0.1.4-beta"  # Wird von CI/CD überschrieben
+version: 0.1.0 # Wird von CI/CD überschrieben
+appVersion: "v0.1.4" # Wird von CI/CD überschrieben
 home: https://hub.teccave.de/tecbeat/mailassist
 sources:
   - https://hub.teccave.de/tecbeat/mailassist
