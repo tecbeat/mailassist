@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.13](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.13) - 2026-04-29
+
+### 🐛 Bug Fixes
+
+- Truncate long error messages + batch bulk inserts under PG param limit - ([5e644e1](https://git.teccave.de/tecbeat/mailassist/commit/5e644e1682adcddb1d48d38f3d5d881072845881))
+
 ## [0.5.12](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.12) - 2026-04-29
 
 ### 🐛 Bug Fixes
