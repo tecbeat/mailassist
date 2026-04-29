@@ -28,6 +28,7 @@ from app.schemas.mail_account import (
     MailAccountResponse,
     MailAccountUpdate,
     PauseUpdate,
+    PollJobStatusResponse,
 )
 
 logger = structlog.get_logger()
@@ -416,6 +417,39 @@ async def poll_account_now(
 
     logger.info("poll_triggered_manually", account_id=str(account_id), user_id=user_id)
     return JobEnqueuedResponse(status="queued", job_id=job.job_id if job else None)
+
+
+@router.get("/{account_id}/poll-status")
+async def get_poll_job_status(
+    account_id: UUID,
+    job_id: str,
+    db: DbSession,
+    user_id: CurrentUserId,
+) -> PollJobStatusResponse:
+    """Check the status of a poll job in the ARQ task queue."""
+    await get_or_404(db, MailAccount, account_id, user_id, "Mail account not found")
+
+    from arq.jobs import Job, JobStatus
+
+    from app.core.redis import get_arq_client
+
+    arq = get_arq_client()
+    job = Job(job_id=job_id, redis=arq)
+    status = await job.status()
+
+    if status == JobStatus.not_found:
+        return PollJobStatusResponse(status="not_found")
+    if status in (JobStatus.queued, JobStatus.deferred):
+        return PollJobStatusResponse(status="queued")
+    if status == JobStatus.in_progress:
+        return PollJobStatusResponse(status="in_progress")
+
+    # complete — check if it succeeded or failed
+    info = await job.result_info()
+    if info and not info.success:
+        error = str(info.result) if info.result else None
+        return PollJobStatusResponse(status="failed", error=error)
+    return PollJobStatusResponse(status="complete")
 
 
 @router.delete("/{account_id}/folders/{folder_path:path}")

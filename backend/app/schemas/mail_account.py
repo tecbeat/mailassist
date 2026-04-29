@@ -174,6 +174,13 @@ class PaginatedResponse(BaseModel):
     pages: int
 
 
+class PollJobStatusResponse(BaseModel):
+    """Status of a poll job queried from the ARQ task queue."""
+
+    status: Literal["queued", "in_progress", "complete", "failed", "not_found"]
+    error: str | None = None
+
+
 class PauseUpdate(BaseModel):
     """Request schema for updating the pause state."""
 
