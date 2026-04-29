@@ -4,10 +4,10 @@
 
 **The self-hosted AI email assistant.**
 
-[![Pipeline](https://img.shields.io/badge/build-passing-brightgreen)](https://git.teccave.de/tecbeat/mailassist/-/pipelines)
+[![Pipeline Status](https://git.teccave.de/tecbeat/mailassist/badges/main/pipeline.svg)](https://git.teccave.de/tecbeat/mailassist/-/commits/main)
+[![Latest Release](https://git.teccave.de/tecbeat/mailassist/-/badges/release.svg)](https://git.teccave.de/tecbeat/mailassist/-/releases)
+[![Coverage Report](https://git.teccave.de/tecbeat/mailassist/badges/main/coverage.svg)](https://git.teccave.de/tecbeat/mailassist/-/commits/main)
 [![License](https://img.shields.io/badge/license-GPLv3-blue)](./LICENSE)
-[![Python](https://img.shields.io/badge/python-3.13-blue)](https://www.python.org/)
-[![React](https://img.shields.io/badge/react-19-61dafb)](https://react.dev/)
 
 </div>
 
