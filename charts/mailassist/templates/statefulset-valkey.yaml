@@ -27,6 +27,8 @@ spec:
         runAsGroup: 999
         runAsNonRoot: true
         fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: valkey
           image: "{{ .Values.valkey.image.repository }}:{{ .Values.valkey.image.tag }}"

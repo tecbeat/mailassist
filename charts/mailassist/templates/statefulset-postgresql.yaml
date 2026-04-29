@@ -27,20 +27,8 @@ spec:
         runAsGroup: 70
         runAsNonRoot: true
         fsGroup: 70
-      initContainers:
-        - name: init-permissions
-          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
-          command:
-            - sh
-            - -c
-            - |
-              chown -R 70:70 /var/lib/postgresql
-          securityContext:
-            runAsUser: 0
-            runAsNonRoot: false
-          volumeMounts:
-            - name: data
-              mountPath: /var/lib/postgresql
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: postgresql
           image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"

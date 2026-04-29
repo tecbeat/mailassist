@@ -28,6 +28,8 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
         runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       {{- if .Values.postgresql.enabled }}
       initContainers:
         - name: wait-for-postgres
