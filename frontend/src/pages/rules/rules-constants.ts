@@ -57,16 +57,44 @@ export function isConditionGroup(rule: ConditionRule | ConditionGroup): rule is 
   return "operator" in rule && "rules" in rule;
 }
 
+/**
+ * Client-only key for stable React rendering.
+ * Stripped before sending to the API; lives as an extra property
+ * that the generated types do not declare.
+ */
+export const KEY_PROP = "_key" as const;
+
+export function assignKey<T extends object>(obj: T): T & { [KEY_PROP]: string } {
+  return { ...obj, [KEY_PROP]: crypto.randomUUID() };
+}
+
+const stableKeys = new WeakMap<object, string>();
+
+export function getKey(obj: object): string {
+  const rec = obj as Record<string, unknown>;
+  const existing = rec[KEY_PROP] as string | undefined;
+  if (existing) return existing;
+  let key = stableKeys.get(obj);
+  if (!key) {
+    key = crypto.randomUUID();
+    stableKeys.set(obj, key);
+  }
+  return key;
+}
+
 export function createEmptyConditionRule(): ConditionRule {
-  return { field: "from", op: FieldOperator.contains, value: "" };
+  return assignKey({ field: "from", op: FieldOperator.contains, value: "" });
 }
 
 export function createEmptyConditionGroup(): ConditionGroup {
-  return { operator: "AND" as ConditionGroup["operator"], rules: [createEmptyConditionRule()] };
+  return assignKey({
+    operator: "AND" as ConditionGroup["operator"],
+    rules: [createEmptyConditionRule()],
+  });
 }
 
 export function createEmptyAction(): RuleAction {
-  return { type: ActionType.label, value: "", target: null };
+  return assignKey({ type: ActionType.label, value: "", target: null });
 }
 
 export function summarizeConditions(group: ConditionGroup | Record<string, unknown>, depth = 0): string {

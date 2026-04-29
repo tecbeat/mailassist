@@ -22,6 +22,7 @@ import {
   isConditionGroup,
   createEmptyConditionRule,
   createEmptyConditionGroup,
+  getKey,
 } from "./rules-constants";
 
 // ---------------------------------------------------------------------------
@@ -153,7 +154,7 @@ export function ConditionBuilder({ group, onChange, depth = 0 }: ConditionBuilde
       {group.rules.map((rule, index) => {
         const isGroup = isConditionGroup(rule as ConditionRule | ConditionGroup);
         return (
-          <div key={index} className="relative">
+          <div key={getKey(rule)} className="relative">
             {isGroup ? (
               <div className="flex items-start gap-1">
                 <div className="flex-1">
