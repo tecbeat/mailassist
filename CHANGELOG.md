@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.11](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.11) - 2026-04-29
+
+### 🐛 Bug Fixes
+
+- Resolve ConfigMap collision and add PodSecurity seccompProfile - ([af553f2](https://git.teccave.de/tecbeat/mailassist/commit/af553f2610e11b377a3f0d573b90ec7b988d7a3d))
+
 ## [0.5.10](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.10) - 2026-04-29
 
 ### 🐛 Bug Fixes
