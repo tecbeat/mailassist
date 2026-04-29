@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.4](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.4) - 2026-04-29
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update valkey/valkey docker tag to v9 - ([f6f59c2](https://git.teccave.de/tecbeat/mailassist/commit/f6f59c228a9ae26b0ce0690e5f35d5d1b32c7f32))
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Pin dependencies - ([b878b46](https://git.teccave.de/tecbeat/mailassist/commit/b878b46f5173f5809d7bf9ea1e6851d9e859f78e))
+
 ## [0.5.3](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.3) - 2026-04-29
 
 ### ⚙️ Miscellaneous Tasks
