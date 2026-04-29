@@ -1,7 +1,7 @@
 ---
 services:
   mailassist:
-    image: hub.teccave.de/tecbeat/mailassist:${VERSION}${SUFIX:+-$SUFIX}
+    image: hub.teccave.de/tecbeat/mailassist:${VERSION}
     ports:
       - "8000:8000"
     environment:
@@ -34,7 +34,7 @@ services:
       - ALL
 
   worker:
-    image: hub.teccave.de/tecbeat/mailassist:${VERSION}${SUFIX:+-$SUFIX}
+    image: hub.teccave.de/tecbeat/mailassist:${VERSION}
     command: ["worker"]
     environment:
       - DATABASE_URL=postgresql+asyncpg://mailer:${POSTGRES_PASSWORD}@postgres:5432/mailer
