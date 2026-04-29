@@ -2,10 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.3](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.3) - 2026-04-29
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Update all non-major dependencies - ([6ab6efd](https://git.teccave.de/tecbeat/mailassist/commit/6ab6efda33dd8d67ce34907be19727eb3668fe2b))
+
 ## [0.5.2](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.2) - 2026-04-28
 
 ### 🐛 Bug Fixes
 
+- *(helm)* Remove duplicate ServiceAccount from serviceaccount.yaml - ([b97d719](https://git.teccave.de/tecbeat/mailassist/commit/b97d719c7d36d85510360b24e0404221cf199bbd))
 - Disable HTML5 validation on AI provider form and align timeout min with backend - ([b2961f1](https://git.teccave.de/tecbeat/mailassist/commit/b2961f1b34914d476a26e7785255df096aceeb8f))
 
 ## [0.5.1](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.1) - 2026-04-28
