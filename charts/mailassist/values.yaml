@@ -323,7 +323,7 @@ valkey:
   enabled: true
   image:
     repository: valkey/valkey
-    tag: "8-alpine"
+    tag: "9-alpine@sha256:e1095c6c76ee982cb2d1e07edbb7fb2a53606630a1d810d5a47c9f646b708bf5"
     pullPolicy: IfNotPresent
   config:
     maxmemory: "128mb"
