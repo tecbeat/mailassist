@@ -57,8 +57,10 @@ ACTIONABLE_PREFIXES = (
 # ParsedAction — structured representation of an action string
 # ---------------------------------------------------------------------------
 
-# Regex to strip parenthetical annotations like " (confidence: 80%)"
-_ANNOTATION_RE = re.compile(r"\s*\([^)]*\)\s*$")
+# Regex to strip confidence annotations like " (confidence: 80%)" from action strings.
+# Narrowed to the specific format produced by plugins so that folder names containing
+# parentheses (e.g. "Projects (2024)") are not corrupted.
+_ANNOTATION_RE = re.compile(r"\s*\(confidence:\s*\d+%\)\s*$")
 
 
 class ActionKind(enum.Enum):
