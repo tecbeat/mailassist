@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import {
   FolderTree,
   FolderOpen,
@@ -278,6 +278,8 @@ export function FolderTreePanel({
 
   const separator = folderData?.separator ?? "/";
   const excludedFolders = folderData?.excluded_folders ?? [];
+  const excludedRef = useRef(excludedFolders);
+  excludedRef.current = excludedFolders;
 
   const folders: FolderInfo[] = useMemo(() => {
     if (!folderData?.folders) return [];
@@ -383,7 +385,8 @@ export function FolderTreePanel({
 
   const handleToggleExclude = useCallback(
     async (path: string, exclude: boolean) => {
-      const currentExcluded = [...excludedFolders];
+      // Read from ref to avoid stale closure on rapid toggles
+      const currentExcluded = [...excludedRef.current];
       let newExcluded: string[];
       if (exclude) {
         newExcluded = [...currentExcluded, path];
@@ -404,7 +407,7 @@ export function FolderTreePanel({
         toast({ title: "Failed to update exclusion list", description: "Could not update the folder exclusion setting.", variant: "destructive" });
       }
     },
-    [excludedFolders, excludeMutation, toast],
+    [excludeMutation, toast],
   );
 
   if (foldersQuery.isLoading) {

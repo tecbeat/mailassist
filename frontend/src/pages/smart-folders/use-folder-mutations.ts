@@ -125,16 +125,31 @@ export function useReprocessSmartFolder() {
 
 export function useUpdateExcludedFolders(accountId: string) {
   const queryClient = useQueryClient();
+  const queryKey = getListFoldersApiMailAccountsAccountIdFoldersGetQueryKey(accountId, { counts: true });
   return useMutation({
     mutationFn: (excludedFolders: string[]) =>
       updateExcludedFoldersApiMailAccountsAccountIdExcludedFoldersPut(
         accountId,
         { excluded_folders: excludedFolders },
       ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: getListFoldersApiMailAccountsAccountIdFoldersGetQueryKey(accountId, { counts: true }),
-      });
+    onMutate: async (newExcluded: string[]) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<{ data: ImapFolderListResponse }>(queryKey);
+      if (previous?.data) {
+        queryClient.setQueryData(queryKey, {
+          ...previous,
+          data: { ...previous.data, excluded_folders: newExcluded },
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKey, context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
     },
   });
 }
