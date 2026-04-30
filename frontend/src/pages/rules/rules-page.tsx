@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Plus, Wand2, AlertCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
+
+import { usePageTitle } from "@/hooks/use-page-title";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import {
@@ -62,6 +64,7 @@ import { NlRuleDialog } from "./nl-rule-dialog";
 // ---------------------------------------------------------------------------
 
 export default function RulesPage() {
+  usePageTitle("Rules");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
