@@ -23,7 +23,7 @@ export function QueryError({
   return (
     <Card className="border-destructive/50 bg-destructive/5">
       <CardContent className="flex flex-col items-center justify-center gap-3 py-8 text-center">
-        <p className="text-sm text-destructive">{message}</p>
+        <p className="text-sm text-destructive select-text cursor-text">{message}</p>
         {onRetry && (
           <AppButton icon={<RefreshCw />} label="Try again" onClick={onRetry}>
             Try again
