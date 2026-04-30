@@ -844,8 +844,12 @@ async def retry_failed_mail(
 ) -> FailedMailActionResponse:
     """Retry a failed mail: set status back to pending and reset retry_count."""
     uid = UUID(user_id)
+    try:
+        email_uuid = UUID(tracked_email_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid tracked_email_id: must be a valid UUID")
     stmt = select(TrackedEmail).where(
-        TrackedEmail.id == UUID(tracked_email_id),
+        TrackedEmail.id == email_uuid,
         TrackedEmail.user_id == uid,
         TrackedEmail.status == TrackedEmailStatus.FAILED,
     )
@@ -873,8 +877,12 @@ async def resolve_failed_mail(
 ) -> FailedMailActionResponse:
     """Dismiss a failed mail: mark as completed (user considers it handled)."""
     uid = UUID(user_id)
+    try:
+        email_uuid = UUID(tracked_email_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid tracked_email_id: must be a valid UUID")
     stmt = select(TrackedEmail).where(
-        TrackedEmail.id == UUID(tracked_email_id),
+        TrackedEmail.id == email_uuid,
         TrackedEmail.user_id == uid,
         TrackedEmail.status == TrackedEmailStatus.FAILED,
     )
