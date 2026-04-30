@@ -44,6 +44,7 @@ backend_unittest:
     - uv venv .venv
     - uv pip compile pyproject.toml --extra dev -o /tmp/requirements.txt
     - uv pip install --python .venv/bin/python -r /tmp/requirements.txt
+    - PYTHONPATH=. .venv/bin/python -m mypy app/
     - PYTHONPATH=. .venv/bin/python -m pytest tests/ -v --cov=app --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-fail-under=38
   artifacts:
     paths:
