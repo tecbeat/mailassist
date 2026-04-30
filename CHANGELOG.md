@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.1-beta) - 2026-04-30
+
+### ⚙️ Miscellaneous Tasks
+
+- Remove premature mypy check from backend_unittest job - ([1dfa38d](https://git.teccave.de/tecbeat/mailassist/commit/1dfa38d780b3e754cd0690c2b5fd21c3c7fccbb6))
+
 ## [0.7.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.0-beta) - 2026-04-30
 
 ### ⛰️  Features
@@ -12,6 +18,10 @@ All notable changes to this project will be documented in this file.
 
 ### 🐛 Bug Fixes
 
+- *(backend)* Change approval_mode_notifications default to AUTO - ([8d0093a](https://git.teccave.de/tecbeat/mailassist/commit/8d0093a501af17a42fd0ea180a144c30ded3a294))
+- *(frontend)* Make error messages selectable and add copy button - ([6cea0f9](https://git.teccave.de/tecbeat/mailassist/commit/6cea0f9a2ebcbdba1bea7f120c17d4d6bb5c49a8))
+- *(frontend)* Use wildcard suffix on plugin routes to prevent catch-all interception - ([10dbcd8](https://git.teccave.de/tecbeat/mailassist/commit/10dbcd88b6a088f0e08d8a04179a36f6872b4768))
+- *(frontend)* Handle future dates and invalid input in formatRelativeTime - ([ea2ec1c](https://git.teccave.de/tecbeat/mailassist/commit/ea2ec1cc573395d8581d5bd598c2bd5a5cb82235))
 - Revert - ([a84d7b1](https://git.teccave.de/tecbeat/mailassist/commit/a84d7b1d444286a70cb2cfda63d3b21bf6cd1573))
 
 ## [0.6.4-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.6.4-beta) - 2026-04-30
