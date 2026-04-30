@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.5-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.6.5-beta) - 2026-04-30
+
+### 🐛 Bug Fixes
+
+- Revert - ([a84d7b1](https://git.teccave.de/tecbeat/mailassist/commit/a84d7b1d444286a70cb2cfda63d3b21bf6cd1573))
+
 ## [0.6.4-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.6.4-beta) - 2026-04-30
 
 ### 🐛 Bug Fixes
