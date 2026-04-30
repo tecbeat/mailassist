@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.4-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.4-beta) - 2026-04-30
+
+### 🐛 Bug Fixes
+
+- *(backend)* Replace async-for get_session with get_session_ctx context manager (#103) - ([cb49b53](https://git.teccave.de/tecbeat/mailassist/commit/cb49b53b5db9b6b5cda4de26cd9dd30c31bb316d))
+- *(backend)* Document get_session commit convention in docstring (#45) - ([d1158cb](https://git.teccave.de/tecbeat/mailassist/commit/d1158cbecda1235ff595875d698f538964855a4d))
+- *(backend)* Remove redundant app_secret_key field_validator (#44) - ([7ec316f](https://git.teccave.de/tecbeat/mailassist/commit/7ec316fadcfc2794911a7d5e1890ed44d8b78021))
+- *(backend)* Add rate_limit_fail_open setting to control outage behaviour (#43) - ([e17b955](https://git.teccave.de/tecbeat/mailassist/commit/e17b9558f2819f3702a018132856165a0fc18804))
+- *(backend)* Validate tracked_email_id as UUID before query (#42) - ([bc4d60a](https://git.teccave.de/tecbeat/mailassist/commit/bc4d60a6a71cd4a1499e08dfb35688df7766a964))
+- *(backend)* Use MGET for dashboard token usage to reduce Valkey round trips (#41) - ([8635370](https://git.teccave.de/tecbeat/mailassist/commit/8635370713d156cce62bda05cc51e6c6c58f6e50))
+- *(backend)* SQL unnest UID diff in idle_monitor to avoid large IN clauses (#31) - ([54941ee](https://git.teccave.de/tecbeat/mailassist/commit/54941eed5c952b1fcb213959d73072137c0bb716))
+- *(backend)* Add health_check_interval to all Redis connection pools (#36) - ([4bfe1cf](https://git.teccave.de/tecbeat/mailassist/commit/4bfe1cf25b59ad68bf5f45b06307ce614dfbb358))
+- *(backend)* Narrow IMAP annotation regex to prevent false positives (#35) - ([8ff709f](https://git.teccave.de/tecbeat/mailassist/commit/8ff709f41016d0e2b7976c89fc3626a75b45d3f4))
+- *(backend)* Asyncio.Lock for OIDC discovery thundering herd (#33) - ([6c4b391](https://git.teccave.de/tecbeat/mailassist/commit/6c4b391ff10e104d69007d2bd1cd239b5ddbdaa7))
+- *(backend)* Str(user_id) cast on enqueue_job and remove double lru_cache (#28, #29) - ([5d26f4d](https://git.teccave.de/tecbeat/mailassist/commit/5d26f4dcbec44357e74131c6e85a83e8530e748b))
+- *(frontend)* HttpError class with status and 409/410 handling in approvals (#118, #121) - ([5c89505](https://git.teccave.de/tecbeat/mailassist/commit/5c895055e20e3684a9a7b6f7a16c858449fa8edd))
+- *(frontend)* Broaden invalidateQueries to top-level key to catch all param variants (#46) - ([dfa7173](https://git.teccave.de/tecbeat/mailassist/commit/dfa717395e27d7cae1deb1a1423e11068b451aa7))
+- *(frontend)* Add toast to movePlugin useCallback deps to prevent stale ref (#39) - ([dbbfacd](https://git.teccave.de/tecbeat/mailassist/commit/dbbfacd14a529525862d62b6fec5894f137c2e00))
+- *(frontend)* Guard 401 redirect to prevent loops on auth pages (#40) - ([ca01c2a](https://git.teccave.de/tecbeat/mailassist/commit/ca01c2a40798c26c6e77fa5b89ff2205235c0b26))
+- *(frontend)* Snapshot editedAction at call time to prevent stale closure (#38) - ([94ddd58](https://git.teccave.de/tecbeat/mailassist/commit/94ddd58f265e58183217b3e96d98b6f1edc31c2a))
+- *(frontend)* Remove stable list.setPage from useEffect deps in approvals (#37) - ([3f6dfe2](https://git.teccave.de/tecbeat/mailassist/commit/3f6dfe26205f99cdfd3ae5a4b008e96d5bcd827f))
+- *(tests)* Update get_session mocks to asynccontextmanager for get_session_ctx (#103) - ([353864c](https://git.teccave.de/tecbeat/mailassist/commit/353864c359a0fed2bae13e149c1f16287ddb5e34))
+
 ## [0.7.3-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.3-beta) - 2026-04-30
 
 ### 🐛 Bug Fixes
