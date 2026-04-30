@@ -316,13 +316,32 @@ async def _poll_folder(
 
     # Insert new UIDs in batches (respecting initial scan batch limit)
     batch_size = get_settings().poll_initial_scan_batch if is_initial_scan else len(new_uids)
+    envelope_subbatch_size = 100  # Split large batches into smaller IMAP fetches
     total_inserted = 0
 
     for i in range(0, len(new_uids), batch_size):
         batch = new_uids[i : i + batch_size]
 
         # Fetch envelope metadata for the batch (IMAP I/O — no DB session)
-        envelopes = await fetch_envelopes(conn, batch, folder=folder)
+        # Split into sub-batches to avoid IMAP timeouts on large mailboxes
+        envelopes: dict[str, tuple[str | None, str | None, datetime | None]] = {}
+        for j in range(0, len(batch), envelope_subbatch_size):
+            subbatch = batch[j : j + envelope_subbatch_size]
+            sub_envelopes = await fetch_envelopes(conn, subbatch, folder=folder)
+            envelopes.update(sub_envelopes)
+
+            # Progress logging during initial scan for large mailboxes
+            if is_initial_scan:
+                fetched_so_far = len(envelopes)
+                progress_pct = (fetched_so_far / len(new_uids)) * 100
+                logger.debug(
+                    "initial_scan_progress",
+                    account_id=account_id,
+                    folder=folder,
+                    fetched=fetched_so_far,
+                    total=len(new_uids),
+                    progress_pct=progress_pct,
+                )
 
         # Bulk insert into tracked_emails with correct folder (short DB session)
         async for db in get_session():
