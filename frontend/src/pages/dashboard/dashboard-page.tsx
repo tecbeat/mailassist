@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useAnimatedNumber } from "@/hooks/use-animated-number";
 import {
@@ -53,6 +54,7 @@ function AnimatedStat({ value }: { value: number }) {
 
 export default function DashboardPage() {
   usePageTitle("Dashboard");
+  const navigate = useNavigate();
   const [period, setPeriod] = useState<TimePeriod>("24h");
 
   // --- Data fetching ---
@@ -83,13 +85,14 @@ export default function DashboardPage() {
     todayOnly?: boolean;
     value?: number;
     subtitle?: string;
+    href?: string;
   }[] = [
     { label: "Processed Mails", icon: <Inbox className="h-4 w-4 text-muted-foreground" />, base: "processed_mails" },
-    { label: "Pending Approvals", icon: <ShieldCheck className="h-4 w-4 text-muted-foreground" />, base: "", todayOnly: true, value: stats?.pending_approvals },
+    { label: "Pending Approvals", icon: <ShieldCheck className="h-4 w-4 text-muted-foreground" />, base: "", todayOnly: true, value: stats?.pending_approvals, href: "/approvals" },
     { label: "Tokens Used", icon: <Coins className="h-4 w-4 text-muted-foreground" />, base: "token_usage" },
-    { label: "Unhealthy Accounts", icon: <AlertTriangle className="h-4 w-4 text-muted-foreground" />, base: "", todayOnly: true, value: stats?.unhealthy_accounts },
-    { label: "AI Provider Issues", icon: <BrainCircuit className="h-4 w-4 text-muted-foreground" />, base: "", todayOnly: true, value: (stats?.unhealthy_ai_providers ?? 0) + (stats?.paused_ai_providers ?? 0), subtitle: stats ? `${stats.unhealthy_ai_providers ?? 0} unhealthy · ${stats.paused_ai_providers ?? 0} paused` : undefined },
-    { label: "Failed Mails", icon: <MailX className="h-4 w-4 text-destructive" />, base: "", todayOnly: true, value: stats?.failed_mails },
+    { label: "Unhealthy Accounts", icon: <AlertTriangle className="h-4 w-4 text-muted-foreground" />, base: "", todayOnly: true, value: stats?.unhealthy_accounts, href: "/mail-accounts", subtitle: stats ? `${stats.unhealthy_accounts ?? 0} unhealthy` : undefined },
+    { label: "AI Provider Issues", icon: <BrainCircuit className="h-4 w-4 text-muted-foreground" />, base: "", todayOnly: true, value: (stats?.unhealthy_ai_providers ?? 0) + (stats?.paused_ai_providers ?? 0), subtitle: stats ? `${stats.unhealthy_ai_providers ?? 0} unhealthy · ${stats.paused_ai_providers ?? 0} paused` : undefined, href: "/ai-settings" },
+    { label: "Failed Mails", icon: <MailX className="h-4 w-4 text-destructive" />, base: "", todayOnly: true, value: stats?.failed_mails, href: "/mail-accounts" },
   ];
 
   const periodStats: Record<string, Record<TimePeriod, keyof DashboardStatsResponse>> = {
@@ -128,20 +131,32 @@ export default function DashboardPage() {
         <StatsSkeletons />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {statCards.map((card) => (
-            <Card key={card.label}>
-              <CardHeader className="flex min-h-[3.5rem] flex-row items-center justify-between space-y-0 pb-2">
-                <CardDescription className="text-sm font-medium">{card.label}</CardDescription>
-                {card.icon}
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold"><AnimatedStat value={resolveValue(card)} /></div>
-                {card.subtitle && (
-                  <p className="text-xs text-muted-foreground">{card.subtitle}</p>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+          {statCards.map((card) => {
+            const value = resolveValue(card);
+            const isClickable = card.href && value > 0;
+            
+            return (
+              <Card
+                key={card.label}
+                className={isClickable ? "cursor-pointer transition-all hover:shadow-md hover:border-foreground/50" : "opacity-60"}
+                onClick={() => isClickable && navigate(card.href!)}
+                role={isClickable ? "button" : undefined}
+                tabIndex={isClickable ? 0 : undefined}
+                onKeyDown={(e) => isClickable && (e.key === "Enter" || e.key === " ") && navigate(card.href!)}
+              >
+                <CardHeader className="flex min-h-[3.5rem] flex-row items-center justify-between space-y-0 pb-2">
+                  <CardDescription className="text-sm font-medium">{card.label}</CardDescription>
+                  {card.icon}
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold"><AnimatedStat value={value} /></div>
+                  {card.subtitle && (
+                    <p className="text-xs text-muted-foreground">{card.subtitle}</p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
