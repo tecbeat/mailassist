@@ -60,7 +60,10 @@ export async function customInstance<T>(
   });
 
   if (response.status === 401) {
-    window.location.href = "/auth/login";
+    // Avoid redirect loops: if already on an auth page, just throw.
+    if (!window.location.pathname.startsWith("/auth/")) {
+      window.location.href = "/auth/login";
+    }
     throw new Error("Unauthorized");
   }
 
