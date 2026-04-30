@@ -105,7 +105,7 @@ class Settings(BaseSettings):
 
     # Polling
     poll_concurrency: int = Field(default=5, description="Max concurrent IMAP connections during polling")
-    poll_initial_scan_batch: int = Field(default=500, description="Batch size for envelope fetching during initial IMAP scan")
+    poll_initial_scan_batch: int = Field(default=200, description="Batch size for envelope fetching during initial IMAP scan")
 
     # Contact sync
     contact_cache_ttl_seconds: int = Field(default=3600, description="Contact match cache TTL in seconds")
