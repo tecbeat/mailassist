@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.6.1-beta) - 2026-04-30
+
+### ⛰️  Features
+
+- Add loading state to Poll Now button - ([18bfcf3](https://git.teccave.de/tecbeat/mailassist/commit/18bfcf3d2d645ff9cc60ed008c0e45d1eeb5e0a5))
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update all non-major dependencies - ([2e3184e](https://git.teccave.de/tecbeat/mailassist/commit/2e3184e93a4f77da39dd284dfa3c3a9819fdb4e3))
+- *(deps)* Pin ghcr.io/astral-sh/uv docker tag to 3b7b60a - ([3e95c3f](https://git.teccave.de/tecbeat/mailassist/commit/3e95c3f63bc3365e28eccf42abab76bc8e8084da))
+- Update from latest to pinned version - ([9ad2beb](https://git.teccave.de/tecbeat/mailassist/commit/9ad2beb94a16a9589b17023be420569fdb5d0086))
+- Use stable unique keys instead of array index for conditions and actions - ([6231190](https://git.teccave.de/tecbeat/mailassist/commit/6231190855a03258f664e221ab0fb2dcf7e5b91b))
+- Update versioner use beta suffix - ([a9d4c8c](https://git.teccave.de/tecbeat/mailassist/commit/a9d4c8cc50891e3d43d173bb7c3ed71ab8b39ea4))
+- Truncate long error messages + batch bulk inserts under PG param limit - ([16471c9](https://git.teccave.de/tecbeat/mailassist/commit/16471c9fb3248bd8188220ba079fb7e0e51433f8))
+
+### 📚 Documentation
+
+- Update README badges to use dynamic GitLab badges - ([56894f7](https://git.teccave.de/tecbeat/mailassist/commit/56894f7499b1864cacb5c386428656842f1583fb))
+
 ## [0.5.12](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.12) - 2026-04-29
 
 ### 🐛 Bug Fixes
@@ -16,15 +35,12 @@ All notable changes to this project will be documented in this file.
 
 ## [0.5.10](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.10) - 2026-04-29
 
-### 🐛 Bug Fixes
-
-- Update PostgreSQL StatefulSet volume mount for PG 18 data directory layout - ([1290e5b](https://git.teccave.de/tecbeat/mailassist/commit/1290e5b22eaf86918ca725bda1ae6bba386be48e))
-
 ## [0.5.9](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.9) - 2026-04-29
 
 ### 🐛 Bug Fixes
 
 - *(deps)* Pin dependency typescript to 6.0.3 - ([25a6dd2](https://git.teccave.de/tecbeat/mailassist/commit/25a6dd20c8d180de8eff68c22dd41277fc709e18))
+- Update PostgreSQL StatefulSet volume mount for PG 18 data directory layout - ([1290e5b](https://git.teccave.de/tecbeat/mailassist/commit/1290e5b22eaf86918ca725bda1ae6bba386be48e))
 
 ## [0.5.8](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.8) - 2026-04-29
 
@@ -40,21 +56,15 @@ All notable changes to this project will be documented in this file.
 
 ## [0.5.6](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.6) - 2026-04-29
 
-### 🐛 Bug Fixes
-
-- *(deps)* Pin dependency @types/react to 19.2.14 - ([d7f74a2](https://git.teccave.de/tecbeat/mailassist/commit/d7f74a24f4934ef42f2a2284c55409997614ceae))
-
 ## [0.5.5](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.5) - 2026-04-29
-
-### 🐛 Bug Fixes
-
-- *(deps)* Update ghcr.io/astral-sh/uv:latest docker digest to 3b7b60a - ([2e4e4e2](https://git.teccave.de/tecbeat/mailassist/commit/2e4e4e2974669c6f5623f10dd2bec8677401d542))
 
 ## [0.5.4](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.4) - 2026-04-29
 
 ### 🐛 Bug Fixes
 
 - *(deps)* Update valkey/valkey docker tag to v9 - ([f6f59c2](https://git.teccave.de/tecbeat/mailassist/commit/f6f59c228a9ae26b0ce0690e5f35d5d1b32c7f32))
+- *(deps)* Update ghcr.io/astral-sh/uv:latest docker digest to 3b7b60a - ([2e4e4e2](https://git.teccave.de/tecbeat/mailassist/commit/2e4e4e2974669c6f5623f10dd2bec8677401d542))
+- *(deps)* Pin dependency @types/react to 19.2.14 - ([d7f74a2](https://git.teccave.de/tecbeat/mailassist/commit/d7f74a24f4934ef42f2a2284c55409997614ceae))
 
 ### ⚙️ Miscellaneous Tasks
 
@@ -70,29 +80,20 @@ All notable changes to this project will be documented in this file.
 
 ### 🐛 Bug Fixes
 
-- *(helm)* Remove duplicate ServiceAccount from serviceaccount.yaml - ([b97d719](https://git.teccave.de/tecbeat/mailassist/commit/b97d719c7d36d85510360b24e0404221cf199bbd))
 - Disable HTML5 validation on AI provider form and align timeout min with backend - ([b2961f1](https://git.teccave.de/tecbeat/mailassist/commit/b2961f1b34914d476a26e7785255df096aceeb8f))
 
 ## [0.5.1](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.1) - 2026-04-28
 
 ### 🐛 Bug Fixes
 
+- *(helm)* Remove duplicate ServiceAccount from serviceaccount.yaml - ([b97d719](https://git.teccave.de/tecbeat/mailassist/commit/b97d719c7d36d85510360b24e0404221cf199bbd))
 - Add beta tag for images - ([9169b7b](https://git.teccave.de/tecbeat/mailassist/commit/9169b7b1bd1b754c3e5260b312a927546f75598d))
 
 ## [0.5.0](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.5.0) - 2026-04-28
 
-### ⛰️  Features
-
-- *(helm)* Add Helm chart for Kubernetes deployment - ([c3ecb2e](https://git.teccave.de/tecbeat/mailassist/commit/c3ecb2e9cfd816cbc7c4fe0b9d262792c216f315))
-- Add helm_publish CI job to push chart to package registry - ([d0e7097](https://git.teccave.de/tecbeat/mailassist/commit/d0e709747d59b36275cda1201efdf7aee00198d7))
-
 ### 🐛 Bug Fixes
 
 - *(ci)* Align curl folded block scalar indentation in helm_publish - ([27a2c53](https://git.teccave.de/tecbeat/mailassist/commit/27a2c53713ce8132a11af6dda477ccb3a557b253))
-- *(ci)* Pass default-values.yaml to helm template in helm_lint job - ([630b6aa](https://git.teccave.de/tecbeat/mailassist/commit/630b6aa8c10424df9f3b9c5a1886af829e58094c))
-- *(helm)* Make DB/Valkey StatefulSets hooks to prevent migrate deadlock - ([5ac6c49](https://git.teccave.de/tecbeat/mailassist/commit/5ac6c49fe8935d9a588cae7cae75de4cc223e85f))
-- *(helm)* MR#17 Review-Fixes — alle 14 Bugfixes umgesetzt - ([a5fcb5a](https://git.teccave.de/tecbeat/mailassist/commit/a5fcb5afe3bcb3f11f60951fb302407fe0e2fbb7))
-- Use deploy stage for helm_publish (publish stage does not exist) - ([b298257](https://git.teccave.de/tecbeat/mailassist/commit/b2982570962cc01f8271722d0559ab302be97667))
 
 ### ⚙️ Miscellaneous Tasks
 
@@ -102,7 +103,17 @@ All notable changes to this project will be documented in this file.
 
 ### ⛰️  Features
 
+- *(helm)* Add Helm chart for Kubernetes deployment - ([c3ecb2e](https://git.teccave.de/tecbeat/mailassist/commit/c3ecb2e9cfd816cbc7c4fe0b9d262792c216f315))
 - Real-time dashboard stats with auto-refresh and animated counters - ([ff60229](https://git.teccave.de/tecbeat/mailassist/commit/ff60229ae6ec9ce4bf47cf8b0b7a18bc299d0033))
+- Add helm_publish CI job to push chart to package registry - ([d0e7097](https://git.teccave.de/tecbeat/mailassist/commit/d0e709747d59b36275cda1201efdf7aee00198d7))
+
+### 🐛 Bug Fixes
+
+- *(ci)* Pass default-values.yaml to helm template in helm_lint job - ([630b6aa](https://git.teccave.de/tecbeat/mailassist/commit/630b6aa8c10424df9f3b9c5a1886af829e58094c))
+- *(helm)* Make DB/Valkey StatefulSets hooks to prevent migrate deadlock - ([5ac6c49](https://git.teccave.de/tecbeat/mailassist/commit/5ac6c49fe8935d9a588cae7cae75de4cc223e85f))
+- *(helm)* MR#17 Review-Fixes — alle 14 Bugfixes umgesetzt - ([a5fcb5a](https://git.teccave.de/tecbeat/mailassist/commit/a5fcb5afe3bcb3f11f60951fb302407fe0e2fbb7))
+- Fix - ([9eac5af](https://git.teccave.de/tecbeat/mailassist/commit/9eac5af81f5bdc13a7a1ac986892dee881815897))
+- Use deploy stage for helm_publish (publish stage does not exist) - ([b298257](https://git.teccave.de/tecbeat/mailassist/commit/b2982570962cc01f8271722d0559ab302be97667))
 
 ### 📚 Documentation
 
@@ -126,7 +137,6 @@ All notable changes to this project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - Update git ignore - ([1d2b406](https://git.teccave.de/tecbeat/mailassist/commit/1d2b406eef6e27e445055eac5d92dab917a96110))
-- Enforce reproducible builds with uv.lock - ([b6425f7](https://git.teccave.de/tecbeat/mailassist/commit/b6425f79c4343e419caed8b62138f6dc5eef12b4))
 
 ## [0.2.2](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.2.2) - 2026-04-27
 
@@ -141,19 +151,17 @@ All notable changes to this project will be documented in this file.
 
 ## [0.2.1](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.2.1) - 2026-04-27
 
-### 🐛 Bug Fixes
-
-- Lower coverage threshold to 38% to match current coverage - ([d0ad425](https://git.teccave.de/tecbeat/mailassist/commit/d0ad425745f986a0707b3ab44becf7d44dc0df1d))
-
-### ⚙️ Miscellaneous Tasks
-
-- Enforce code coverage threshold and publish Cobertura report - ([2ab7eca](https://git.teccave.de/tecbeat/mailassist/commit/2ab7ecabf036c66e289f71cbadd8fe12828c4180))
+## [0.2.0](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.2.0) - 2026-04-27
 
 ## [0.1.23](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.23) - 2026-04-27
 
 ### ⛰️  Features
 
 - Remove redundant empty PluginSettingsDialog from 7 plugin pages - ([00cef39](https://git.teccave.de/tecbeat/mailassist/commit/00cef39e910976a22572dad86126bf7d3fa9a309))
+
+### 🐛 Bug Fixes
+
+- Lower coverage threshold to 38% to match current coverage - ([d0ad425](https://git.teccave.de/tecbeat/mailassist/commit/d0ad425745f986a0707b3ab44becf7d44dc0df1d))
 
 ### 📚 Documentation
 
@@ -165,6 +173,7 @@ All notable changes to this project will be documented in this file.
 
 ### ⚙️ Miscellaneous Tasks
 
+- Enforce code coverage threshold and publish Cobertura report - ([2ab7eca](https://git.teccave.de/tecbeat/mailassist/commit/2ab7ecabf036c66e289f71cbadd8fe12828c4180))
 - Add frontend type checking (tsc --noEmit) to pipeline - ([bdcd3cc](https://git.teccave.de/tecbeat/mailassist/commit/bdcd3cc379f54e77c5bc4110ab1631ff81ce3ef2))
 
 ## [0.1.22](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.22) - 2026-04-27
@@ -242,11 +251,11 @@ All notable changes to this project will be documented in this file.
 
 ### 🐛 Bug Fixes
 
-- Validate envelope schema before accessing keys on decrypt - ([c44091b](https://git.teccave.de/tecbeat/mailassist/commit/c44091b8e11c6df8b9af562a6814cedab3ca616f))
 - Replace authlib with pure httpx OAuth2 PKCE implementation - ([37f5510](https://git.teccave.de/tecbeat/mailassist/commit/37f551000aec2eac812ad2857769c5ed474e2537))
 - Broaden authlib warning filter to match submodules - ([817da32](https://git.teccave.de/tecbeat/mailassist/commit/817da3242408ee1f6354a4a02d4e32bbe2dcd8c6))
 - Remove unrealistic coverage threshold and filter unraisable warning - ([11f06a4](https://git.teccave.de/tecbeat/mailassist/commit/11f06a46da0331aa705cc2446894deca824a87e2))
 - Eliminate test warnings and add coverage reporting to CI - ([7434807](https://git.teccave.de/tecbeat/mailassist/commit/743480752c798c64cfcacb2110945fdbc2bb0b52))
+- Validate envelope schema before accessing keys on decrypt - ([c44091b](https://git.teccave.de/tecbeat/mailassist/commit/c44091b8e11c6df8b9af562a6814cedab3ca616f))
 
 ## [0.1.12](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.12) - 2026-04-27
 
@@ -282,15 +291,12 @@ All notable changes to this project will be documented in this file.
 
 ## [0.1.7](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.7) - 2026-04-27
 
-### 🐛 Bug Fixes
-
-- Extend CSRF protection to cover all state-changing routes - ([375a5d3](https://git.teccave.de/tecbeat/mailassist/commit/375a5d3b05069dca8ed194d00d2abde14c10b783))
-
 ## [0.1.6](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.6) - 2026-04-27
 
 ### 🐛 Bug Fixes
 
 - *(deps)* Update all non-major dependencies - ([cb84191](https://git.teccave.de/tecbeat/mailassist/commit/cb84191652a404fe46a1939a225d6278b4c10cee))
+- Extend CSRF protection to cover all state-changing routes - ([375a5d3](https://git.teccave.de/tecbeat/mailassist/commit/375a5d3b05069dca8ed194d00d2abde14c10b783))
 
 ## [0.1.5](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.5) - 2026-04-26
 
@@ -311,16 +317,12 @@ All notable changes to this project will be documented in this file.
 
 - *(frontend)* Adapt tsconfig for TypeScript 6 and add vite-env types - ([244cfa1](https://git.teccave.de/tecbeat/mailassist/commit/244cfa193f41e79f09a9a1e4ef102310925edfdf))
 
-### ⚙️ Miscellaneous Tasks
-
-- Consolidate seven open Renovate MRs into one update - ([f66db1a](https://git.teccave.de/tecbeat/mailassist/commit/f66db1abaafecd416837530201eb245c38a70997))
-
 ## [0.1.2](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.1.2) - 2026-04-26
 
 ### 🐛 Bug Fixes
 
-- *(deps)* Update node.js to v24 - ([e3ee371](https://git.teccave.de/tecbeat/mailassist/commit/e3ee371765ba7ed7638535f917f7a0614084dde4))
 - *(deps)* Update valkey/valkey docker tag to v9 - ([4ebdc17](https://git.teccave.de/tecbeat/mailassist/commit/4ebdc17c726f9f064b7fc73752b49dd1331dd21c))
+- *(deps)* Update node.js to v24 - ([e3ee371](https://git.teccave.de/tecbeat/mailassist/commit/e3ee371765ba7ed7638535f917f7a0614084dde4))
 - *(deps)* Pin dependencies - ([1c5b49f](https://git.teccave.de/tecbeat/mailassist/commit/1c5b49f4385b35acb036db87b784c3c3731b350e))
 
 ### 🧪 Testing
