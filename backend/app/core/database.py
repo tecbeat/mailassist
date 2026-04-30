@@ -44,6 +44,14 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     skipped the commit and the transaction was rolled back on session close.
     An unconditional ``commit()`` on a truly read-only session is essentially
     free (PostgreSQL treats it as a no-op) and avoids data-loss bugs.
+
+    **Commit convention:** endpoints *must not* call ``await db.commit()``
+    manually — the generator commits unconditionally after the endpoint
+    returns.  A manual commit inside the endpoint is not harmful (PostgreSQL
+    begins a new implicit transaction for the remaining work), but it is
+    redundant and misleading.  Use ``await db.flush()`` if you need
+    auto-generated IDs to be visible within the same request without
+    ending the transaction early.
     """
     if _session_factory is None:
         raise RuntimeError("Database not initialized. Call init_db() first.")
