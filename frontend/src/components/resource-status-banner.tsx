@@ -12,6 +12,7 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  AlertTriangle,
 } from "lucide-react";
 import { AppButton } from "@/components/app-button";
 import { formatRelativeTime } from "@/lib/utils";
@@ -77,8 +78,8 @@ export function ResourceStatusBanner({
   const isCircuitBroken = isPaused && pausedReason === "circuit_breaker";
   const hasErrors = consecutiveErrors > 0;
 
-  // Only show banner when paused
-  if (!isPaused) return null;
+  // Only show banner when paused or has errors
+  if (!isPaused && !hasErrors) return null;
 
   return (
     <div className="space-y-2">
@@ -132,6 +133,29 @@ export function ResourceStatusBanner({
                 <span className="text-muted-foreground ml-1">
                   &middot; {consecutiveErrors} error(s)
                 </span>
+              )}
+            </div>
+          </div>
+          {lastError && <CollapsibleError text={lastError} />}
+        </div>
+      )}
+
+      {/* Warning banner for errors but not paused */}
+      {!isPaused && hasErrors && (
+        <div className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400 space-y-1.5">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <span className="font-medium">{consecutiveErrors} consecutive error(s)</span>
+              {onResetHealth && (
+                <button
+                  type="button"
+                  onClick={onResetHealth}
+                  disabled={resetHealthLoading}
+                  className="ml-2 text-amber-700 dark:text-amber-400 underline hover:no-underline disabled:opacity-50"
+                >
+                  Reset
+                </button>
               )}
             </div>
           </div>

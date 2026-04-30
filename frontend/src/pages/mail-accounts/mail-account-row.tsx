@@ -147,6 +147,7 @@ export function MailAccountRow({
 
       {/* Row 3: Pause info + excluded folders */}
       {(account.is_paused ||
+        account.consecutive_errors > 0 ||
         (account.excluded_folders && account.excluded_folders.length > 0)) && (
         <div className="pl-7 space-y-2">
           <ResourceStatusBanner
