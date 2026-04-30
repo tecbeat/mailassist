@@ -204,10 +204,13 @@ export default function ApprovalsPage() {
 
   const handleSaveAndApprove = useCallback(
     (id: string) => {
+      // Snapshot editedAction at call time to avoid stale-closure reads
+      // if state updates between when the callback was created and invoked.
+      const actionSnapshot = editedAction;
       setProcessingIds((prev) => new Set(prev).add(id));
 
       editMutation.mutate(
-        { approvalId: id, data: { edited_actions: editedAction } },
+        { approvalId: id, data: { edited_actions: actionSnapshot } },
         {
           onSuccess: () => {
             const { queryKey, previousData } = performOptimisticRemoval([id]);
