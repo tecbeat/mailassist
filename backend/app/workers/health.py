@@ -31,7 +31,7 @@ from imap_tools import MailBox
 from sqlalchemy import or_, select, update
 
 from app.core.config import get_settings
-from app.core.database import get_session
+from app.core.database import get_session_ctx
 from app.core.events import (
     AccountReactivatedEvent,
     ProviderReactivatedEvent,
@@ -88,7 +88,7 @@ async def reset_orphaned_jobs() -> None:
     them to QUEUED lets the scheduler re-enqueue them on its next cycle
     (within ~1 minute) instead of waiting for the 10-minute stale threshold.
     """
-    async for db in get_session():
+    async with get_session_ctx() as db:
         stmt = (
             update(TrackedEmail)
             .where(
@@ -142,7 +142,7 @@ async def cleanup_stale_running_jobs() -> None:
     settings = get_settings()
     cutoff = datetime.now(UTC) - timedelta(seconds=settings.stale_job_threshold_seconds)
 
-    async for db in get_session():
+    async with get_session_ctx() as db:
         stmt = (
             update(TrackedEmail)
             .where(
@@ -188,7 +188,7 @@ async def recover_circuit_broken_providers() -> None:
     settings = get_settings()
     cutoff = datetime.now(UTC) - timedelta(seconds=settings.provider_recovery_cooldown_seconds)
 
-    async for db in get_session():
+    async with get_session_ctx() as db:
         stmt = select(AIProvider).where(
             AIProvider.is_paused.is_(True),
             AIProvider.paused_reason == "circuit_breaker",
@@ -355,7 +355,7 @@ async def _recover_paused_accounts(
     now: datetime, cooldown_seconds: int,
 ) -> None:
     """Check paused IMAP accounts and unpause those that pass the probe."""
-    async for db in get_session():
+    async with get_session_ctx() as db:
         stmt = select(MailAccount).where(
             MailAccount.is_paused.is_(True),
             MailAccount.manually_paused.is_(False),  # skip user-paused accounts
@@ -421,7 +421,7 @@ async def _recover_paused_ai_providers(
     now: datetime, cooldown_seconds: int,
 ) -> None:
     """Check paused AI providers and unpause those that pass the probe."""
-    async for db in get_session():
+    async with get_session_ctx() as db:
         stmt = select(AIProvider).where(
             AIProvider.is_paused.is_(True),
             AIProvider.manually_paused.is_(False),  # skip user-paused providers

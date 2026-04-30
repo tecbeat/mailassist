@@ -9,7 +9,7 @@ import structlog
 from sqlalchemy import select
 
 from app.core.config import get_settings
-from app.core.database import get_session
+from app.core.database import get_session_ctx
 from app.models import AIDraft, DraftStatus, MailAccount
 from app.services.draft_cleanup import cleanup_drafts_for_account
 from app.workers.utils import worker_error_handler
@@ -28,7 +28,7 @@ async def cleanup_all_drafts(ctx: dict) -> None:
     settings = get_settings()
     expiry_days = settings.draft_expiry_days
 
-    async for db in get_session():
+    async with get_session_ctx() as db:
         # Find accounts with active drafts
         stmt = (
             select(AIDraft.mail_account_id)

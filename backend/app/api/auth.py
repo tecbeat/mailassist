@@ -22,7 +22,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
 
 from app.core.config import get_settings
-from app.core.database import get_session
+from app.core.database import get_session_ctx
 from app.core.redis import get_session_client
 from app.core.security import get_encryption
 from app.models import User
@@ -233,7 +233,7 @@ async def callback(
         userinfo = resp.json()
 
     # Upsert user in database and create session only after successful commit
-    async for db in get_session():
+    async with get_session_ctx() as db:
         sub = userinfo.get("sub")
         email = userinfo.get("email", "")
         display_name = userinfo.get("name", userinfo.get("preferred_username", email))

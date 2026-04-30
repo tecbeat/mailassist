@@ -24,7 +24,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_session
+from app.core.database import get_session_ctx
 from app.core.events import (
     AIProcessingCompleteEvent,
     Event,
@@ -186,7 +186,7 @@ async def handle_ai_processing_complete(event: Event) -> None:
 
     # Load notification config and mail metadata from DB
     try:
-        async for db in get_session():
+        async with get_session_ctx() as db:
             # Load NotificationConfig
             config_result = await db.execute(
                 select(NotificationConfig).where(

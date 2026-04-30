@@ -14,7 +14,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_session
+from app.core.database import get_session_ctx
 from app.models import (
     Approval,
     ApprovalStatus,
@@ -81,7 +81,7 @@ async def execute_approved_actions(ctx: dict, approval_id: str) -> None:
     """
     log = logger.bind(approval_id=approval_id)
 
-    async for db in get_session():
+    async with get_session_ctx() as db:
         stmt = select(Approval).where(Approval.id == UUID(approval_id))
         result = await db.execute(stmt)
         approval = result.scalar_one_or_none()
@@ -192,7 +192,7 @@ async def handle_spam_rejection(ctx: dict, user_id: str, account_id: str, mail_u
 
     # Resolve current_folder from tracked email
     current_folder = "INBOX"
-    async for db in get_session():
+    async with get_session_ctx() as db:
         stmt = select(TrackedEmail.current_folder).where(
             TrackedEmail.mail_account_id == UUID(account_id),
             TrackedEmail.mail_uid == mail_uid,

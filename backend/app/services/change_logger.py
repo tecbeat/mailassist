@@ -11,7 +11,7 @@ from uuid import UUID
 
 import structlog
 
-from app.core.database import get_session
+from app.core.database import get_session_ctx
 from app.models import FolderChangeLog, LabelChangeLog
 from app.services.imap_actions import ActionKind, parse_action
 
@@ -76,7 +76,7 @@ async def save_new_labels(
     if not labels:
         return
 
-    async for db in get_session():
+    async with get_session_ctx() as db:
         for label in labels:
             db.add(LabelChangeLog(
                 user_id=user_id,
@@ -115,7 +115,7 @@ async def save_new_folders(
     if not folders:
         return
 
-    async for db in get_session():
+    async with get_session_ctx() as db:
         for folder in folders:
             db.add(FolderChangeLog(
                 user_id=user_id,

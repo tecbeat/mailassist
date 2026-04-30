@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.constants import PLUGIN_TO_APPROVAL_COLUMN
-from app.core.database import get_session
+from app.core.database import get_session_ctx
 from app.core.events import (
     AIProcessingCompleteEvent,
     ContactMatchedEvent,
@@ -164,7 +164,7 @@ async def fetch_account(
     """
     account: MailAccount | None = None
 
-    async for db in get_session():
+    async with get_session_ctx() as db:
         stmt = select(MailAccount).where(
             MailAccount.id == UUID(account_id),
             MailAccount.user_id == UUID(user_id),
@@ -620,7 +620,7 @@ async def execute_post_pipeline(
     )
 
     # Re-check account is still active
-    async for db in get_session():
+    async with get_session_ctx() as db:
         stmt = select(MailAccount).where(
             MailAccount.id == UUID(account_id),
             MailAccount.is_paused.is_(False),
