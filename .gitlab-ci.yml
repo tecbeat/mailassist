@@ -193,3 +193,7 @@ cleanup_image:
     - job: cleanup_lxc
       artifacts: false
       optional: true
+
+cleanup_helm:
+  rules:
+    - when: never
