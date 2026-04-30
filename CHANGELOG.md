@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.0-beta) - 2026-04-30
+
+### ⛰️  Features
+
+- Make dashboard stats cards actionable with navigation links - ([3a4b6b7](https://git.teccave.de/tecbeat/mailassist/commit/3a4b6b7f91f3631c7c08809362a49004cb8e593c))
+
 ## [0.6.5-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.6.5-beta) - 2026-04-30
 
 ### 🐛 Bug Fixes
