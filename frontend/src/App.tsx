@@ -80,7 +80,7 @@ export default function App() {
                           ([path, Component]) => (
                             <Route
                               key={path}
-                              path={path}
+                              path={`${path}/*`}
                               element={<RouteErrorBoundary><Component /></RouteErrorBoundary>}
                             />
                           ),
