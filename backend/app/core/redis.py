@@ -39,6 +39,9 @@ def init_valkey(settings: Settings) -> None:
         "socket_timeout": settings.valkey_socket_timeout,
         "socket_connect_timeout": settings.valkey_socket_connect_timeout,
         "socket_keepalive": True,
+        # Proactively verify connections so stale ones are detected after a
+        # Valkey restart rather than causing errors on the next request.
+        "health_check_interval": 30,
     }
 
     _task_client = aioredis.from_url(
