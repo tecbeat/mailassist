@@ -183,13 +183,9 @@ updater:
       artifacts: false
 
 cleanup_image:
-  needs:
-    - job: versioner
-      artifacts: true
-    - job: test_build_image
-      artifacts: false
-    - job: integration_systemtest
-      artifacts: false
-    - job: cleanup_lxc
-      artifacts: false
-      optional: true
+  rules:
+    - when: never
+
+cleanup_helm:
+  rules:
+    - when: never
