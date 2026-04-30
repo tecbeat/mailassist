@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.3-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.3-beta) - 2026-04-30
+
+### 🐛 Bug Fixes
+
+- *(backend)* Correct progress counter and extract envelope subbatch constant - ([1bbdf91](https://git.teccave.de/tecbeat/mailassist/commit/1bbdf912d0057cc4e95fe9b8a75c79d7e708e1af))
+- Batch envelope fetch to prevent poll timeout on large mailboxes - ([1744f53](https://git.teccave.de/tecbeat/mailassist/commit/1744f53431cf9cf659b30b931028b905f7f89ffb))
+
+### ⚙️ Miscellaneous Tasks
+
+- Disable redundant cleanup_helm job - ([07d32ae](https://git.teccave.de/tecbeat/mailassist/commit/07d32ae2aaea6e0b77a244e2ff8d6257707d1199))
+- Disable cleanup_helm job - ([efe3563](https://git.teccave.de/tecbeat/mailassist/commit/efe3563d9768f0684d83b15fe482c59b4bd6dc77))
+
+### ◀️ Revert
+
+- Disable cleanup_helm job" - ([eea6846](https://git.teccave.de/tecbeat/mailassist/commit/eea6846b25c8ee043282967bd9b4d0f3e8248176))
+
+## [0.7.2-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.2-beta) - 2026-04-30
+
 ## [0.7.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.1-beta) - 2026-04-30
 
 ### 🐛 Bug Fixes
