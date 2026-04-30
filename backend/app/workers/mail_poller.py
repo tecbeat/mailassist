@@ -55,6 +55,9 @@ logger = structlog.get_logger()
 # Exponential backoff schedule: 30s, 60s, 120s, 300s (max)
 POLLER_BACKOFF_SCHEDULE = [30, 60, 120, 300]
 
+# Max UIDs per individual IMAP fetch to avoid server-side timeouts on large mailboxes
+_ENVELOPE_SUBBATCH_SIZE = 100
+
 
 async def poll_mail_accounts(ctx: dict) -> None:
     """Poll all active mail accounts for new messages.
@@ -317,12 +320,31 @@ async def _poll_folder(
     # Insert new UIDs in batches (respecting initial scan batch limit)
     batch_size = get_settings().poll_initial_scan_batch if is_initial_scan else len(new_uids)
     total_inserted = 0
+    total_envelopes_fetched = 0  # cumulative across all outer batches
 
     for i in range(0, len(new_uids), batch_size):
         batch = new_uids[i : i + batch_size]
 
         # Fetch envelope metadata for the batch (IMAP I/O — no DB session)
-        envelopes = await fetch_envelopes(conn, batch, folder=folder)
+        # Split into sub-batches to avoid IMAP timeouts on large mailboxes
+        envelopes: dict[str, tuple[str | None, str | None, datetime | None]] = {}
+        for j in range(0, len(batch), _ENVELOPE_SUBBATCH_SIZE):
+            subbatch = batch[j : j + _ENVELOPE_SUBBATCH_SIZE]
+            sub_envelopes = await fetch_envelopes(conn, subbatch, folder=folder)
+            envelopes.update(sub_envelopes)
+            total_envelopes_fetched += len(sub_envelopes)
+
+            # Progress logging during initial scan for large mailboxes
+            if is_initial_scan:
+                progress_pct = (total_envelopes_fetched / len(new_uids)) * 100
+                logger.debug(
+                    "initial_scan_progress",
+                    account_id=account_id,
+                    folder=folder,
+                    fetched=total_envelopes_fetched,
+                    total=len(new_uids),
+                    progress_pct=progress_pct,
+                )
 
         # Bulk insert into tracked_emails with correct folder (short DB session)
         async for db in get_session():

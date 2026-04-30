@@ -304,7 +304,7 @@ class WorkerSettings:
         func(recover_paused, timeout=60, max_tries=1),
 
         # On-demand tasks
-        func(poll_single_account, timeout=120, max_tries=2),
+        func(poll_single_account, timeout=600, max_tries=2),
         func(process_mail, timeout=600, max_tries=1),
         func(execute_approved_actions, timeout=120, max_tries=3),
         func(handle_spam_rejection, timeout=600, max_tries=3),
