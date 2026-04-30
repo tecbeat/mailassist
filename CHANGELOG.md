@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.6.2-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.6.2-beta) - 2026-04-30
+## [0.6.3-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.6.3-beta) - 2026-04-30
 
 ### ⛰️  Features
 
@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 
 - *(deps)* Update all non-major dependencies - ([2e3184e](https://git.teccave.de/tecbeat/mailassist/commit/2e3184e93a4f77da39dd284dfa3c3a9819fdb4e3))
 - *(deps)* Pin ghcr.io/astral-sh/uv docker tag to 3b7b60a - ([3e95c3f](https://git.teccave.de/tecbeat/mailassist/commit/3e95c3f63bc3365e28eccf42abab76bc8e8084da))
+- *(frontend)* Correct DnD folder tree reparenting logic - ([8fa623e](https://git.teccave.de/tecbeat/mailassist/commit/8fa623ee4ed5faaafe5fd7a0d2f7263608ac39f4))
 - *(frontend)* Persist loading spinners across page navigation - ([05b4bc6](https://git.teccave.de/tecbeat/mailassist/commit/05b4bc6198fffec8691097dd237e6295e5a3cf23))
 - Update from latest to pinned version - ([9ad2beb](https://git.teccave.de/tecbeat/mailassist/commit/9ad2beb94a16a9589b17023be420569fdb5d0086))
 - Use stable unique keys instead of array index for conditions and actions - ([6231190](https://git.teccave.de/tecbeat/mailassist/commit/6231190855a03258f664e221ab0fb2dcf7e5b91b))
