@@ -190,13 +190,6 @@ class Settings(BaseSettings):
     rules_max_pattern_length: int = Field(default=500, description="Max regex pattern length for rule matching")
     rules_max_text_length: int = Field(default=51200, description="Max text length (bytes) to search against rules")
 
-    @field_validator("app_secret_key")
-    @classmethod
-    def validate_secret_key(cls, v: str) -> str:
-        if len(v) < 32:
-            raise ValueError("APP_SECRET_KEY must be at least 32 characters")
-        return v
-
     @field_validator("app_secret_key_old")
     @classmethod
     def validate_secret_key_old(cls, v: str | None) -> str | None:
