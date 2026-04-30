@@ -109,7 +109,7 @@ export default function CouponsPage() {
 
   function invalidateList() {
     queryClient.invalidateQueries({
-      queryKey: getListCouponsApiCouponsGetQueryKey(params),
+      queryKey: getListCouponsApiCouponsGetQueryKey(),
     });
   }
 
