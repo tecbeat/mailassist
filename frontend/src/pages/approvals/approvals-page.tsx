@@ -79,7 +79,9 @@ export default function ApprovalsPage() {
 
   useEffect(() => {
     list.setPage(1);
-  }, [statusFilter, functionTypeFilter, sortOrder, list.setPage]);
+    // list.setPage is a stable useState setter — omitting it from deps is safe
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, functionTypeFilter, sortOrder]);
 
   // --- Data fetching ---
   const queryParams = useMemo(
