@@ -81,6 +81,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { cn, formatRelativeTime, unwrapResponse } from "@/lib/utils";
+import { getKey, assignKey } from "./rules/rules-constants";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -139,15 +140,15 @@ function isConditionGroup(rule: ConditionRule | ConditionGroup): rule is Conditi
 }
 
 function createEmptyConditionRule(): ConditionRule {
-  return { field: "from", op: FieldOperator.contains, value: "" };
+  return assignKey({ field: "from", op: FieldOperator.contains, value: "" });
 }
 
 function createEmptyConditionGroup(): ConditionGroup {
-  return { operator: ConditionOperator.AND, rules: [createEmptyConditionRule()] };
+  return assignKey({ operator: ConditionOperator.AND, rules: [createEmptyConditionRule()] });
 }
 
 function createEmptyAction(): RuleAction {
-  return { type: ActionType.label, value: "", target: null };
+  return assignKey({ type: ActionType.label, value: "", target: null });
 }
 
 function summarizeConditions(group: ConditionGroup | Record<string, unknown>, depth = 0): string {
@@ -276,7 +277,7 @@ function ConditionBuilder({ group, onChange, depth = 0 }: ConditionBuilderProps)
       {group.rules.map((rule, index) => {
         const isGroup = isConditionGroup(rule as ConditionRule | ConditionGroup);
         return (
-          <div key={index} className="relative">
+          <div key={getKey(rule)} className="relative">
             {isGroup ? (
               <div className="flex items-start gap-1">
                 <div className="flex-1">
@@ -411,7 +412,7 @@ function ActionsEditor({ actions, onChange }: ActionsEditorProps) {
   return (
     <div className="space-y-2">
       {actions.map((action, index) => (
-        <div key={index} className="flex items-center gap-2">
+        <div key={getKey(action)} className="flex items-center gap-2">
           <Select
             value={action.type}
             onValueChange={(v) =>

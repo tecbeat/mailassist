@@ -406,6 +406,9 @@ async def _insert_tracked_batch(
 ) -> int:
     """Bulk-insert tracked_emails rows using INSERT ... ON CONFLICT DO NOTHING.
 
+    Splits into sub-batches to stay under PostgreSQL's 32,767 bind-parameter
+    limit (11 columns per row → max ~2,900 rows per statement).
+
     Returns the number of rows actually inserted (excludes conflicts).
     """
     if not uids:
@@ -431,15 +434,22 @@ async def _insert_tracked_batch(
             }
         )
 
-    stmt = (
-        pg_insert(TrackedEmail)
-        .values(rows)
-        .on_conflict_do_nothing(constraint="uq_tracked_email_account_uid")
-    )
-    result = await db.execute(stmt)
-    await db.flush()
+    # 11 columns per row; 32_767 // 11 = 2978, use 2000 for safety margin
+    max_rows_per_insert = 2000
+    total_inserted = 0
 
-    return result.rowcount
+    for i in range(0, len(rows), max_rows_per_insert):
+        batch = rows[i : i + max_rows_per_insert]
+        stmt = (
+            pg_insert(TrackedEmail)
+            .values(batch)
+            .on_conflict_do_nothing(constraint="uq_tracked_email_account_uid")
+        )
+        result = await db.execute(stmt)
+        total_inserted += result.rowcount
+
+    await db.flush()
+    return total_inserted
 
 
 async def poll_single_account(ctx: dict, user_id: str, account_id: str) -> None:

@@ -18,6 +18,7 @@ import {
   ACTIONS_NEEDING_VALUE,
   ACTIONS_NEEDING_TARGET,
   createEmptyAction,
+  getKey,
 } from "./rules-constants";
 
 // ---------------------------------------------------------------------------
@@ -48,7 +49,7 @@ export function ActionsEditor({ actions, onChange }: ActionsEditorProps) {
   return (
     <div className="space-y-2">
       {actions.map((action, index) => (
-        <div key={index} className="flex items-center gap-2">
+        <div key={getKey(action)} className="flex items-center gap-2">
           <Select
             value={action.type}
             onValueChange={(v) =>
