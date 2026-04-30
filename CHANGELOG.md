@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.4-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.6.4-beta) - 2026-04-30
+
+### 🐛 Bug Fixes
+
+- *(frontend)* Resolve stale closure in folder exclude toggle - ([56b913c](https://git.teccave.de/tecbeat/mailassist/commit/56b913c4857ef07165ee833ef97c87e987c25216))
+
 ## [0.6.3-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.6.3-beta) - 2026-04-30
 
 ### 🐛 Bug Fixes
