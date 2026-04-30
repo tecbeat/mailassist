@@ -172,6 +172,17 @@ class Settings(BaseSettings):
     draft_lookback_days: int = Field(default=14, description="Days to look back in Sent for superseded drafts")
     draft_max_sent_scan: int = Field(default=100, description="Max recent Sent messages to scan for In-Reply-To headers")
 
+    # Rate limiting
+    rate_limit_fail_open: bool = Field(
+        default=True,
+        description=(
+            "When True (default), requests are allowed through if Valkey is unreachable — "
+            "preserving availability at the cost of rate limiting. "
+            "When False, requests return 503 during Valkey outages — "
+            "enforcing rate limits at the cost of availability."
+        ),
+    )
+
     # Calendar
     ical_product_id: str = Field(default="-//mailassist//EN", description="iCal PRODID for generated events")
 
