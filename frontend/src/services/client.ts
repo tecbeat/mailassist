@@ -4,6 +4,17 @@
  * Handles credentials, CSRF tokens, 401 redirects, and JSON error parsing.
  */
 
+/** Typed HTTP error that preserves the response status code. */
+export class HttpError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "HttpError";
+  }
+}
+
 /** Read a cookie value by name from document.cookie. */
 function getCookie(name: string): string | undefined {
   const match = document.cookie
@@ -76,7 +87,7 @@ export async function customInstance<T>(
     } catch {
       message = errorBody;
     }
-    throw new Error(message);
+    throw new HttpError(message, response.status);
   }
 
   if (response.status === 204) {
