@@ -10,7 +10,6 @@ include:
 versioner:
   script:
     - versioner --suffix beta
-    - more version.env
 
 templater:
   rules:
