@@ -84,7 +84,7 @@ class UserSettings(Base):
     approval_mode_summary: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.APPROVAL, nullable=False)
     approval_mode_rules: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.APPROVAL, nullable=False)
     approval_mode_contacts: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.APPROVAL, nullable=False)
-    approval_mode_notifications: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.APPROVAL, nullable=False)
+    approval_mode_notifications: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.AUTO, nullable=False)
     plugin_order: Mapped[list[str] | None] = mapped_column(JSON, nullable=True, default=None)
     plugin_provider_map: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
