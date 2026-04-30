@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [0.7.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.1-beta) - 2026-04-30
 
+### 🐛 Bug Fixes
+
+- *(frontend)* Add usePageTitle to rules page - ([3234077](https://git.teccave.de/tecbeat/mailassist/commit/3234077ad593e4ef13b83ec1fab13c88f94bf01e))
+
 ### ⚙️ Miscellaneous Tasks
 
 - Remove premature mypy check from backend_unittest job - ([1dfa38d](https://git.teccave.de/tecbeat/mailassist/commit/1dfa38d780b3e754cd0690c2b5fd21c3c7fccbb6))
