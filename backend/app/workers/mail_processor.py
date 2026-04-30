@@ -39,7 +39,7 @@ import time
 import structlog
 from sqlalchemy import select, update
 
-from app.core.database import get_session
+from app.core.database import get_session_ctx
 from app.core.events import AIProcessingCompleteEvent, get_event_bus
 from app.models import AIProvider, MailAccount, TrackedEmail, TrackedEmailStatus
 from app.models.mail import CompletionReason, ErrorType
@@ -92,7 +92,7 @@ async def _update_tracked_status(
             ``"provider_ai"``, ``"mail"``, or ``None`` to clear.
     """
     try:
-        async for db in get_session():
+        async with get_session_ctx() as db:
             stmt = select(TrackedEmail).where(
                 TrackedEmail.mail_account_id == UUID(account_id),
                 TrackedEmail.mail_uid == mail_uid,
@@ -143,7 +143,7 @@ async def _update_tracked_metadata(
     (which does not fetch IMAP envelopes).
     """
     try:
-        async for db in get_session():
+        async with get_session_ctx() as db:
             stmt = select(TrackedEmail).where(
                 TrackedEmail.mail_account_id == UUID(account_id),
                 TrackedEmail.mail_uid == mail_uid,
@@ -183,7 +183,7 @@ async def _update_current_folder(
     Uses an independent DB session.  Non-fatal on failure.
     """
     try:
-        async for db in get_session():
+        async with get_session_ctx() as db:
             stmt = select(TrackedEmail).where(
                 TrackedEmail.mail_account_id == UUID(account_id),
                 TrackedEmail.mail_uid == mail_uid,
@@ -218,7 +218,7 @@ async def _fail_queued_mails_for_folder(
     fail because their folder no longer exists on the IMAP server.
     """
     try:
-        async for db in get_session():
+        async with get_session_ctx() as db:
             from sqlalchemy import update
 
             stmt = (
@@ -263,7 +263,7 @@ async def _pause_account(
     """
     try:
         now = datetime.now(UTC)
-        async for db in get_session():
+        async with get_session_ctx() as db:
             stmt = (
                 update(MailAccount)
                 .where(MailAccount.id == UUID(account_id))
@@ -294,7 +294,7 @@ async def _pause_provider(
     """
     try:
         now = datetime.now(UTC)
-        async for db in get_session():
+        async with get_session_ctx() as db:
             stmt = (
                 update(AIProvider)
                 .where(AIProvider.id == UUID(provider_id))
@@ -487,7 +487,7 @@ async def _process_mail_inner(
     # Status is already PROCESSING (set by the scheduler before ARQ dispatch).
 
     pipeline_result: PipelineResult
-    async for db in get_session():
+    async with get_session_ctx() as db:
         pipeline_result = await run_ai_pipeline(
             db=db,
             user_id=user_id,

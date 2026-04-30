@@ -258,14 +258,14 @@ async def auto_add_sender_email(
     Best-effort: failures are logged but never propagate.
     """
     from app.core.config import get_settings
-    from app.core.database import get_session
+    from app.core.database import get_session_ctx
 
     email_lower = sender_email.strip().lower()
     if not email_lower:
         return False
 
     try:
-        async for db in get_session():
+        async with get_session_ctx() as db:
             contact = await db.get(Contact, contact_id)
             if contact is None or contact.user_id != user_id:
                 logger.debug("auto_add_email_contact_not_found", contact_id=str(contact_id))

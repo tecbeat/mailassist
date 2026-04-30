@@ -93,7 +93,7 @@ export default function AutoReplyPage() {
     try {
       await deleteMutation.mutateAsync({ replyId: id });
       queryClient.invalidateQueries({
-        queryKey: getListAutoRepliesApiAutoRepliesGetQueryKey(params),
+        queryKey: getListAutoRepliesApiAutoRepliesGetQueryKey(),
       });
       setDeleteTarget(null);
       toast({ title: "Auto-reply record removed", description: "The auto-reply entry has been deleted." });
@@ -126,7 +126,7 @@ export default function AutoReplyPage() {
         },
       });
       queryClient.invalidateQueries({
-        queryKey: getListAutoRepliesApiAutoRepliesGetQueryKey(params),
+        queryKey: getListAutoRepliesApiAutoRepliesGetQueryKey(),
       });
       setEditingId(null);
       toast({ title: "Draft updated", description: "The auto-reply draft has been saved." });

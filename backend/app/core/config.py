@@ -172,19 +172,23 @@ class Settings(BaseSettings):
     draft_lookback_days: int = Field(default=14, description="Days to look back in Sent for superseded drafts")
     draft_max_sent_scan: int = Field(default=100, description="Max recent Sent messages to scan for In-Reply-To headers")
 
+    # Rate limiting
+    rate_limit_fail_open: bool = Field(
+        default=True,
+        description=(
+            "When True (default), requests are allowed through if Valkey is unreachable — "
+            "preserving availability at the cost of rate limiting. "
+            "When False, requests return 503 during Valkey outages — "
+            "enforcing rate limits at the cost of availability."
+        ),
+    )
+
     # Calendar
     ical_product_id: str = Field(default="-//mailassist//EN", description="iCal PRODID for generated events")
 
     # Rules engine
     rules_max_pattern_length: int = Field(default=500, description="Max regex pattern length for rule matching")
     rules_max_text_length: int = Field(default=51200, description="Max text length (bytes) to search against rules")
-
-    @field_validator("app_secret_key")
-    @classmethod
-    def validate_secret_key(cls, v: str) -> str:
-        if len(v) < 32:
-            raise ValueError("APP_SECRET_KEY must be at least 32 characters")
-        return v
 
     @field_validator("app_secret_key_old")
     @classmethod

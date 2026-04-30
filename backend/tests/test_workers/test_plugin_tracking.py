@@ -8,6 +8,7 @@ mail) with pause-flag integration — IMAP errors pause the account,
 LLM errors pause the provider, parse errors are permanent.
 """
 
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -155,7 +156,8 @@ class TestUpdateTrackedStatusPluginFields:
         mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.flush = AsyncMock()
 
-        # Simulate the async generator from get_session()
+        # Provide a get_session_ctx context manager mock that yields the mock db
+        @asynccontextmanager
         async def fake_get_session():
             yield mock_db
 
@@ -164,7 +166,7 @@ class TestUpdateTrackedStatusPluginFields:
 
         account_id = str(uuid4())
 
-        with patch("app.workers.mail_processor.get_session", fake_get_session):
+        with         patch("app.workers.mail_processor.get_session_ctx", fake_get_session):
             from app.workers.mail_processor import _update_tracked_status
 
             await _update_tracked_status(
@@ -201,6 +203,7 @@ class TestUpdateTrackedStatusPluginFields:
         mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.flush = AsyncMock()
 
+        @asynccontextmanager
         async def fake_get_session():
             yield mock_db
 
@@ -209,7 +212,7 @@ class TestUpdateTrackedStatusPluginFields:
 
         account_id = str(uuid4())
 
-        with patch("app.workers.mail_processor.get_session", fake_get_session):
+        with         patch("app.workers.mail_processor.get_session_ctx", fake_get_session):
             from app.workers.mail_processor import _update_tracked_status
 
             await _update_tracked_status(
@@ -269,6 +272,7 @@ class TestProcessMailStatusTransitions:
         mock_pipeline_result.completion_reason = "full_pipeline"
         mock_pipeline_result.provider_error = False
 
+        @asynccontextmanager
         async def fake_get_session():
             yield AsyncMock()
 
@@ -293,7 +297,7 @@ class TestProcessMailStatusTransitions:
                 "app.workers.mail_processor.run_ai_pipeline",
                 return_value=mock_pipeline_result,
             ),
-            patch("app.workers.mail_processor.get_session", fake_get_session),
+            patch("app.workers.mail_processor.get_session_ctx", fake_get_session),
             patch("app.workers.mail_processor.get_event_bus") as mock_event_bus,
             patch("app.workers.mail_processor._update_tracked_metadata", new_callable=AsyncMock),
         ):
@@ -525,6 +529,7 @@ class TestProcessMailStatusTransitions:
         mock_pipeline_result.completion_reason = None
         mock_pipeline_result.provider_error = True
 
+        @asynccontextmanager
         async def fake_get_session():
             yield AsyncMock()
 
@@ -549,7 +554,7 @@ class TestProcessMailStatusTransitions:
                 "app.workers.mail_processor.run_ai_pipeline",
                 return_value=mock_pipeline_result,
             ),
-            patch("app.workers.mail_processor.get_session", fake_get_session),
+            patch("app.workers.mail_processor.get_session_ctx", fake_get_session),
             patch(
                 "app.workers.mail_processor._pause_provider",
                 new_callable=AsyncMock,
@@ -716,6 +721,7 @@ class TestUpdateTrackedStatusErrorType:
         mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.flush = AsyncMock()
 
+        @asynccontextmanager
         async def fake_get_session():
             yield mock_db
 
@@ -724,7 +730,7 @@ class TestUpdateTrackedStatusErrorType:
 
         account_id = str(uuid4())
 
-        with patch("app.workers.mail_processor.get_session", fake_get_session):
+        with         patch("app.workers.mail_processor.get_session_ctx", fake_get_session):
             from app.workers.mail_processor import _update_tracked_status
 
             await _update_tracked_status(
@@ -752,6 +758,7 @@ class TestUpdateTrackedStatusErrorType:
         mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.flush = AsyncMock()
 
+        @asynccontextmanager
         async def fake_get_session():
             yield mock_db
 
@@ -760,7 +767,7 @@ class TestUpdateTrackedStatusErrorType:
 
         account_id = str(uuid4())
 
-        with patch("app.workers.mail_processor.get_session", fake_get_session):
+        with         patch("app.workers.mail_processor.get_session_ctx", fake_get_session):
             from app.workers.mail_processor import _update_tracked_status
 
             await _update_tracked_status(
@@ -858,6 +865,7 @@ class TestSavepointRollback:
         mock_pipeline_result.approvals_created = 0
         mock_pipeline_result.completion_reason = None
 
+        @asynccontextmanager
         async def fake_get_session():
             yield AsyncMock()
 
@@ -882,7 +890,7 @@ class TestSavepointRollback:
                 "app.workers.mail_processor.run_ai_pipeline",
                 return_value=mock_pipeline_result,
             ),
-            patch("app.workers.mail_processor.get_session", fake_get_session),
+            patch("app.workers.mail_processor.get_session_ctx", fake_get_session),
             patch(
                 "app.workers.mail_processor._pause_provider",
                 new_callable=AsyncMock,
@@ -939,6 +947,7 @@ class TestSavepointRollback:
         mock_pipeline_result.approvals_created = 0
         mock_pipeline_result.completion_reason = None
 
+        @asynccontextmanager
         async def fake_get_session():
             yield AsyncMock()
 
@@ -963,7 +972,7 @@ class TestSavepointRollback:
                 "app.workers.mail_processor.run_ai_pipeline",
                 return_value=mock_pipeline_result,
             ),
-            patch("app.workers.mail_processor.get_session", fake_get_session),
+            patch("app.workers.mail_processor.get_session_ctx", fake_get_session),
             patch(
                 "app.workers.mail_processor._pause_provider",
                 new_callable=AsyncMock,
@@ -1021,6 +1030,7 @@ class TestSavepointRollback:
         mock_pipeline_result.approvals_created = 0
         mock_pipeline_result.completion_reason = None
 
+        @asynccontextmanager
         async def fake_get_session():
             yield AsyncMock()
 
@@ -1045,7 +1055,7 @@ class TestSavepointRollback:
                 "app.workers.mail_processor.run_ai_pipeline",
                 return_value=mock_pipeline_result,
             ),
-            patch("app.workers.mail_processor.get_session", fake_get_session),
+            patch("app.workers.mail_processor.get_session_ctx", fake_get_session),
             patch(
                 "app.workers.mail_processor.execute_post_pipeline",
                 side_effect=ConnectionError("IMAP connection lost"),

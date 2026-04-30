@@ -78,7 +78,7 @@ export default function LabelingPage() {
     try {
       await deleteMutation.mutateAsync({ labelId: id });
       queryClient.invalidateQueries({
-        queryKey: getListAppliedLabelsApiLabelsGetQueryKey(params),
+        queryKey: getListAppliedLabelsApiLabelsGetQueryKey(),
       });
       setDeleteTarget(null);
       toast({ title: "Label record removed", description: "The label assignment has been deleted." });

@@ -18,11 +18,11 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import ARRAY, String, bindparam, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_session
+from app.core.database import get_session_ctx
 from app.models import MailAccount, TrackedEmail, TrackedEmailStatus
 from app.services.mail import (
     ImapConnection,
@@ -124,7 +124,7 @@ async def check_idle_health() -> None:
         _idle_tasks.pop(account_id, None)
 
     # Restart dead IDLE tasks for accounts that are still active + idle-enabled
-    async for db in get_session():
+    async with get_session_ctx() as db:
         for account_id in dead_accounts:
             stmt = select(MailAccount).where(
                 MailAccount.id == UUID(account_id),
@@ -145,7 +145,7 @@ async def start_idle_manager() -> None:
     Called during worker startup. Scans for accounts with idle_enabled=True
     and starts an IDLE task for each.
     """
-    async for db in get_session():
+    async with get_session_ctx() as db:
         stmt = select(MailAccount).where(
             MailAccount.is_paused.is_(False),
             MailAccount.idle_enabled.is_(True),
@@ -181,7 +181,7 @@ async def _idle_loop(account: MailAccount) -> None:
         conn = None
         try:
             # Reload account from DB to pick up credential rotations / config changes
-            async for db in get_session():
+            async with get_session_ctx() as db:
                 stmt = select(MailAccount).where(
                     MailAccount.id == UUID(account_id),
                     MailAccount.is_paused.is_(False),
@@ -287,7 +287,7 @@ async def _idle_loop(account: MailAccount) -> None:
             )
 
             # Update error status
-            async for db in get_session():
+            async with get_session_ctx() as db:
                 await update_account_sync_status(db, UUID(account_id), error=str(e))
 
                 # Check circuit breaker
@@ -324,26 +324,36 @@ async def _search_and_insert_new(
         logger.debug("idle_inbox_empty", account_id=account_id)
         return 0
 
-    # Filter out UIDs already tracked (server-side DB diff)
-    async for db in get_session():
-        uid_set = set(uids)
-        stmt = (
-            select(TrackedEmail.mail_uid)
-            .where(
-                TrackedEmail.mail_account_id == UUID(account_id),
-                TrackedEmail.current_folder == "INBOX",
-                TrackedEmail.mail_uid.in_(uids),
-            )
+    # Filter out UIDs already tracked using a server-side SQL diff.
+    # Uses the same unnest() pattern as mail_poller._get_new_uids to avoid
+    # loading all tracked UIDs into Python memory for large mailboxes.
+    _uid_diff_query = text("""
+        SELECT u.uid
+        FROM unnest(:uids) AS u(uid)
+        WHERE NOT EXISTS (
+            SELECT 1 FROM tracked_emails te
+            WHERE te.mail_account_id = :account_id
+              AND te.mail_uid = u.uid
+              AND te.current_folder = 'INBOX'
         )
-        result = await db.execute(stmt)
-        existing = {row[0] for row in result.all()}
-        new_uids = [u for u in uids if u not in existing]
+    """).bindparams(bindparam("uids", type_=ARRAY(String)))
+
+    batch_size = 5_000
+    new_uids: list[str] = []
+    acct_uuid = UUID(account_id)
+    async with get_session_ctx() as db:
+        for i in range(0, len(uids), batch_size):
+            batch = uids[i : i + batch_size]
+            result = await db.execute(
+                _uid_diff_query, {"uids": batch, "account_id": acct_uuid},
+            )
+            new_uids.extend(row[0] for row in result.all())
 
     logger.debug(
         "idle_search_result",
         account_id=account_id,
         total_in_inbox=len(uids),
-        already_tracked=len(existing),
+        already_tracked=len(uids) - len(new_uids),
         new=len(new_uids),
     )
 
@@ -351,13 +361,13 @@ async def _search_and_insert_new(
         return 0
 
     inserted = 0
-    async for db in get_session():
+    async with get_session_ctx() as db:
         inserted = await _insert_tracked_uids(
             db, UUID(user_id), UUID(account_id), new_uids,
         )
 
     if inserted:
-        async for db in get_session():
+        async with get_session_ctx() as db:
             await update_account_sync_status(db, UUID(account_id))
 
     return inserted

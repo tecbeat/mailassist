@@ -11,7 +11,7 @@ import structlog
 from sqlalchemy import select
 
 from app.core.config import get_settings
-from app.core.database import get_session
+from app.core.database import get_session_ctx
 from app.models import CardDAVConfig
 from app.services.contacts import sync_contacts
 
@@ -37,7 +37,7 @@ async def sync_all_contacts(ctx: dict) -> None:
     """
     now = datetime.now(UTC)
 
-    async for db in get_session():
+    async with get_session_ctx() as db:
         stmt = select(CardDAVConfig).where(CardDAVConfig.is_active.is_(True))
         result = await db.execute(stmt)
         configs = result.scalars().all()

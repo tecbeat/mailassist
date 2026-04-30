@@ -651,20 +651,16 @@ async def _count_tracked(
 
 
 async def _get_token_usage(user_id: str, days: int) -> int:
-    """Aggregate token usage from Valkey daily counters."""
+    """Aggregate token usage from Valkey daily counters using a single MGET."""
     try:
         cache = get_cache_client()
-        total = 0
         now = datetime.now(UTC)
-
-        for day_offset in range(days):
-            date_str = (now - timedelta(days=day_offset)).strftime("%Y-%m-%d")
-            key = f"token_usage:{user_id}:{date_str}"
-            val = await cache.get(key)
-            if val is not None:
-                total += int(val)
-
-        return total
+        keys = [
+            f"token_usage:{user_id}:{(now - timedelta(days=offset)).strftime('%Y-%m-%d')}"
+            for offset in range(days)
+        ]
+        values = await cache.mget(*keys)
+        return sum(int(v) for v in values if v is not None)
     except Exception:
         logger.warning("token_usage_fetch_failed", user_id=user_id, days=days)
         return 0
@@ -848,8 +844,12 @@ async def retry_failed_mail(
 ) -> FailedMailActionResponse:
     """Retry a failed mail: set status back to pending and reset retry_count."""
     uid = UUID(user_id)
+    try:
+        email_uuid = UUID(tracked_email_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid tracked_email_id: must be a valid UUID")
     stmt = select(TrackedEmail).where(
-        TrackedEmail.id == UUID(tracked_email_id),
+        TrackedEmail.id == email_uuid,
         TrackedEmail.user_id == uid,
         TrackedEmail.status == TrackedEmailStatus.FAILED,
     )
@@ -877,8 +877,12 @@ async def resolve_failed_mail(
 ) -> FailedMailActionResponse:
     """Dismiss a failed mail: mark as completed (user considers it handled)."""
     uid = UUID(user_id)
+    try:
+        email_uuid = UUID(tracked_email_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid tracked_email_id: must be a valid UUID")
     stmt = select(TrackedEmail).where(
-        TrackedEmail.id == UUID(tracked_email_id),
+        TrackedEmail.id == email_uuid,
         TrackedEmail.user_id == uid,
         TrackedEmail.status == TrackedEmailStatus.FAILED,
     )

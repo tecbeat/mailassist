@@ -59,6 +59,7 @@ import {
 } from "./approval-helpers";
 import { ApprovalEditForm } from "./approval-edit-form";
 import { ApprovalCardSkeleton } from "./approval-card-skeleton";
+import { HttpError } from "@/services/client";
 
 // ---------------------------------------------------------------------------
 // Approvals Page
@@ -79,7 +80,9 @@ export default function ApprovalsPage() {
 
   useEffect(() => {
     list.setPage(1);
-  }, [statusFilter, functionTypeFilter, sortOrder, list.setPage]);
+    // list.setPage is a stable useState setter — omitting it from deps is safe
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, functionTypeFilter, sortOrder]);
 
   // --- Data fetching ---
   const queryParams = useMemo(
@@ -154,9 +157,21 @@ export default function ApprovalsPage() {
             queryClient.invalidateQueries({ queryKey: ["/api/approvals"] });
             queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
           },
-          onError: () => {
-            rollback(queryKey, previousData);
-            toast({ title: "Approval failed", description: "Could not approve this action. Please try again.", variant: "destructive" });
+          onError: (err) => {
+            const status = err instanceof HttpError ? err.status : 0;
+            if (status === 409 || status === 410) {
+              // Approval was already processed or has expired — drop the optimistic
+              // state and refresh so the stale item disappears without a page reload.
+              queryClient.invalidateQueries({ queryKey: ["/api/approvals"] });
+              const description =
+                status === 410
+                  ? "This approval has expired and has been removed from your queue."
+                  : "This approval was already processed by another session.";
+              toast({ title: "Approval no longer actionable", description, variant: "destructive" });
+            } else {
+              rollback(queryKey, previousData);
+              toast({ title: "Approval failed", description: "Could not approve this action. Please try again.", variant: "destructive" });
+            }
           },
           onSettled: () => {
             setProcessingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
@@ -179,9 +194,19 @@ export default function ApprovalsPage() {
             toast({ title: "Rejected", description: "Action has been rejected." });
             queryClient.invalidateQueries({ queryKey: ["/api/approvals"] });
           },
-          onError: () => {
-            rollback(queryKey, previousData);
-            toast({ title: "Rejection failed", description: "Could not reject this action. Please try again.", variant: "destructive" });
+          onError: (err) => {
+            const status = err instanceof HttpError ? err.status : 0;
+            if (status === 409 || status === 410) {
+              queryClient.invalidateQueries({ queryKey: ["/api/approvals"] });
+              const description =
+                status === 410
+                  ? "This approval has expired and has been removed from your queue."
+                  : "This approval was already processed by another session.";
+              toast({ title: "Approval no longer actionable", description, variant: "destructive" });
+            } else {
+              rollback(queryKey, previousData);
+              toast({ title: "Rejection failed", description: "Could not reject this action. Please try again.", variant: "destructive" });
+            }
           },
           onSettled: () => {
             setProcessingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
@@ -202,10 +227,13 @@ export default function ApprovalsPage() {
 
   const handleSaveAndApprove = useCallback(
     (id: string) => {
+      // Snapshot editedAction at call time to avoid stale-closure reads
+      // if state updates between when the callback was created and invoked.
+      const actionSnapshot = editedAction;
       setProcessingIds((prev) => new Set(prev).add(id));
 
       editMutation.mutate(
-        { approvalId: id, data: { edited_actions: editedAction } },
+        { approvalId: id, data: { edited_actions: actionSnapshot } },
         {
           onSuccess: () => {
             const { queryKey, previousData } = performOptimisticRemoval([id]);
@@ -219,9 +247,19 @@ export default function ApprovalsPage() {
                   queryClient.invalidateQueries({ queryKey: ["/api/approvals"] });
                   queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
                 },
-                onError: () => {
-                  rollback(queryKey, previousData);
-                  toast({ title: "Approval failed", description: "Could not approve the edited action. Please try again.", variant: "destructive" });
+                onError: (err) => {
+                  const status = err instanceof HttpError ? err.status : 0;
+                  if (status === 409 || status === 410) {
+                    queryClient.invalidateQueries({ queryKey: ["/api/approvals"] });
+                    const description =
+                      status === 410
+                        ? "This approval has expired and has been removed from your queue."
+                        : "This approval was already processed by another session.";
+                    toast({ title: "Approval no longer actionable", description, variant: "destructive" });
+                  } else {
+                    rollback(queryKey, previousData);
+                    toast({ title: "Approval failed", description: "Could not approve the edited action. Please try again.", variant: "destructive" });
+                  }
                 },
                 onSettled: () => {
                   setProcessingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });

@@ -7,7 +7,6 @@ and pagination helpers via FastAPI's Depends() mechanism.
 from __future__ import annotations
 
 import math
-from functools import lru_cache
 from typing import Annotated, Any, Sequence, TypeVar
 from uuid import UUID
 
@@ -19,9 +18,8 @@ from app.core.config import Settings, get_settings
 from app.core.database import get_session
 
 
-@lru_cache
 def get_cached_settings() -> Settings:
-    """Cached settings singleton."""
+    """Return the cached settings singleton (caching handled by get_settings)."""
     return get_settings()
 
 

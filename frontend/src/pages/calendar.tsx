@@ -278,7 +278,7 @@ export default function CalendarPage() {
     try {
       await deleteMutation.mutateAsync({ eventId: id });
       queryClient.invalidateQueries({
-        queryKey: getListCalendarEventsApiCalendarEventsGetQueryKey(eventsParams),
+        queryKey: getListCalendarEventsApiCalendarEventsGetQueryKey(),
       });
       setDeleteTarget(null);
       toast({ title: "Calendar event removed", description: "The event has been deleted from the list." });
@@ -292,7 +292,7 @@ export default function CalendarPage() {
     try {
       await syncMutation.mutateAsync({ eventId: id });
       queryClient.invalidateQueries({
-        queryKey: getListCalendarEventsApiCalendarEventsGetQueryKey(eventsParams),
+        queryKey: getListCalendarEventsApiCalendarEventsGetQueryKey(),
       });
       toast({ title: "Event synced to calendar", description: "The event has been pushed to your CalDAV calendar." });
     } catch {

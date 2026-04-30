@@ -8,6 +8,7 @@ Verifies:
 - Cooldown reset on failed probe
 """
 
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -309,11 +310,12 @@ class TestRecoverPausedAccounts:
         mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.commit = AsyncMock()
 
+        @asynccontextmanager
         async def fake_get_session():
             yield mock_db
 
         with (
-            patch("app.workers.health.get_session", fake_get_session),
+            patch("app.workers.health.get_session_ctx", fake_get_session),
             patch("app.workers.health.probe_imap_account",
                   AsyncMock(return_value=True)),
             patch("app.workers.health.get_event_bus") as mock_bus_fn,
@@ -345,11 +347,12 @@ class TestRecoverPausedAccounts:
         mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.commit = AsyncMock()
 
+        @asynccontextmanager
         async def fake_get_session():
             yield mock_db
 
         with (
-            patch("app.workers.health.get_session", fake_get_session),
+            patch("app.workers.health.get_session_ctx", fake_get_session),
             patch("app.workers.health.probe_imap_account",
                   AsyncMock(return_value=False)),
             patch("app.workers.health.get_event_bus") as mock_bus_fn,
@@ -380,13 +383,14 @@ class TestRecoverPausedAccounts:
         mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.commit = AsyncMock()
 
+        @asynccontextmanager
         async def fake_get_session():
             yield mock_db
 
         probe_mock = AsyncMock(return_value=True)
 
         with (
-            patch("app.workers.health.get_session", fake_get_session),
+            patch("app.workers.health.get_session_ctx", fake_get_session),
             patch("app.workers.health.probe_imap_account", probe_mock),
             patch("app.workers.health.get_event_bus") as mock_bus_fn,
         ):
@@ -433,11 +437,12 @@ class TestRecoverPausedProviders:
         mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.commit = AsyncMock()
 
+        @asynccontextmanager
         async def fake_get_session():
             yield mock_db
 
         with (
-            patch("app.workers.health.get_session", fake_get_session),
+            patch("app.workers.health.get_session_ctx", fake_get_session),
             patch("app.workers.health.probe_ai_provider",
                   AsyncMock(return_value=True)),
             patch("app.workers.health.get_event_bus") as mock_bus_fn,
@@ -469,11 +474,12 @@ class TestRecoverPausedProviders:
         mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.commit = AsyncMock()
 
+        @asynccontextmanager
         async def fake_get_session():
             yield mock_db
 
         with (
-            patch("app.workers.health.get_session", fake_get_session),
+            patch("app.workers.health.get_session_ctx", fake_get_session),
             patch("app.workers.health.probe_ai_provider",
                   AsyncMock(return_value=False)),
             patch("app.workers.health.get_event_bus") as mock_bus_fn,
@@ -502,13 +508,14 @@ class TestRecoverPausedProviders:
         mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.commit = AsyncMock()
 
+        @asynccontextmanager
         async def fake_get_session():
             yield mock_db
 
         probe_mock = AsyncMock(return_value=True)
 
         with (
-            patch("app.workers.health.get_session", fake_get_session),
+            patch("app.workers.health.get_session_ctx", fake_get_session),
             patch("app.workers.health.probe_ai_provider", probe_mock),
             patch("app.workers.health.get_event_bus") as mock_bus_fn,
         ):

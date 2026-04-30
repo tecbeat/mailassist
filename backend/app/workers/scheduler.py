@@ -38,7 +38,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.constants import PIPELINE_PLUGIN_NAMES, PLUGIN_TO_APPROVAL_COLUMN
-from app.core.database import get_session
+from app.core.database import get_session_ctx
 from app.models import (
     AIProvider,
     MailAccount,
@@ -62,14 +62,14 @@ async def schedule_pending_mails(ctx: dict) -> None:
     """
     arq_redis: ArqRedis = ctx["redis"]
 
-    async for db in get_session():
+    async with get_session_ctx() as db:
         await _reset_stale_processing(db)
         await _schedule(db, arq_redis)
 
 
 async def schedule_now(arq_redis: ArqRedis) -> None:
     """Immediately schedule queued mails (event-driven, e.g. reactivation)."""
-    async for db in get_session():
+    async with get_session_ctx() as db:
         await _schedule(db, arq_redis)
 
 

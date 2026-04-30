@@ -29,7 +29,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_session
+from app.core.database import get_session_ctx
 from app.core.config import get_settings
 from app.models import MailAccount, TrackedEmail, TrackedEmailStatus
 from app.services.mail import (
@@ -70,7 +70,7 @@ async def poll_mail_accounts(ctx: dict) -> None:
     """
     # --- Phase 1: Load account list in a short session ---
     account_ids: list[str] = []
-    async for db in get_session():
+    async with get_session_ctx() as db:
         stmt = (
             select(
                 MailAccount.id,
@@ -130,7 +130,7 @@ async def poll_mail_accounts(ctx: dict) -> None:
     async def _poll_with_semaphore(acct_id: str) -> None:
         async with semaphore:
             account = None
-            async for db in get_session():
+            async with get_session_ctx() as db:
                 stmt = select(MailAccount).where(MailAccount.id == UUID(acct_id))
                 result = await db.execute(stmt)
                 account = result.scalar_one_or_none()
@@ -166,7 +166,7 @@ async def _poll_single_account(
 
     # If scan_existing_emails is off, skip the initial scan entirely
     if is_initial_scan and not account.scan_existing_emails:
-        async for db in get_session():
+        async with get_session_ctx() as db:
             stmt = select(MailAccount).where(MailAccount.id == account.id)
             result = await db.execute(stmt)
             acct = result.scalar_one_or_none()
@@ -212,7 +212,7 @@ async def _poll_single_account(
                         total_folders=len(all_folders),
                         excluded=len(excluded),
                     )
-                    async for db in get_session():
+                    async with get_session_ctx() as db:
                         stmt = select(MailAccount).where(MailAccount.id == account.id)
                         result = await db.execute(stmt)
                         acct = result.scalar_one_or_none()
@@ -232,7 +232,7 @@ async def _poll_single_account(
 
             # Mark initial scan done after all folders are processed
             if is_initial_scan:
-                async for db in get_session():
+                async with get_session_ctx() as db:
                     stmt = select(MailAccount).where(MailAccount.id == account.id)
                     result = await db.execute(stmt)
                     acct = result.scalar_one_or_none()
@@ -247,12 +247,12 @@ async def _poll_single_account(
                 )
 
         # Success — reset error state in a short session
-        async for db in get_session():
+        async with get_session_ctx() as db:
             await update_account_sync_status(db, account.id)
 
     except Exception as exc:
         logger.exception("polling_failed", account_id=account_id)
-        async for db in get_session():
+        async with get_session_ctx() as db:
             await update_account_sync_status(db, account.id, error=str(exc))
             await check_circuit_breaker(db, account.id)
 
@@ -300,7 +300,7 @@ async def _poll_folder(
     # Filter out UIDs already tracked (server-side, per-folder)
     # Short DB session for the diff query
     new_uids: list[str] = []
-    async for db in get_session():
+    async with get_session_ctx() as db:
         new_uids = await _get_new_uids(db, account_id, uids, folder=folder)
 
     logger.info(
@@ -347,7 +347,7 @@ async def _poll_folder(
                 )
 
         # Bulk insert into tracked_emails with correct folder (short DB session)
-        async for db in get_session():
+        async with get_session_ctx() as db:
             inserted = await _insert_tracked_batch(
                 db, account.user_id, account.id, batch, envelopes,
                 current_folder=folder,
@@ -479,7 +479,7 @@ async def poll_single_account(ctx: dict, user_id: str, account_id: str) -> None:
     uid = UUID(account_id)
     account = None
 
-    async for db in get_session():
+    async with get_session_ctx() as db:
         stmt = select(MailAccount).where(
             MailAccount.id == uid,
             MailAccount.user_id == UUID(user_id),

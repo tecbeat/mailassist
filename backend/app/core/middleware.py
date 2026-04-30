@@ -226,8 +226,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     headers={"Retry-After": "60"},
                 )
         except Exception:
-            # Fail-open: if Valkey is down, don't block requests
             logger.warning("rate_limit_check_failed", reason="valkey_error")
+            if not settings.rate_limit_fail_open:
+                return JSONResponse(
+                    status_code=503,
+                    content={"error": "Service unavailable", "detail": "Rate limiter is temporarily unavailable."},
+                )
 
         return await call_next(request)
 

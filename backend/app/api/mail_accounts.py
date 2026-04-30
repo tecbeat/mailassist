@@ -118,7 +118,7 @@ async def create_mail_account(
     from app.core.redis import get_arq_client
 
     arq = get_arq_client()
-    await arq.enqueue_job("poll_single_account", user_id, str(account.id))
+    await arq.enqueue_job("poll_single_account", str(user_id), str(account.id))
 
     return MailAccountResponse.model_validate(account)
 

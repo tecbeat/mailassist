@@ -140,7 +140,7 @@ export default function SpamPage() {
       try {
         await deleteMutation.mutateAsync({ entryId: id });
         queryClient.invalidateQueries({
-          queryKey: getListBlocklistApiSpamBlocklistGetQueryKey(params),
+          queryKey: getListBlocklistApiSpamBlocklistGetQueryKey(),
         });
         setDeleteTarget(null);
         toast({ title: "Blocklist entry removed", description: "The entry has been deleted from the blocklist." });
@@ -163,7 +163,7 @@ export default function SpamPage() {
         data: result.data,
       });
       queryClient.invalidateQueries({
-        queryKey: getListBlocklistApiSpamBlocklistGetQueryKey(params),
+        queryKey: getListBlocklistApiSpamBlocklistGetQueryKey(),
       });
       setAddDialogOpen(false);
       setNewValue("");
