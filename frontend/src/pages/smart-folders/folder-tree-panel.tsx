@@ -298,7 +298,8 @@ export function FolderTreePanel({
     function collectIds(nodes: FolderNode[]): string[] {
       return nodes.flatMap((n) => [n.fullPath, ...collectIds(n.children)]);
     }
-    return collectIds(tree);
+    // Exclude __system__ virtual node — it's not a real IMAP folder
+    return collectIds(tree).filter((id) => id !== "__system__");
   }, [tree]);
 
   const sensors = useSensors(
@@ -322,27 +323,47 @@ export function FolderTreePanel({
       const oldPath = active.id as string;
       const overPath = over.id as string;
 
+      // Prevent dropping onto the virtual __system__ group node
+      if (overPath === "__system__") return;
+
+      // Prevent dropping onto system folders (Inbox, Sent, Trash, etc.)
+      const overNode = allFolderIds.includes(overPath)
+        ? (() => {
+            function findNode(nodes: FolderNode[], path: string): FolderNode | undefined {
+              for (const n of nodes) {
+                if (n.fullPath === path) return n;
+                const found = findNode(n.children, path);
+                if (found) return found;
+              }
+              return undefined;
+            }
+            return findNode(tree, overPath);
+          })()
+        : undefined;
+      if (overNode?.isSystemFolder) return;
+
+      // Prevent dropping a folder into itself or its own descendant
+      if (overPath.startsWith(oldPath + separator)) return;
+
+      // Reparent: move dragged folder into the target folder
       const oldParts = oldPath.split(separator);
       const folderName = oldParts[oldParts.length - 1] ?? "";
+      const newPath = `${overPath}${separator}${folderName}`;
 
-      const oldParent = oldParts.slice(0, -1).join(separator);
-      const overParts = overPath.split(separator);
-      const overParent = overParts.slice(0, -1).join(separator);
-
-      if (oldParent === overParent) return;
-
-      const newPath = overParent ? `${overParent}${separator}${folderName}` : folderName;
-
+      // No-op if already a direct child of the target
       if (newPath === oldPath) return;
 
       try {
         await renameMutation.mutateAsync({ oldName: oldPath, newName: newPath });
-        toast({ title: `Moved "${folderName}" to "${newPath}"`, description: "Folder has been relocated successfully." });
+        toast({
+          title: `Moved "${folderName}"`,
+          description: `Folder relocated to "${overPath}".`,
+        });
       } catch {
         toast({ title: "Failed to move folder", description: "Could not rename the IMAP folder.", variant: "destructive" });
       }
     },
-    [renameMutation, separator, toast],
+    [renameMutation, separator, toast, allFolderIds, tree],
   );
 
   const handleDelete = useCallback(
