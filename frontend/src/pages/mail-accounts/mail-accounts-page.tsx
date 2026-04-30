@@ -39,7 +39,7 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { AppButton } from "@/components/app-button";
 import { useToast } from "@/components/ui/toast";
 import { unwrapResponse } from "@/lib/utils";
-import { usePollJobStatus } from "@/hooks/use-poll-job-status";
+import { useAccountOperations } from "@/hooks/use-account-operations";
 
 import {
   mailAccountBaseSchema,
@@ -129,9 +129,33 @@ export default function MailAccountsPage() {
     },
   });
 
+  // Persistent operation tracking (survives component unmounts / tab switches)
+  const accountOps = useAccountOperations();
+
+  useEffect(() => {
+    accountOps.setCallbacks({
+      onPollComplete: () => {
+        queryClient.invalidateQueries({ queryKey: getListMailAccountsApiMailAccountsGetQueryKey() });
+        toast({ title: "Poll complete", description: "Mailbox check finished successfully." });
+      },
+      onPollFailed: (_accountId, error) => {
+        queryClient.invalidateQueries({ queryKey: getListMailAccountsApiMailAccountsGetQueryKey() });
+        toast({
+          title: "Poll failed",
+          description: error || "The background poll job failed.",
+          variant: "destructive",
+        });
+      },
+    });
+  }, [accountOps, queryClient, toast]);
+
   const testMutation = useTestConnectionApiMailAccountsAccountIdTestPost({
     mutation: {
-      onSuccess: (response) => {
+      onMutate: (variables) => {
+        accountOps.startTest(variables.accountId);
+      },
+      onSuccess: (response, variables) => {
+        accountOps.completeTest(variables.accountId);
         const result = unwrapResponse<ConnectionTestResult>(response);
         if (result) {
           const imapOk = result.imap_success;
@@ -145,7 +169,8 @@ export default function MailAccountsPage() {
           });
         }
       },
-      onError: () => {
+      onError: (_error, variables) => {
+        accountOps.failTest(variables.accountId);
         toast({
           title: "Connection test failed",
           description: "Could not reach the server.",
@@ -157,31 +182,21 @@ export default function MailAccountsPage() {
 
   const pollMutation = usePollAccountNowApiMailAccountsAccountIdPollPost({
     mutation: {
-      onSuccess: (response) => {
+      onMutate: (variables) => {
+        accountOps.startPollPending(variables.accountId);
+      },
+      onSuccess: (response, variables) => {
         const result = unwrapResponse<JobEnqueuedResponse>(response);
         if (result?.job_id) {
-          const accountId = pollMutation.variables?.accountId;
-          if (accountId) pollJobStatus.trackJob(accountId, result.job_id);
+          accountOps.completePollWithJob(variables.accountId, result.job_id);
+        } else {
+          accountOps.failPoll(variables.accountId);
         }
       },
-      onError: () => {
+      onError: (_error, variables) => {
+        accountOps.failPoll(variables.accountId);
         toast({ title: "Poll failed", description: "Could not start polling for new messages.", variant: "destructive" });
       },
-    },
-  });
-
-  const pollJobStatus = usePollJobStatus({
-    onComplete: () => {
-      queryClient.invalidateQueries({ queryKey: getListMailAccountsApiMailAccountsGetQueryKey() });
-      toast({ title: "Poll complete", description: "Mailbox check finished successfully." });
-    },
-    onFailed: (_accountId, error) => {
-      queryClient.invalidateQueries({ queryKey: getListMailAccountsApiMailAccountsGetQueryKey() });
-      toast({
-        title: "Poll failed",
-        description: error || "The background poll job failed.",
-        variant: "destructive",
-      });
     },
   });
 
@@ -429,8 +444,8 @@ export default function MailAccountsPage() {
                   onPause={(id) => pauseMutation.mutate({ accountId: id, data: { paused: true, pause_reason: "manual" } })}
                   onUnpause={(id) => unpauseMutation.mutate({ accountId: id, data: { paused: false, pause_reason: "manual" } })}
                   onResetHealth={(id) => resetHealthMutation.mutate({ accountId: id })}
-                  testLoading={testMutation.isPending && testMutation.variables?.accountId === account.id}
-                  pollLoading={(pollMutation.isPending && pollMutation.variables?.accountId === account.id) || pollJobStatus.isPolling(account.id)}
+                  testLoading={accountOps.isTestLoading(account.id)}
+                  pollLoading={accountOps.isPollLoading(account.id)}
                   pauseLoading={pauseMutation.isPending && pauseMutation.variables?.accountId === account.id}
                   unpauseLoading={unpauseMutation.isPending && unpauseMutation.variables?.accountId === account.id}
                   resetHealthLoading={resetHealthMutation.isPending}
