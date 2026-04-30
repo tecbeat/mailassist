@@ -778,7 +778,7 @@ export default function PluginsPage() {
         return next;
       });
     },
-    [updateMutation, queryClient],
+    [updateMutation, queryClient, toast],
   );
 
   // ---------------------------------------------------------------------------
