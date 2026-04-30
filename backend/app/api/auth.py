@@ -4,6 +4,7 @@ Implements Authorization Code Flow with PKCE using pure httpx.
 Sessions stored in Valkey with TTL auto-expiry.
 """
 
+import asyncio
 import base64
 import hashlib
 import secrets
@@ -34,6 +35,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 _OIDC_CACHE_TTL_SECONDS = 3600
 _oidc_config: dict | None = None
 _oidc_config_fetched_at: float = 0.0
+_oidc_lock = asyncio.Lock()  # prevents thundering herd on cache expiry
 
 
 def _create_pkce_pair() -> tuple[str, str]:
@@ -58,17 +60,23 @@ async def _get_oidc_config() -> dict:
     if _oidc_config is not None and (now - _oidc_config_fetched_at) < _OIDC_CACHE_TTL_SECONDS:
         return _oidc_config
 
-    settings = get_settings()
-    if not settings.oidc_issuer_url:
-        raise HTTPException(status_code=503, detail="OIDC not configured")
-    issuer = settings.oidc_issuer_url.rstrip("/")
-    discovery_url = f"{issuer}/.well-known/openid-configuration"
+    async with _oidc_lock:
+        # Re-check inside the lock — another coroutine may have refreshed while we waited
+        now = time.monotonic()
+        if _oidc_config is not None and (now - _oidc_config_fetched_at) < _OIDC_CACHE_TTL_SECONDS:
+            return _oidc_config
 
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(discovery_url, timeout=10)
-        resp.raise_for_status()
-        _oidc_config = resp.json()
-        _oidc_config_fetched_at = now
+        settings = get_settings()
+        if not settings.oidc_issuer_url:
+            raise HTTPException(status_code=503, detail="OIDC not configured")
+        issuer = settings.oidc_issuer_url.rstrip("/")
+        discovery_url = f"{issuer}/.well-known/openid-configuration"
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(discovery_url, timeout=10)
+            resp.raise_for_status()
+            _oidc_config = resp.json()
+            _oidc_config_fetched_at = now
 
     return _oidc_config
 
