@@ -12,6 +12,16 @@ versioner:
     - versioner --suffix beta
     - more version.env
 
+changelogger:
+  variables:
+      GIT_STRATEGY: clone
+      GIT_DEPTH: 0
+  script:
+    - envsubst < /app/cliff.toml > ./out.toml && mv ./out.toml ./cliff.toml
+    - git-cliff --tag ${VERSION} --output CHANGELOG.md -vv
+    - git-cliff --unreleased --tag ${VERSION} --output RELEASE.md -vv
+    - more RELEASE.md
+
 templater:
   rules:
     - when: never
