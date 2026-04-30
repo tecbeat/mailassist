@@ -7,6 +7,7 @@ and that commit failures produce a proper error without ghost sessions.
 from __future__ import annotations
 
 import json
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -60,6 +61,7 @@ def _make_mock_db_session(*, commit_side_effect=None):
     db.commit = AsyncMock(side_effect=commit_side_effect)
     db.rollback = AsyncMock()
 
+    @asynccontextmanager
     async def fake_get_session():
         yield db
 
@@ -83,7 +85,7 @@ async def test_callback_creates_session_after_commit(
         patch("app.api.auth.get_settings") as mock_settings,
         patch("app.api.auth._get_oidc_config", return_value=oidc_config),
         patch("app.api.auth.get_session_client", return_value=fake_session_client),
-        patch("app.api.auth.get_session", fake_get_session),
+        patch("app.api.auth.get_session_ctx", fake_get_session),
         patch("app.api.auth.get_encryption") as mock_enc,
         patch("app.api.auth._exchange_code_for_token", return_value=fake_token),
         patch("httpx.AsyncClient") as mock_http_cls,
@@ -150,7 +152,7 @@ async def test_callback_no_session_on_commit_failure(
         patch("app.api.auth.get_settings") as mock_settings,
         patch("app.api.auth._get_oidc_config", return_value=oidc_config),
         patch("app.api.auth.get_session_client", return_value=fake_session_client),
-        patch("app.api.auth.get_session", fake_get_session),
+        patch("app.api.auth.get_session_ctx", fake_get_session),
         patch("app.api.auth.get_encryption") as mock_enc,
         patch("app.api.auth._exchange_code_for_token", return_value=fake_token),
         patch("httpx.AsyncClient") as mock_http_cls,

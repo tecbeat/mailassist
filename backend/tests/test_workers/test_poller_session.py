@@ -4,6 +4,7 @@ Verifies that _poll_single_account does not hold a DB session open
 during IMAP I/O operations.
 """
 
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -30,10 +31,11 @@ def _make_account(*, initial_scan_done=True, scan_existing_emails=False):
 
 
 def _tracking_session_open_during_imap():
-    """Return a get_session mock that tracks whether a session was open during IMAP."""
+    """Return a get_session_ctx mock that tracks whether a session was open during IMAP."""
     sessions_opened = []
     sessions_closed = []
 
+    @asynccontextmanager
     async def _gen():
         db = AsyncMock()
         db.expunge = MagicMock()
@@ -55,7 +57,8 @@ async def test_poll_single_account_does_not_hold_session_during_imap():
 
     original_get_session = None
 
-    async def mock_get_session():
+    @asynccontextmanager
+    async def mock_get_session_ctx():
         nonlocal session_stack
         db = AsyncMock()
         db.expunge = MagicMock()
@@ -79,7 +82,7 @@ async def test_poll_single_account_does_not_hold_session_during_imap():
         return []
 
     with (
-        patch("app.workers.mail_poller.get_session", mock_get_session),
+        patch("app.workers.mail_poller.get_session_ctx", mock_get_session_ctx),
         patch("app.workers.mail_poller.connect_imap", mock_connect_imap),
         patch("app.workers.mail_poller.search_uids", mock_search_uids),
         patch("app.workers.mail_poller.safe_imap_logout", new_callable=AsyncMock),

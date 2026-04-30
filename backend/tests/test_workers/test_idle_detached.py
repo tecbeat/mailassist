@@ -4,6 +4,7 @@ Verifies that MailAccount objects are expunged from the session before
 use outside the session context, preventing DetachedInstanceError.
 """
 
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -19,13 +20,14 @@ def _make_account():
 
 
 def _mock_session(account):
-    """Return an async-generator mock that yields a session with the account."""
+    """Return an async context-manager mock that yields a session with the account."""
     db = AsyncMock()
     result = MagicMock()
     result.scalar_one_or_none.return_value = account
     db.execute = AsyncMock(return_value=result)
     db.expunge = MagicMock()
 
+    @asynccontextmanager
     async def _gen():
         yield db
 
@@ -40,7 +42,7 @@ async def test_idle_loop_expunges_account_before_session_close():
 
     # Patch connect_imap to raise so the loop exits after the first reload
     with (
-        patch("app.workers.idle_monitor.get_session", gen_fn),
+        patch("app.workers.idle_monitor.get_session_ctx", gen_fn),
         patch("app.workers.idle_monitor.connect_imap", side_effect=StopIteration),
         patch("app.workers.idle_monitor.update_account_sync_status"),
         patch("app.workers.idle_monitor.check_circuit_breaker", return_value=True),
@@ -63,11 +65,12 @@ async def test_start_idle_manager_expunges_accounts():
     db.execute = AsyncMock(return_value=result)
     db.expunge = MagicMock()
 
+    @asynccontextmanager
     async def _gen():
         yield db
 
     with (
-        patch("app.workers.idle_monitor.get_session", _gen),
+        patch("app.workers.idle_monitor.get_session_ctx", _gen),
         patch("app.workers.idle_monitor.start_idle_for_account", new_callable=AsyncMock),
     ):
         from app.workers.idle_monitor import start_idle_manager

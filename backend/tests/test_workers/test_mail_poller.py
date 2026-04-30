@@ -13,6 +13,7 @@ Tests cover:
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -65,15 +66,16 @@ def _make_mock_conn():
     return conn
 
 
-def _mock_get_session():
-    """Return a mock get_session async generator that yields a mock db."""
-    async def _gen():
+def _mock_get_session_ctx():
+    """Return a mock get_session_ctx context manager that yields a mock db."""
+    @asynccontextmanager
+    async def _ctx():
         db = AsyncMock()
         result = MagicMock()
         result.scalar_one_or_none.return_value = MagicMock(initial_scan_done=False)
         db.execute = AsyncMock(return_value=result)
         yield db
-    return _gen
+    return _ctx
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +98,7 @@ async def test_poller_uses_search_uids_and_fetch_envelopes():
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=3) as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
-        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.get_session_ctx", _mock_get_session_ctx()),
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_search.return_value = ["501", "502", "503"]
@@ -163,7 +165,7 @@ async def test_poller_subtracts_already_tracked_uids():
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=2) as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
-        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.get_session_ctx", _mock_get_session_ctx()),
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_search.return_value = ["100", "200", "300", "400"]
@@ -196,7 +198,7 @@ async def test_poller_handles_empty_mailbox():
         patch("app.workers.mail_poller._insert_tracked_batch") as mock_insert,
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
-        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.get_session_ctx", _mock_get_session_ctx()),
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_search.return_value = []
@@ -234,7 +236,7 @@ async def test_normal_polling_uses_inbox_all():
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=1),
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
-        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.get_session_ctx", _mock_get_session_ctx()),
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_search.return_value = ["10"]
@@ -263,7 +265,7 @@ async def test_initial_scan_skipped_when_scan_existing_false():
         patch("app.workers.mail_poller._insert_tracked_batch", return_value=2),
         patch("app.workers.mail_poller.timed_operation") as mock_timed,
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
-        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.get_session_ctx", _mock_get_session_ctx()),
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_search.return_value = ["20", "21"]
@@ -300,7 +302,7 @@ async def test_initial_scan_iterates_all_folders():
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
         patch("app.workers.mail_poller.get_cached_folders", new_callable=AsyncMock, return_value=None),
         patch("app.workers.mail_poller.set_cached_folders", new_callable=AsyncMock),
-        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.get_session_ctx", _mock_get_session_ctx()),
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["INBOX", "Sent", "Archive", "Trash", "Spam"]
@@ -351,7 +353,7 @@ async def test_initial_scan_excludes_all_folders():
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
         patch("app.workers.mail_poller.get_cached_folders", new_callable=AsyncMock, return_value=None),
         patch("app.workers.mail_poller.set_cached_folders", new_callable=AsyncMock),
-        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.get_session_ctx", _mock_get_session_ctx()),
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["INBOX", "Sent"]
@@ -382,7 +384,7 @@ async def test_initial_scan_sets_correct_current_folder():
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
         patch("app.workers.mail_poller.get_cached_folders", new_callable=AsyncMock, return_value=None),
         patch("app.workers.mail_poller.set_cached_folders", new_callable=AsyncMock),
-        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.get_session_ctx", _mock_get_session_ctx()),
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["Archive"]
@@ -516,7 +518,7 @@ async def test_initial_scan_passes_folder_to_get_new_uids():
         patch("app.workers.mail_poller.is_idle_active", return_value=False),
         patch("app.workers.mail_poller.get_cached_folders", new_callable=AsyncMock, return_value=None),
         patch("app.workers.mail_poller.set_cached_folders", new_callable=AsyncMock),
-        patch("app.workers.mail_poller.get_session", _mock_get_session()),
+        patch("app.workers.mail_poller.get_session_ctx", _mock_get_session_ctx()),
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["INBOX", "Sent"]
