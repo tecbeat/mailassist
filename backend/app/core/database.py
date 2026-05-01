@@ -35,7 +35,7 @@ def init_db(settings: Settings) -> None:
     )
 
 
-async def get_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_session() -> AsyncGenerator[AsyncSession]:
     """FastAPI dependency that yields an async database session.
 
     Always commits after yielding.  An explicit ``flush()`` inside an
@@ -65,7 +65,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 @asynccontextmanager
-async def get_session_ctx() -> AsyncGenerator[AsyncSession, None]:
+async def get_session_ctx() -> AsyncGenerator[AsyncSession]:
     """Async context manager for obtaining a database session.
 
     Unlike ``get_session`` (an async generator designed as a FastAPI

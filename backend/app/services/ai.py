@@ -17,8 +17,8 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis import get_cache_client
-from app.models.ai import AIProvider
 from app.core.types import ConnectionTestResult
+from app.models.ai import AIProvider
 
 logger = structlog.get_logger()
 
@@ -29,6 +29,7 @@ litellm.suppress_debug_info = True
 # ---------------------------------------------------------------------------
 # Custom exception for transient LLM errors (connection, timeout, rate limit)
 # ---------------------------------------------------------------------------
+
 
 class TransientLLMError(Exception):
     """Raised when an LLM call fails due to a transient provider issue.
@@ -52,7 +53,7 @@ class TransientLLMError(Exception):
         # Try to extract the final meaningful part.
         msg = str(orig)
         if hasattr(orig, "message"):
-            msg = orig.message  # type: ignore[union-attr]
+            msg = orig.message
         return f"{type(orig).__name__}: {msg}"
 
 
@@ -75,7 +76,7 @@ class PermanentLLMError(Exception):
             return str(self)
         msg = str(orig)
         if hasattr(orig, "message"):
-            msg = orig.message  # type: ignore[union-attr]
+            msg = orig.message
         return f"{type(orig).__name__}: {msg}"
 
 
@@ -115,9 +116,7 @@ def is_transient_llm_error(exc: Exception) -> bool:
         return True
     # litellm wraps many errors — check the string representation
     err_str = str(exc).lower()
-    if any(kw in err_str for kw in ("timeout", "connection", "rate limit", "503", "502", "429")):
-        return True
-    return False
+    return bool(any(kw in err_str for kw in ("timeout", "connection", "rate limit", "503", "502", "429")))
 
 
 def is_permanent_llm_error(exc: Exception) -> bool:
@@ -130,14 +129,13 @@ def is_permanent_llm_error(exc: Exception) -> bool:
     if exc_type in _PERMANENT_ERROR_TYPES:
         return True
     err_str = str(exc).lower()
-    if any(kw in err_str for kw in ("401", "403", "404", "invalid api key", "model not found")):
-        return True
-    return False
+    return bool(any(kw in err_str for kw in ("401", "403", "404", "invalid api key", "model not found")))
 
 
 # ---------------------------------------------------------------------------
 # Provider health tracking
 # ---------------------------------------------------------------------------
+
 
 async def update_provider_health(
     db: AsyncSession,
@@ -280,7 +278,7 @@ async def call_llm(
 
             content = response.choices[0].message.content
             usage = response.usage
-            total_tokens += (usage.total_tokens if usage else 0)
+            total_tokens += usage.total_tokens if usage else 0
 
             # Parse and validate -- try to extract JSON from markdown code blocks
             parsed = _parse_json_response(content)
@@ -307,11 +305,13 @@ async def call_llm(
                     error=str(e),
                 )
                 messages.append({"role": "assistant", "content": content if "content" in locals() else ""})
-                messages.append({
-                    "role": "user",
-                    "content": "Your response was not valid JSON matching the required schema. "
-                    "Please respond with valid JSON only, matching the exact schema requested.",
-                })
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": "Your response was not valid JSON matching the required schema. "
+                        "Please respond with valid JSON only, matching the exact schema requested.",
+                    }
+                )
                 continue
             logger.error(
                 "llm_invalid_output_final",
@@ -461,9 +461,8 @@ def _repair_json(text: str) -> str:
             continue
         if ch in _CLOSERS:
             stack.append(_CLOSERS[ch])
-        elif ch in ("}", "]"):
-            if stack and stack[-1] == ch:
-                stack.pop()
+        elif ch in ("}", "]") and stack and stack[-1] == ch:
+            stack.pop()
 
     if stack:
         cleaned += "".join(reversed(stack))
@@ -513,11 +512,11 @@ def _parse_json_response(content: str) -> Any:
             end = text.rfind(end_char)
             if end > start:
                 try:
-                    return json.loads(text[start:end + 1])
+                    return json.loads(text[start : end + 1])
                 except json.JSONDecodeError:
                     # Try repairing the extracted block
                     try:
-                        result = json.loads(_repair_json(text[start:end + 1]))
+                        result = json.loads(_repair_json(text[start : end + 1]))
                         logger.warning("json_repaired", strategy="brace_extraction_repair")
                         return result
                     except json.JSONDecodeError:
@@ -542,7 +541,9 @@ async def _track_tokens(user_id: str, tokens: int) -> None:
     try:
         cache = get_cache_client()
         from datetime import UTC, datetime
+
         from app.core.config import get_settings
+
         today = datetime.now(UTC).strftime("%Y-%m-%d")
         key = f"token_usage:{user_id}:{today}"
         await cache.incrby(key, tokens)

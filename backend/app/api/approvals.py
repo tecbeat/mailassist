@@ -16,6 +16,7 @@ from uuid import UUID
 import structlog
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUserId, DbSession, get_or_404, paginate, sanitize_like
 from app.core.redis import get_arq_client
@@ -136,7 +137,6 @@ async def reject_action(
     return ApprovalResponse.model_validate(approval)
 
 
-
 @router.patch("/{approval_id}")
 async def edit_approval(
     approval_id: UUID,
@@ -187,7 +187,7 @@ async def delete_approval(
     logger.info("approval_deleted", approval_id=str(approval_id), user_id=user_id)
 
 
-async def _get_pending_or_404(db, approval_id: UUID, user_id: str) -> Approval:
+async def _get_pending_or_404(db: AsyncSession, approval_id: UUID, user_id: str) -> Approval:
     """Fetch a pending/manual_input approval owned by the current user or raise 404.
 
     Accepts approvals in PENDING or MANUAL_INPUT status — both represent

@@ -5,7 +5,7 @@ so it can be called safely from inside a savepoint (begin_nested) without
 killing the enclosing transaction.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest

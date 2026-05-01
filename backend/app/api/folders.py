@@ -4,13 +4,18 @@ Provides listing, folder summary, delete, and full smart-folder reset
 views for folders assigned by the AI smart folder plugin.
 """
 
-from typing import Literal
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, HTTPException, Query
-from sqlalchemy import delete as sa_delete, func, select, update as sa_update
+from sqlalchemy import delete as sa_delete
+from sqlalchemy import func, select
+from sqlalchemy import update as sa_update
+
+if TYPE_CHECKING:
+    from sqlalchemy.sql.elements import UnaryExpression
 
 from app.api.deps import CurrentUserId, DbSession, get_or_404, paginate, sanitize_like
 from app.models import AssignedFolder, FolderChangeLog, MailAccount, TrackedEmail, TrackedEmailStatus
@@ -47,6 +52,7 @@ async def list_assigned_folders(
     if folder:
         base_stmt = base_stmt.where(AssignedFolder.folder.ilike(f"%{sanitize_like(folder)}%"))
 
+    order_col: UnaryExpression[Any]
     if sort == "oldest":
         order_col = AssignedFolder.created_at.asc()
     elif sort == "folder":
@@ -108,9 +114,7 @@ async def reset_smart_folder(
     uid = UUID(user_id)
 
     # Gather affected mail UIDs *before* deleting the assigned_folders rows
-    af_stmt = select(
-        AssignedFolder.mail_account_id, AssignedFolder.mail_uid
-    ).where(
+    af_stmt = select(AssignedFolder.mail_account_id, AssignedFolder.mail_uid).where(
         AssignedFolder.user_id == uid,
         AssignedFolder.folder == folder_name,
     )
@@ -136,7 +140,8 @@ async def reset_smart_folder(
     results: list[SmartFolderResetAccountResult] = []
     for account in accounts:
         entry = SmartFolderResetAccountResult(
-            account_id=str(account.id), account_name=account.name,
+            account_id=str(account.id),
+            account_name=account.name,
         )
         try:
             conn = await connect_imap(account)
@@ -167,7 +172,7 @@ async def reset_smart_folder(
         AssignedFolder.folder == folder_name,
     )
     af_result = await db.execute(del_af)
-    deleted_af = af_result.rowcount  # type: ignore[union-attr]
+    deleted_af = af_result.rowcount  # type: ignore[attr-defined]
 
     # 2) Delete folder_change_logs records
     del_fcl = sa_delete(FolderChangeLog).where(
@@ -175,7 +180,7 @@ async def reset_smart_folder(
         FolderChangeLog.folder == folder_name,
     )
     fcl_result = await db.execute(del_fcl)
-    deleted_fcl = fcl_result.rowcount  # type: ignore[union-attr]
+    deleted_fcl = fcl_result.rowcount  # type: ignore[attr-defined]
 
     # 3) Reset tracked_emails for affected UIDs to pending (triggers reprocessing)
     #
@@ -233,7 +238,7 @@ async def reset_smart_folder(
                 )
             )
             inbox_result = await db.execute(upd_inbox)
-            reset_tracked += inbox_result.rowcount  # type: ignore[union-attr]
+            reset_tracked += inbox_result.rowcount  # type: ignore[attr-defined]
 
         # b) Update remaining rows (no collision) to INBOX + QUEUED
         safe_uids = [u for u in uid_list if u not in existing_set]
@@ -260,7 +265,7 @@ async def reset_smart_folder(
                 )
             )
             upd_result = await db.execute(upd)
-            reset_tracked += upd_result.rowcount  # type: ignore[union-attr]
+            reset_tracked += upd_result.rowcount  # type: ignore[attr-defined]
 
     await db.flush()
 
@@ -305,9 +310,7 @@ async def reprocess_smart_folder(
     uid = UUID(user_id)
 
     # Try smart folder lookup first (via AssignedFolder records)
-    af_stmt = select(
-        AssignedFolder.mail_account_id, AssignedFolder.mail_uid
-    ).where(
+    af_stmt = select(AssignedFolder.mail_account_id, AssignedFolder.mail_uid).where(
         AssignedFolder.user_id == uid,
         AssignedFolder.folder == folder_name,
     )
@@ -343,7 +346,7 @@ async def reprocess_smart_folder(
                 )
             )
             upd_result = await db.execute(upd)
-            requeued += upd_result.rowcount  # type: ignore[union-attr]
+            requeued += upd_result.rowcount  # type: ignore[attr-defined]
     else:
         # Regular folder path: re-queue by current_folder
         upd = (
@@ -366,7 +369,7 @@ async def reprocess_smart_folder(
             )
         )
         upd_result = await db.execute(upd)
-        requeued = upd_result.rowcount  # type: ignore[union-attr]
+        requeued = upd_result.rowcount  # type: ignore[attr-defined]
 
     await db.flush()
 

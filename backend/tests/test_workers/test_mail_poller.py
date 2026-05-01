@@ -19,8 +19,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.workers.mail_poller import _poll_single_account, _get_new_uids
-
+from app.workers.mail_poller import _get_new_uids, _poll_single_account
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -68,6 +67,7 @@ def _make_mock_conn():
 
 def _mock_get_session_ctx():
     """Return a mock get_session_ctx context manager that yields a mock db."""
+
     @asynccontextmanager
     async def _ctx():
         db = AsyncMock()
@@ -75,6 +75,7 @@ def _mock_get_session_ctx():
         result.scalar_one_or_none.return_value = MagicMock(initial_scan_done=False)
         db.execute = AsyncMock(return_value=result)
         yield db
+
     return _ctx
 
 
@@ -446,8 +447,9 @@ class TestScanExistingEmailsSchema:
         assert data.scan_existing_emails is None
 
     def test_response_schema_includes_scan_existing_emails(self):
+        from datetime import UTC, datetime
+
         from app.schemas.mail_account import MailAccountResponse
-        from datetime import datetime, UTC
 
         resp = MailAccountResponse(
             id="00000000-0000-0000-0000-000000000001",
@@ -484,7 +486,6 @@ class TestScanExistingEmailsSchema:
 @pytest.mark.asyncio
 async def test_get_new_uids_passes_folder_to_query():
     """_get_new_uids should include current_folder in the SQL filter."""
-    from app.workers.mail_poller import _get_new_uids
 
     mock_db = AsyncMock()
     mock_result = MagicMock()
@@ -550,8 +551,8 @@ class TestListFoldersNoselect:
 
     @pytest.mark.asyncio
     async def test_filters_noselect_folders(self):
-        from app.services.mail import list_folders, ImapConnection
-        import asyncio
+
+        from app.services.mail import ImapConnection, list_folders
 
         # Create mock FolderInfo objects as returned by imap-tools
         def _make_folder(name, flags=""):

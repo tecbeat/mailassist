@@ -15,7 +15,6 @@ from uuid import uuid4
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # IMAP probe
 # ---------------------------------------------------------------------------
@@ -50,8 +49,7 @@ class TestProbeImapAccount:
         mock_mb.logout = MagicMock()
 
         with (
-            patch("app.workers.health.decrypt_credentials",
-                  return_value={"username": "user", "password": "pass"}),
+            patch("app.workers.health.decrypt_credentials", return_value={"username": "user", "password": "pass"}),
             patch("app.workers.health.MailBox", return_value=mock_mb),
         ):
             result = await probe_imap_account(account)
@@ -71,8 +69,7 @@ class TestProbeImapAccount:
         mock_mb.login = MagicMock(side_effect=Exception("LOGIN failed"))
 
         with (
-            patch("app.workers.health.decrypt_credentials",
-                  return_value={"username": "user", "password": "wrong"}),
+            patch("app.workers.health.decrypt_credentials", return_value={"username": "user", "password": "wrong"}),
             patch("app.workers.health.MailBox", return_value=mock_mb),
         ):
             result = await probe_imap_account(account)
@@ -87,10 +84,8 @@ class TestProbeImapAccount:
         account = self._make_account()
 
         with (
-            patch("app.workers.health.decrypt_credentials",
-                  return_value={"username": "user", "password": "pass"}),
-            patch("app.workers.health.MailBox",
-                  side_effect=OSError("Connection refused")),
+            patch("app.workers.health.decrypt_credentials", return_value={"username": "user", "password": "pass"}),
+            patch("app.workers.health.MailBox", side_effect=OSError("Connection refused")),
         ):
             result = await probe_imap_account(account)
 
@@ -100,19 +95,18 @@ class TestProbeImapAccount:
     async def test_timeout_returns_false(self):
         """Timeout during probe returns False."""
         import asyncio
+
         from app.workers.health import probe_imap_account
 
         account = self._make_account()
 
         # Simulate a slow connection that exceeds the timeout
         def slow_init(*args, **kwargs):
-            raise asyncio.TimeoutError()
+            raise TimeoutError()
 
         with (
-            patch("app.workers.health.decrypt_credentials",
-                  return_value={"username": "user", "password": "pass"}),
-            patch("app.workers.health.asyncio.wait_for",
-                  side_effect=asyncio.TimeoutError),
+            patch("app.workers.health.decrypt_credentials", return_value={"username": "user", "password": "pass"}),
+            patch("app.workers.health.asyncio.wait_for", side_effect=asyncio.TimeoutError),
         ):
             result = await probe_imap_account(account)
 
@@ -130,8 +124,7 @@ class TestProbeImapAccount:
         mock_mb.logout = MagicMock(side_effect=OSError("broken pipe"))
 
         with (
-            patch("app.workers.health.decrypt_credentials",
-                  return_value={"username": "user", "password": "pass"}),
+            patch("app.workers.health.decrypt_credentials", return_value={"username": "user", "password": "pass"}),
             patch("app.workers.health.MailBox", return_value=mock_mb),
         ):
             result = await probe_imap_account(account)
@@ -147,8 +140,7 @@ class TestProbeImapAccount:
 class TestProbeAiProvider:
     """AI provider probe: /v1/models or /api/tags."""
 
-    def _make_provider(self, *, provider_type="openai", base_url="https://api.openai.com",
-                       api_key=b"encrypted_key"):
+    def _make_provider(self, *, provider_type="openai", base_url="https://api.openai.com", api_key=b"encrypted_key"):
         provider = MagicMock()
         provider.id = uuid4()
         provider.user_id = uuid4()
@@ -316,8 +308,7 @@ class TestRecoverPausedAccounts:
 
         with (
             patch("app.workers.health.get_session_ctx", fake_get_session),
-            patch("app.workers.health.probe_imap_account",
-                  AsyncMock(return_value=True)),
+            patch("app.workers.health.probe_imap_account", AsyncMock(return_value=True)),
             patch("app.workers.health.get_event_bus") as mock_bus_fn,
         ):
             mock_bus = AsyncMock()
@@ -353,8 +344,7 @@ class TestRecoverPausedAccounts:
 
         with (
             patch("app.workers.health.get_session_ctx", fake_get_session),
-            patch("app.workers.health.probe_imap_account",
-                  AsyncMock(return_value=False)),
+            patch("app.workers.health.probe_imap_account", AsyncMock(return_value=False)),
             patch("app.workers.health.get_event_bus") as mock_bus_fn,
         ):
             mock_bus = AsyncMock()
@@ -443,8 +433,7 @@ class TestRecoverPausedProviders:
 
         with (
             patch("app.workers.health.get_session_ctx", fake_get_session),
-            patch("app.workers.health.probe_ai_provider",
-                  AsyncMock(return_value=True)),
+            patch("app.workers.health.probe_ai_provider", AsyncMock(return_value=True)),
             patch("app.workers.health.get_event_bus") as mock_bus_fn,
         ):
             mock_bus = AsyncMock()
@@ -480,8 +469,7 @@ class TestRecoverPausedProviders:
 
         with (
             patch("app.workers.health.get_session_ctx", fake_get_session),
-            patch("app.workers.health.probe_ai_provider",
-                  AsyncMock(return_value=False)),
+            patch("app.workers.health.probe_ai_provider", AsyncMock(return_value=False)),
             patch("app.workers.health.get_event_bus") as mock_bus_fn,
         ):
             mock_bus = AsyncMock()

@@ -17,12 +17,10 @@ Mapping from plugin names to notification event types:
 
 from __future__ import annotations
 
-from typing import Any
-from uuid import UUID
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session_ctx
 from app.core.events import (
@@ -42,6 +40,11 @@ from app.models.mail import (
 )
 from app.models.notifications import NotificationConfig
 from app.services.notifications import send_notification
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
 
@@ -73,13 +76,13 @@ async def _load_plugin_context(
 
     try:
         if event_type == "email_summary":
-            result = await db.execute(
+            summary_result = await db.execute(
                 select(EmailSummary).where(
                     EmailSummary.mail_account_id == account_id,
                     EmailSummary.mail_uid == mail_uid,
                 )
             )
-            summary = result.scalar_one_or_none()
+            summary = summary_result.scalar_one_or_none()
             if summary:
                 extra["summary"] = summary.summary
                 extra["key_points"] = summary.key_points or []
@@ -88,27 +91,24 @@ async def _load_plugin_context(
                 extra["action_description"] = summary.action_description or ""
 
         elif event_type == "coupon_found":
-            result = await db.execute(
+            coupon_result = await db.execute(
                 select(ExtractedCoupon).where(
                     ExtractedCoupon.mail_account_id == account_id,
                     ExtractedCoupon.mail_uid == mail_uid,
                 )
             )
-            coupons = result.scalars().all()
+            coupons = coupon_result.scalars().all()
             extra["coupon_codes"] = [c.code for c in coupons]
-            extra["coupons"] = [
-                {"code": c.code, "description": c.description, "store": c.store}
-                for c in coupons
-            ]
+            extra["coupons"] = [{"code": c.code, "description": c.description, "store": c.store} for c in coupons]
 
         elif event_type == "calendar_event_created":
-            result = await db.execute(
+            cal_result = await db.execute(
                 select(CalendarEvent).where(
                     CalendarEvent.mail_account_id == account_id,
                     CalendarEvent.mail_uid == mail_uid,
                 )
             )
-            cal = result.scalar_one_or_none()
+            cal = cal_result.scalar_one_or_none()
             if cal:
                 extra["calendar_event"] = {
                     "title": cal.title,
@@ -119,26 +119,26 @@ async def _load_plugin_context(
                 }
 
         elif event_type == "reply_needed":
-            result = await db.execute(
+            reply_result = await db.execute(
                 select(AutoReplyRecord).where(
                     AutoReplyRecord.mail_account_id == account_id,
                     AutoReplyRecord.mail_uid == mail_uid,
                 )
             )
-            reply = result.scalar_one_or_none()
+            reply = reply_result.scalar_one_or_none()
             if reply:
                 extra["action_taken"] = f"Draft reply created (tone: {reply.tone or 'default'})"
                 extra["draft_body"] = reply.draft_body
                 extra["tone"] = reply.tone
 
         elif event_type == "contact_assigned":
-            result = await db.execute(
+            assign_result = await db.execute(
                 select(ContactAssignment).where(
                     ContactAssignment.mail_account_id == account_id,
                     ContactAssignment.mail_uid == mail_uid,
                 )
             )
-            assignment = result.scalar_one_or_none()
+            assignment = assign_result.scalar_one_or_none()
             if assignment:
                 extra["contact_name"] = assignment.contact_name
                 extra["confidence"] = assignment.confidence
@@ -189,9 +189,7 @@ async def handle_ai_processing_complete(event: Event) -> None:
         async with get_session_ctx() as db:
             # Load NotificationConfig
             config_result = await db.execute(
-                select(NotificationConfig).where(
-                    NotificationConfig.user_id == event.user_id
-                )
+                select(NotificationConfig).where(NotificationConfig.user_id == event.user_id)
             )
             config = config_result.scalar_one_or_none()
 
@@ -199,16 +197,13 @@ async def handle_ai_processing_complete(event: Event) -> None:
                 log.debug("notification_skip", reason="no_config_or_urls")
                 return
 
-            notify_on: dict = config.notify_on or {}
+            notify_on: dict[str, Any] = config.notify_on or {}
 
             # Filter to only event types the user has enabled
-            enabled_types = [
-                et for et in triggered_event_types if notify_on.get(et, False)
-            ]
+            enabled_types = [et for et in triggered_event_types if notify_on.get(et, False)]
 
             if not enabled_types:
-                log.debug("notification_skip", reason="no_enabled_toggles",
-                          triggered=triggered_event_types)
+                log.debug("notification_skip", reason="no_enabled_toggles", triggered=triggered_event_types)
                 return
 
             # Load TrackedEmail for context (subject, sender)
@@ -222,9 +217,7 @@ async def handle_ai_processing_complete(event: Event) -> None:
             tracked_email = mail_result.scalars().first()
 
             # Load MailAccount for account name
-            account_result = await db.execute(
-                select(MailAccount).where(MailAccount.id == event.account_id)
-            )
+            account_result = await db.execute(select(MailAccount).where(MailAccount.id == event.account_id))
             account = account_result.scalar_one_or_none()
 
             subject = tracked_email.subject if tracked_email else "Unknown"
@@ -252,14 +245,18 @@ async def handle_ai_processing_complete(event: Event) -> None:
             }
 
             # Get custom templates from config
-            custom_templates: dict = config.templates or {}
+            custom_templates: dict[str, Any] = config.templates or {}
 
             # Send one notification per enabled event type
             channels_sent: list[str] = []
             for event_type in enabled_types:
                 # Enrich context with plugin-specific data
+                assert event.account_id is not None
                 plugin_ctx = await _load_plugin_context(
-                    db, event_type, event.account_id, event.mail_uid,
+                    db,
+                    event_type,
+                    event.account_id,
+                    event.mail_uid,
                 )
                 context = {**base_context, **plugin_ctx}
 
@@ -294,13 +291,15 @@ async def handle_ai_processing_complete(event: Event) -> None:
 
                 # Emit observability event
                 bus = get_event_bus()
-                await bus.emit(NotificationSentEvent(
-                    user_id=event.user_id,
-                    account_id=event.account_id,
-                    mail_uid=event.mail_uid,
-                    channels=channels_sent,
-                    correlation_id=event.correlation_id,
-                ))
+                await bus.emit(
+                    NotificationSentEvent(
+                        user_id=event.user_id,
+                        account_id=event.account_id,
+                        mail_uid=event.mail_uid,
+                        channels=channels_sent,
+                        correlation_id=event.correlation_id,
+                    )
+                )
             else:
                 log.warning("notifications_all_failed", event_types=enabled_types)
 

@@ -14,6 +14,7 @@ the IDLE wait is a blocking call.
 """
 
 import asyncio
+import contextlib
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -26,18 +27,18 @@ from app.core.database import get_session_ctx
 from app.models import MailAccount, TrackedEmail, TrackedEmailStatus
 from app.services.mail import (
     ImapConnection,
+    check_circuit_breaker,
     connect_imap,
     safe_imap_logout,
     search_uids,
     update_account_sync_status,
-    check_circuit_breaker,
 )
 from app.workers.utils import get_backoff_seconds
 
 logger = structlog.get_logger()
 
 # Active IDLE tasks by account_id
-_idle_tasks: dict[str, asyncio.Task] = {}
+_idle_tasks: dict[str, asyncio.Task[None]] = {}
 
 # IDLE timeout: RFC 2177 recommends re-issuing IDLE every 29 minutes.
 IDLE_TIMEOUT_SECONDS = 29 * 60
@@ -82,10 +83,8 @@ async def stop_idle_for_account(account_id: str) -> None:
         task = _idle_tasks.pop(account_id)
         if not task.done():
             task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await task
-            except asyncio.CancelledError:
-                pass
         logger.info("idle_task_stopped", account_id=account_id)
 
 
@@ -188,15 +187,15 @@ async def _idle_loop(account: MailAccount) -> None:
                     MailAccount.idle_enabled.is_(True),
                 )
                 result = await db.execute(stmt)
-                account = result.scalar_one_or_none()
-                if account is not None:
-                    db.expunge(account)
+                refreshed_account = result.scalar_one_or_none()
+                if refreshed_account is not None:
+                    db.expunge(refreshed_account)
 
-            if account is None:
+            if refreshed_account is None:
                 logger.info("idle_account_gone", account_id=account_id)
                 return
 
-            conn = await connect_imap(account)
+            conn = await connect_imap(refreshed_account)
 
             # Check IDLE support
             if conn.capabilities and "IDLE" not in [c.upper() for c in conn.capabilities if isinstance(c, str)]:
@@ -252,22 +251,17 @@ async def _idle_loop(account: MailAccount) -> None:
                 logger.debug(
                     "idle_push_received",
                     account_id=account_id,
-                    responses=[
-                        r.decode(errors="replace") if isinstance(r, bytes) else str(r)
-                        for r in responses
-                    ],
+                    responses=[r.decode(errors="replace") if isinstance(r, bytes) else str(r) for r in responses],
                 )
 
-                has_new_mail = any(
-                    (b"EXISTS" in r if isinstance(r, bytes)
-                     else "EXISTS" in str(r))
-                    for r in responses
-                )
+                has_new_mail = any((b"EXISTS" in r if isinstance(r, bytes) else "EXISTS" in str(r)) for r in responses)
 
                 if has_new_mail:
                     logger.info("idle_new_mail", account_id=account_id)
                     await _search_and_insert_new(
-                        conn, account_id, user_id,
+                        conn,
+                        account_id,
+                        user_id,
                     )
 
         except asyncio.CancelledError:
@@ -303,7 +297,9 @@ async def _idle_loop(account: MailAccount) -> None:
 
 
 async def _search_and_insert_new(
-    conn: ImapConnection, account_id: str, user_id: str,
+    conn: ImapConnection,
+    account_id: str,
+    user_id: str,
 ) -> int:
     """Find untracked UIDs in INBOX and insert them into tracked_emails.
 
@@ -345,7 +341,8 @@ async def _search_and_insert_new(
         for i in range(0, len(uids), batch_size):
             batch = uids[i : i + batch_size]
             result = await db.execute(
-                _uid_diff_query, {"uids": batch, "account_id": acct_uuid},
+                _uid_diff_query,
+                {"uids": batch, "account_id": acct_uuid},
             )
             new_uids.extend(row[0] for row in result.all())
 
@@ -363,7 +360,10 @@ async def _search_and_insert_new(
     inserted = 0
     async with get_session_ctx() as db:
         inserted = await _insert_tracked_uids(
-            db, UUID(user_id), UUID(account_id), new_uids,
+            db,
+            UUID(user_id),
+            UUID(account_id),
+            new_uids,
         )
 
     if inserted:
@@ -402,15 +402,11 @@ async def _insert_tracked_uids(
         for uid in uids
     ]
 
-    stmt = (
-        pg_insert(TrackedEmail)
-        .values(rows)
-        .on_conflict_do_nothing(constraint="uq_tracked_email_account_uid")
-    )
+    stmt = pg_insert(TrackedEmail).values(rows).on_conflict_do_nothing(constraint="uq_tracked_email_account_uid")
     result = await db.execute(stmt)
     await db.flush()
 
-    inserted = result.rowcount
+    inserted: int = result.rowcount  # type: ignore[attr-defined]
     if inserted > 0:
         logger.info(
             "idle_tracked_emails_inserted",

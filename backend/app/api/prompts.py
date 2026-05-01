@@ -32,30 +32,65 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/api/prompts", tags=["prompts"])
 
 # All available template variables with metadata
-_TEMPLATE_VARIABLES: list[dict] = [
+_TEMPLATE_VARIABLES: list[dict[str, Any]] = [
     {"name": "sender", "var_type": "String", "description": "Sender email address", "example": "john@example.com"},
     {"name": "sender_name", "var_type": "String", "description": "Display name from header", "example": "John Doe"},
-    {"name": "contact.display_name", "var_type": "String", "description": "Matched contact name", "example": "John Doe"},
-    {"name": "contact.organization", "var_type": "String", "description": "Contact's organization", "example": "Acme Corp"},
+    {
+        "name": "contact.display_name",
+        "var_type": "String",
+        "description": "Matched contact name",
+        "example": "John Doe",
+    },
+    {
+        "name": "contact.organization",
+        "var_type": "String",
+        "description": "Contact's organization",
+        "example": "Acme Corp",
+    },
     {"name": "contact.title", "var_type": "String", "description": "Contact's job title", "example": "CTO"},
-    {"name": "contact.phones", "var_type": "List", "description": "Contact phone numbers", "example": '[\"+49 123 456\"]'},
+    {
+        "name": "contact.phones",
+        "var_type": "List",
+        "description": "Contact phone numbers",
+        "example": '["+49 123 456"]',
+    },
     {"name": "recipient", "var_type": "String", "description": "Recipient (To) address", "example": "me@example.com"},
     {"name": "subject", "var_type": "String", "description": "Email subject line", "example": "Meeting Tomorrow"},
     {"name": "body", "var_type": "String", "description": "Email body (truncated)", "example": "Hi, let's discuss..."},
     {"name": "body_plain", "var_type": "String", "description": "Plain text body", "example": "Hi, let's discuss..."},
     {"name": "body_html", "var_type": "String", "description": "HTML body (sanitized)", "example": "<p>Hi</p>"},
-    {"name": "headers", "var_type": "Dict", "description": "All email headers", "example": '{"List-Unsubscribe": "..."}'},
+    {
+        "name": "headers",
+        "var_type": "Dict",
+        "description": "All email headers",
+        "example": '{"List-Unsubscribe": "..."}',
+    },
     {"name": "date", "var_type": "DateTime", "description": "Email send date", "example": "2026-03-30T14:30:00Z"},
     {"name": "has_attachments", "var_type": "Boolean", "description": "Has attachments", "example": "true"},
-    {"name": "attachment_names", "var_type": "List", "description": "Attachment filenames", "example": '["invoice.pdf"]'},
+    {
+        "name": "attachment_names",
+        "var_type": "List",
+        "description": "Attachment filenames",
+        "example": '["invoice.pdf"]',
+    },
     {"name": "account_name", "var_type": "String", "description": "Mail account name", "example": "Work"},
     {"name": "account_email", "var_type": "String", "description": "Mail account address", "example": "me@work.com"},
-    {"name": "current_time", "var_type": "DateTime", "description": "Current UTC time", "example": "2026-03-30T15:00:00Z"},
+    {
+        "name": "current_time",
+        "var_type": "DateTime",
+        "description": "Current UTC time",
+        "example": "2026-03-30T15:00:00Z",
+    },
     {"name": "current_date", "var_type": "String", "description": "Current date", "example": "2026-03-30"},
     {"name": "current_weekday", "var_type": "String", "description": "Weekday name", "example": "Monday"},
     {"name": "current_hour", "var_type": "Integer", "description": "Hour (0-23)", "example": "15"},
     {"name": "existing_labels", "var_type": "List", "description": "Current mail labels", "example": '["important"]'},
-    {"name": "existing_folders", "var_type": "List", "description": "Available IMAP folders", "example": '["INBOX", "Work"]'},
+    {
+        "name": "existing_folders",
+        "var_type": "List",
+        "description": "Available IMAP folders",
+        "example": '["INBOX", "Work"]',
+    },
     {"name": "folder_separator", "var_type": "String", "description": "IMAP folder separator", "example": "/"},
     {"name": "mail_size", "var_type": "Integer", "description": "Message size (bytes)", "example": "45230"},
     {"name": "thread_length", "var_type": "Integer", "description": "Thread message count", "example": "3"},
@@ -64,12 +99,22 @@ _TEMPLATE_VARIABLES: list[dict] = [
     {"name": "language", "var_type": "String", "description": "User language code (ISO 639-1)", "example": "en"},
     {"name": "language_full", "var_type": "String", "description": "User language full name", "example": "English"},
     {"name": "timezone", "var_type": "String", "description": "User timezone (IANA)", "example": "Europe/Berlin"},
-    {"name": "local_time", "var_type": "DateTime", "description": "Current time in user timezone", "example": "2026-03-30T16:00:00+01:00"},
-    {"name": "excluded_folders", "var_type": "List", "description": "Folders excluded from smart folder assignment", "example": '["Trash", "Junk"]'},
+    {
+        "name": "local_time",
+        "var_type": "DateTime",
+        "description": "Current time in user timezone",
+        "example": "2026-03-30T16:00:00+01:00",
+    },
+    {
+        "name": "excluded_folders",
+        "var_type": "List",
+        "description": "Folders excluded from smart folder assignment",
+        "example": '["Trash", "Junk"]',
+    },
 ]
 
 # Sample data used for prompt preview rendering
-_SAMPLE_CONTEXT: dict = {
+_SAMPLE_CONTEXT: dict[str, Any] = {
     "sender": "john.doe@example.com",
     "sender_name": "John Doe",
     "contact": {
@@ -141,7 +186,7 @@ async def list_prompts(
     """
     uid = UUID(user_id)
     registry = get_plugin_registry()
-    engine = get_template_engine()
+    get_template_engine()
 
     # Fetch user-custom prompts
     stmt = select(Prompt).where(Prompt.user_id == uid)
@@ -155,12 +200,14 @@ async def list_prompts(
         else:
             # Load default template from filesystem
             default_system = _load_default_template(plugin.default_prompt_template)
-            prompts.append(PromptResponse(
-                function_type=plugin.name,
-                system_prompt=default_system,
-                user_prompt=None,
-                is_custom=False,
-            ))
+            prompts.append(
+                PromptResponse(
+                    function_type=plugin.name,
+                    system_prompt=default_system,
+                    user_prompt=None,
+                    is_custom=False,
+                )
+            )
 
     return prompts
 
@@ -194,6 +241,7 @@ async def get_prompt(
     # Return default
     registry = get_plugin_registry()
     plugin = registry.get_plugin(function_type)
+    assert plugin is not None
     default_system = _load_default_template(plugin.default_prompt_template)
     return PromptResponse(
         function_type=function_type,
@@ -270,6 +318,7 @@ async def reset_prompt(
     # Return the default
     registry = get_plugin_registry()
     plugin = registry.get_plugin(function_type)
+    assert plugin is not None
     default_system = _load_default_template(plugin.default_prompt_template)
     return PromptResponse(
         function_type=function_type,

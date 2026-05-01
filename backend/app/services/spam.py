@@ -6,16 +6,20 @@ managing the blocklist, and checking senders against it.
 
 from __future__ import annotations
 
-from uuid import UUID
+from typing import TYPE_CHECKING, Any
 
 import structlog
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Contact, MailAccount, SpamBlocklistEntry, TrackedEmail
 from app.models.spam import BlocklistEntryType, BlocklistSource
-from app.services.imap_actions import SPAM_FOLDERS, execute_imap_actions
+from app.services.imap_actions import execute_imap_actions
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
 
@@ -58,7 +62,7 @@ async def _upsert_blocklist_entry(
         )
     )
     result = await db.execute(stmt)
-    return result.rowcount > 0
+    return bool(result.rowcount)  # type: ignore[attr-defined]
 
 
 async def report_as_spam(
@@ -68,7 +72,7 @@ async def report_as_spam(
     mail_uid: str,
     sender_email: str,
     subject: str | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """Report a mail as spam.
 
     Creates blocklist entries for the sender email and domain,
@@ -89,19 +93,26 @@ async def report_as_spam(
 
     # Block the sender email
     if await _upsert_blocklist_entry(
-        db, user_id, BlocklistEntryType.EMAIL, sender_email,
-        BlocklistSource.REPORTED, mail_uid,
+        db,
+        user_id,
+        BlocklistEntryType.EMAIL,
+        sender_email,
+        BlocklistSource.REPORTED,
+        mail_uid,
     ):
         created += 1
 
     # Block the sender domain
     domain = _extract_domain(sender_email)
-    if domain:
-        if await _upsert_blocklist_entry(
-            db, user_id, BlocklistEntryType.DOMAIN, domain,
-            BlocklistSource.REPORTED, mail_uid,
-        ):
-            created += 1
+    if domain and await _upsert_blocklist_entry(
+        db,
+        user_id,
+        BlocklistEntryType.DOMAIN,
+        domain,
+        BlocklistSource.REPORTED,
+        mail_uid,
+    ):
+        created += 1
 
     await db.flush()
 
@@ -130,7 +141,8 @@ async def report_as_spam(
 
         try:
             move_outcome = await execute_imap_actions(
-                account, mail_uid,
+                account,
+                mail_uid,
                 ["move_to_spam", "mark_as_read"],
                 source_folder=current_folder,
             )
@@ -178,7 +190,7 @@ async def report_contact_as_spam(
     db: AsyncSession,
     user_id: UUID,
     contact_id: UUID,
-) -> dict:
+) -> dict[str, Any]:
     """Report a contact as spam — block all their emails and delete the contact.
 
     Args:
@@ -208,18 +220,23 @@ async def report_contact_as_spam(
 
     for email in emails:
         if await _upsert_blocklist_entry(
-            db, user_id, BlocklistEntryType.EMAIL, email,
+            db,
+            user_id,
+            BlocklistEntryType.EMAIL,
+            email,
             BlocklistSource.REPORTED,
         ):
             created += 1
 
         domain = _extract_domain(email)
-        if domain:
-            if await _upsert_blocklist_entry(
-                db, user_id, BlocklistEntryType.DOMAIN, domain,
-                BlocklistSource.REPORTED,
-            ):
-                created += 1
+        if domain and await _upsert_blocklist_entry(
+            db,
+            user_id,
+            BlocklistEntryType.DOMAIN,
+            domain,
+            BlocklistSource.REPORTED,
+        ):
+            created += 1
 
     # Delete the contact
     await db.delete(contact)
@@ -265,16 +282,12 @@ async def is_blocked(
 
     conditions = [
         # Exact email match
-        (
-            (SpamBlocklistEntry.entry_type == BlocklistEntryType.EMAIL)
-            & (SpamBlocklistEntry.value == sender_lower)
-        ),
+        ((SpamBlocklistEntry.entry_type == BlocklistEntryType.EMAIL) & (SpamBlocklistEntry.value == sender_lower)),
     ]
 
     if domain:
         conditions.append(
-            (SpamBlocklistEntry.entry_type == BlocklistEntryType.DOMAIN)
-            & (SpamBlocklistEntry.value == domain)
+            (SpamBlocklistEntry.entry_type == BlocklistEntryType.DOMAIN) & (SpamBlocklistEntry.value == domain)
         )
 
     stmt = (
@@ -292,12 +305,9 @@ async def is_blocked(
 
     # Check subject patterns
     if subject:
-        pattern_stmt = (
-            select(SpamBlocklistEntry.value)
-            .where(
-                SpamBlocklistEntry.user_id == user_id,
-                SpamBlocklistEntry.entry_type == BlocklistEntryType.PATTERN,
-            )
+        pattern_stmt = select(SpamBlocklistEntry.value).where(
+            SpamBlocklistEntry.user_id == user_id,
+            SpamBlocklistEntry.entry_type == BlocklistEntryType.PATTERN,
         )
         pattern_result = await db.execute(pattern_stmt)
         patterns = pattern_result.scalars().all()
@@ -314,7 +324,7 @@ async def get_blocklist_context(
     db: AsyncSession,
     user_id: UUID,
     limit: int = 100,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Get blocklist entries for AI prompt context.
 
     Returns a compact list of entries suitable for injection into

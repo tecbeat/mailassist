@@ -44,7 +44,7 @@ def init_valkey(settings: Settings) -> None:
         "health_check_interval": 30,
     }
 
-    _task_client = aioredis.from_url(
+    _task_client = aioredis.from_url(  # type: ignore[no-untyped-call]
         _make_url(settings.valkey_url, 0),
         max_connections=20,
         decode_responses=True,
@@ -52,19 +52,19 @@ def init_valkey(settings: Settings) -> None:
     )
     # Binary-mode client for reading raw ARQ job payloads (pickle-serialized).
     # Shares DB 0 but does NOT decode responses so callers get raw bytes.
-    _task_binary_client = aioredis.from_url(
+    _task_binary_client = aioredis.from_url(  # type: ignore[no-untyped-call]
         _make_url(settings.valkey_url, 0),
         max_connections=5,
         decode_responses=False,
         **common_kwargs,
     )
-    _session_client = aioredis.from_url(
+    _session_client = aioredis.from_url(  # type: ignore[no-untyped-call]
         _make_url(settings.valkey_url, 1),
         max_connections=10,
         decode_responses=True,
         **common_kwargs,
     )
-    _cache_client = aioredis.from_url(
+    _cache_client = aioredis.from_url(  # type: ignore[no-untyped-call]
         _make_url(settings.valkey_url, 2),
         max_connections=10,
         decode_responses=True,

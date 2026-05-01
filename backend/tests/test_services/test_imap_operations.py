@@ -16,11 +16,10 @@ import pytest
 from app.services.mail import (
     ImapConnection,
     connect_imap,
-    list_folders,
     create_folder,
     get_permanent_flags,
+    list_folders,
 )
-
 
 # ---------------------------------------------------------------------------
 # imap-tools mock helpers
@@ -185,12 +184,14 @@ class TestListFolders:
     async def test_list_folders_standard(self):
         """Standard folder list is parsed correctly."""
         mb = MagicMock()
-        mb.folder.list.return_value = iter([
-            _make_folder_info("INBOX"),
-            _make_folder_info("Sent"),
-            _make_folder_info("Work", flags=("\\HasChildren",)),
-            _make_folder_info("Work/Projects"),
-        ])
+        mb.folder.list.return_value = iter(
+            [
+                _make_folder_info("INBOX"),
+                _make_folder_info("Sent"),
+                _make_folder_info("Work", flags=("\\HasChildren",)),
+                _make_folder_info("Work/Projects"),
+            ]
+        )
         conn = ImapConnection(mailbox=mb, account_id=uuid4(), host="test", separator="/")
         folders = await list_folders(conn)
         assert "INBOX" in folders
@@ -202,10 +203,12 @@ class TestListFolders:
     async def test_list_folders_noselect_excluded(self):
         """Folders with \\Noselect flag are excluded."""
         mb = MagicMock()
-        mb.folder.list.return_value = iter([
-            _make_folder_info("INBOX"),
-            _make_folder_info("Container", flags=("\\Noselect", "\\HasChildren")),
-        ])
+        mb.folder.list.return_value = iter(
+            [
+                _make_folder_info("INBOX"),
+                _make_folder_info("Container", flags=("\\Noselect", "\\HasChildren")),
+            ]
+        )
         conn = ImapConnection(mailbox=mb, account_id=uuid4(), host="test", separator="/")
         folders = await list_folders(conn)
         assert "INBOX" in folders

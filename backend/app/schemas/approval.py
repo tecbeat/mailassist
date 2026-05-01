@@ -1,6 +1,7 @@
 """Pydantic schemas for Approval system API requests and responses."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -15,8 +16,8 @@ class ApprovalResponse(BaseModel):
     mail_uid: str
     mail_subject: str
     mail_from: str
-    proposed_action: dict
-    edited_actions: dict | None = None
+    proposed_action: dict[str, Any]
+    edited_actions: dict[str, Any] | None = None
     ai_reasoning: str
     status: str
     created_at: datetime
@@ -39,6 +40,6 @@ class ApprovalListResponse(BaseModel):
 class ApprovalEditRequest(BaseModel):
     """Request body for editing proposed actions on an approval."""
 
-    edited_actions: dict = Field(
+    edited_actions: dict[str, Any] = Field(
         description="User-edited actions to override the AI-proposed actions.",
     )

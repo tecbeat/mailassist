@@ -20,7 +20,6 @@ import pytest
 from app.models import TrackedEmailStatus
 from app.models.user import ApprovalMode
 
-
 # ---------------------------------------------------------------------------
 # Lightweight row stubs returned by mock db.execute()
 # ---------------------------------------------------------------------------
@@ -144,14 +143,12 @@ def _build_db_side_effect(
     # any user not present in user_settings_map.
     providers_list = [_make_provider_for_user(uid) for uid in users_with_provider]
     user_settings_list = [
-        _make_user_settings_for_user(uid, max_concurrent=user_max_concurrent.get(uid, 5))
-        for uid in users_with_provider
+        _make_user_settings_for_user(uid, max_concurrent=user_max_concurrent.get(uid, 5)) for uid in users_with_provider
     ]
 
     # Pre-build tracked email objects for the QUEUED→PROCESSING step
     tracked_objects: dict[UUID, _FakeTrackedEmail] = {
-        row.id: _FakeTrackedEmail(row.id, TrackedEmailStatus.QUEUED)
-        for row in queued_rows
+        row.id: _FakeTrackedEmail(row.id, TrackedEmailStatus.QUEUED) for row in queued_rows
     }
 
     call_count = 0
@@ -172,9 +169,7 @@ def _build_db_side_effect(
         elif idx == 4:
             return _scalars_all_result(user_settings_list)
         elif idx == 5:
-            return _all_result(
-                [(uid, cnt) for uid, cnt in per_user_processing.items()]
-            )
+            return _all_result(list(per_user_processing.items()))
         else:
             # QUEUED→PROCESSING lookups: return the next still-QUEUED row.
             for te in tracked_objects.values():
@@ -242,14 +237,16 @@ class TestPerUserSlotEnforcement:
             QueuedRow(uuid4(), user_id, account_id, "uid2"),
         ]
 
-        db_mock.execute = AsyncMock(side_effect=_build_db_side_effect(
-            global_processing=0,
-            queued_rows=queued_rows,
-            healthy_account_ids=[account_id],
-            users_with_provider=[user_id],
-            per_user_processing={user_id: 3},  # Already at capacity
-            user_max_concurrent={user_id: 3},   # Limit is 3
-        ))
+        db_mock.execute = AsyncMock(
+            side_effect=_build_db_side_effect(
+                global_processing=0,
+                queued_rows=queued_rows,
+                healthy_account_ids=[account_id],
+                users_with_provider=[user_id],
+                per_user_processing={user_id: 3},  # Already at capacity
+                user_max_concurrent={user_id: 3},  # Limit is 3
+            )
+        )
 
         await _schedule(db_mock, arq_mock)
 
@@ -258,7 +255,10 @@ class TestPerUserSlotEnforcement:
 
     @pytest.mark.asyncio
     async def test_user_with_free_slots_gets_limited_dispatch(
-        self, mock_settings, arq_mock, db_mock,
+        self,
+        mock_settings,
+        arq_mock,
+        db_mock,
     ):
         """User with 1 free slot only gets 1 mail dispatched."""
         from app.workers.scheduler import _schedule
@@ -273,10 +273,7 @@ class TestPerUserSlotEnforcement:
         ]
 
         # Build tracked objects for QUEUED→PROCESSING step
-        tracked_objects = {
-            row.id: _FakeTrackedEmail(row.id, TrackedEmailStatus.QUEUED)
-            for row in queued_rows
-        }
+        tracked_objects = {row.id: _FakeTrackedEmail(row.id, TrackedEmailStatus.QUEUED) for row in queued_rows}
 
         call_count = 0
 
@@ -316,7 +313,10 @@ class TestPerUserSlotEnforcement:
 
     @pytest.mark.asyncio
     async def test_default_max_concurrent_when_no_settings(
-        self, mock_settings, arq_mock, db_mock,
+        self,
+        mock_settings,
+        arq_mock,
+        db_mock,
     ):
         """Users with explicit UserSettings respect ``max_concurrent_processing``.
 
@@ -331,15 +331,9 @@ class TestPerUserSlotEnforcement:
         user_id = uuid4()
         account_id = uuid4()
 
-        queued_rows = [
-            QueuedRow(uuid4(), user_id, account_id, f"uid{i}")
-            for i in range(5)
-        ]
+        queued_rows = [QueuedRow(uuid4(), user_id, account_id, f"uid{i}") for i in range(5)]
 
-        tracked_objects = {
-            row.id: _FakeTrackedEmail(row.id, TrackedEmailStatus.QUEUED)
-            for row in queued_rows
-        }
+        tracked_objects = {row.id: _FakeTrackedEmail(row.id, TrackedEmailStatus.QUEUED) for row in queued_rows}
 
         provider = _make_provider_for_user(user_id)
         user_settings = _make_user_settings_for_user(user_id, max_concurrent=3)
@@ -395,10 +389,7 @@ class TestPauseFlagFiltering:
             QueuedRow(uuid4(), user_id, healthy_account, "uid2"),  # healthy
         ]
 
-        tracked_objects = {
-            row.id: _FakeTrackedEmail(row.id, TrackedEmailStatus.QUEUED)
-            for row in queued_rows
-        }
+        tracked_objects = {row.id: _FakeTrackedEmail(row.id, TrackedEmailStatus.QUEUED) for row in queued_rows}
 
         call_count = 0
 
@@ -441,7 +432,10 @@ class TestPauseFlagFiltering:
 
     @pytest.mark.asyncio
     async def test_user_with_all_providers_paused_skipped(
-        self, mock_settings, arq_mock, db_mock,
+        self,
+        mock_settings,
+        arq_mock,
+        db_mock,
     ):
         """Users with no healthy, non-paused provider get no dispatches."""
         from app.workers.scheduler import _schedule
@@ -453,12 +447,14 @@ class TestPauseFlagFiltering:
             QueuedRow(uuid4(), user_id, account_id, "uid1"),
         ]
 
-        db_mock.execute = AsyncMock(side_effect=_build_db_side_effect(
-            global_processing=0,
-            queued_rows=queued_rows,
-            healthy_account_ids=[account_id],
-            users_with_provider=[],  # No healthy provider for this user
-        ))
+        db_mock.execute = AsyncMock(
+            side_effect=_build_db_side_effect(
+                global_processing=0,
+                queued_rows=queued_rows,
+                healthy_account_ids=[account_id],
+                users_with_provider=[],  # No healthy provider for this user
+            )
+        )
 
         await _schedule(db_mock, arq_mock)
 
@@ -535,10 +531,7 @@ class TestRoundRobinFairness:
             QueuedRow(uuid4(), user_b, acct_b, "b2"),
         ]
 
-        tracked_objects = {
-            row.id: _FakeTrackedEmail(row.id, TrackedEmailStatus.QUEUED)
-            for row in queued_rows
-        }
+        tracked_objects = {row.id: _FakeTrackedEmail(row.id, TrackedEmailStatus.QUEUED) for row in queued_rows}
         tracked_list = list(tracked_objects.values())
         tracked_idx = 0
 
@@ -592,12 +585,14 @@ class TestGlobalCapacity:
 
         mock_settings.worker_max_jobs = 10  # max_process_slots = 10 - 2 = 8
 
-        db_mock.execute = AsyncMock(side_effect=_build_db_side_effect(
-            global_processing=8,  # At capacity
-            queued_rows=[QueuedRow(uuid4(), uuid4(), uuid4(), "uid1")],
-            healthy_account_ids=[],
-            users_with_provider=[],
-        ))
+        db_mock.execute = AsyncMock(
+            side_effect=_build_db_side_effect(
+                global_processing=8,  # At capacity
+                queued_rows=[QueuedRow(uuid4(), uuid4(), uuid4(), "uid1")],
+                healthy_account_ids=[],
+                users_with_provider=[],
+            )
+        )
 
         await _schedule(db_mock, arq_mock)
 

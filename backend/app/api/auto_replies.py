@@ -41,10 +41,7 @@ async def list_auto_replies(
     if search:
         base_stmt = base_stmt.where(AutoReplyRecord.mail_subject.ilike(f"%{sanitize_like(search)}%"))
 
-    if sort == "oldest":
-        order_col = AutoReplyRecord.created_at.asc()
-    else:
-        order_col = AutoReplyRecord.created_at.desc()
+    order_col = AutoReplyRecord.created_at.asc() if sort == "oldest" else AutoReplyRecord.created_at.desc()
 
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)

@@ -86,10 +86,7 @@ async def list_blocklist(
 ) -> BlocklistListResponse:
     """List blocklist entries with optional filtering and pagination."""
     uid = UUID(user_id)
-    base_stmt = (
-        select(SpamBlocklistEntry)
-        .where(SpamBlocklistEntry.user_id == uid)
-    )
+    base_stmt = select(SpamBlocklistEntry).where(SpamBlocklistEntry.user_id == uid)
 
     if search:
         pattern = f"%{sanitize_like(search)}%"

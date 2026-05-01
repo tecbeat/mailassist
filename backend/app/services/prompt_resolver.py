@@ -6,7 +6,8 @@ to the default template from the filesystem.  Previously duplicated
 in mail_processor.py and pipeline.py.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, tzinfo
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -21,7 +22,7 @@ from app.plugins.base import AIFunctionPlugin, MailContext
 async def resolve_prompts(
     db: AsyncSession,
     user_id: UUID,
-    plugin: AIFunctionPlugin,
+    plugin: AIFunctionPlugin[Any],
     engine: TemplateEngine,
     context: MailContext,
     language: str = "en",
@@ -39,7 +40,8 @@ async def resolve_prompts(
     # calendar_extraction (and similar) sees the correct local date
     try:
         from zoneinfo import ZoneInfo
-        tz = ZoneInfo(timezone)
+
+        tz: tzinfo = ZoneInfo(timezone)
     except (KeyError, Exception):
         tz = UTC
     now = datetime.now(tz)

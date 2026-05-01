@@ -61,8 +61,8 @@ async def evaluate_summary_filter(
     # Check label filter
     filter_labels = rules.get("labels")
     if filter_labels:
-        label_set = {l.lower() for l in labels}
-        filter_set = {l.lower() for l in filter_labels}
+        label_set = {lbl.lower() for lbl in labels}
+        filter_set = {lbl.lower() for lbl in filter_labels}
         if not label_set & filter_set:
             return False
 

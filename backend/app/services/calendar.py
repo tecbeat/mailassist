@@ -9,10 +9,10 @@ thread via ``asyncio.to_thread()``.
 """
 
 import asyncio
+import contextlib
 import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from uuid import UUID
 
 import caldav
 import structlog
@@ -20,7 +20,6 @@ from icalendar import Calendar, Event, vText
 
 from app.core.config import get_settings
 from app.core.exceptions import ExternalServiceError
-
 from app.core.security import decrypt_credentials, get_encryption
 from app.core.types import ConnectionTestResult
 
@@ -140,17 +139,14 @@ async def create_calendar_event(
             no calendars are found, or the event creation fails.
     """
     if end is None:
-        if is_all_day:
-            end = start + timedelta(days=1)
-        else:
-            end = start + timedelta(hours=1)
+        end = start + timedelta(days=1) if is_all_day else start + timedelta(hours=1)
 
     # Build iCalendar event
-    cal = Calendar()
+    cal = Calendar()  # type: ignore[no-untyped-call]
     cal.add("prodid", get_settings().ical_product_id)
     cal.add("version", "2.0")
 
-    event = Event()
+    event = Event()  # type: ignore[no-untyped-call]
     event.add("summary", title)
 
     if is_all_day:
@@ -186,13 +182,14 @@ async def create_calendar_event(
         resolved_url = caldav_url
 
     try:
+
         def _create_event() -> tuple[str, bool, str | None]:
             """Run blocking CalDAV operations in a worker thread.
 
             Returns (calendar_name, used_fallback, uid) so logging stays
             on the main thread where structlog context vars are available.
             """
-            client = caldav.DAVClient(
+            client = caldav.DAVClient(  # type: ignore[operator]
                 url=resolved_url,
                 username=username,
                 password=password,
@@ -219,10 +216,8 @@ async def create_calendar_event(
             created = target_cal.save_event(ical_string)
             # Extract the UID from the created event
             uid = None
-            try:
+            with contextlib.suppress(Exception):
                 uid = str(created.vobject_instance.vevent.uid.value)
-            except Exception:
-                pass
             return target_cal.name, used_fallback, uid
 
         used_calendar, used_fallback, event_uid = await asyncio.to_thread(_create_event)
@@ -268,9 +263,12 @@ async def delete_caldav_event(
     resolved_url = discovery.dav_url if discovery.success and discovery.dav_url else caldav_url
 
     try:
+
         def _delete() -> None:
-            client = caldav.DAVClient(
-                url=resolved_url, username=username, password=password,
+            client = caldav.DAVClient(  # type: ignore[operator]
+                url=resolved_url,
+                username=username,
+                password=password,
             )
             principal = client.principal()
             calendars = principal.calendars()

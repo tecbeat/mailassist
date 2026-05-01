@@ -3,6 +3,8 @@
 Defines request/response models for the dry-run pipeline test endpoint.
 """
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -59,7 +61,7 @@ class PluginTestResult(BaseModel):
     display_name: str
     success: bool
     actions: list[str] = []
-    ai_response: dict | None = None
+    ai_response: dict[str, Any] | None = None
     tokens_used: int = 0
     error: str | None = None
     skipped: bool = False

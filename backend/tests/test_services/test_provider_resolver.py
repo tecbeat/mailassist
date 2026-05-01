@@ -9,7 +9,6 @@ from uuid import uuid4
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # get_default_provider resolution tests
 # ---------------------------------------------------------------------------
@@ -130,7 +129,10 @@ class TestResolvePluginProvider:
         plugin_map = {"email_summary": "id-b"}
 
         result = resolve_plugin_provider(
-            "email_summary", plugin_map, providers, provider_a,
+            "email_summary",
+            plugin_map,
+            providers,
+            provider_a,
         )
         assert result is provider_b
 

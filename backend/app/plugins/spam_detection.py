@@ -5,9 +5,11 @@ Runs first in the pipeline (execution_order=10). If spam is detected with
 sufficient confidence, remaining plugins are skipped.
 """
 
+from typing import Any, ClassVar
+
 from pydantic import BaseModel, Field
 
-from app.plugins.base import AIFunctionPlugin, ActionResult, MailContext
+from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
 
 
@@ -32,7 +34,7 @@ class SpamDetectionPlugin(AIFunctionPlugin[SpamDetectionResponse]):
     approval_key = "spam"
     has_view_page = True
     view_route = "/spam"
-    default_config = {"confidence_threshold": 0.8}
+    default_config: ClassVar[dict[str, Any]] = {"confidence_threshold": 0.8}
 
     async def execute(self, context: MailContext, ai_response: SpamDetectionResponse) -> ActionResult:
         if not ai_response.is_spam:

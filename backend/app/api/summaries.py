@@ -52,7 +52,6 @@ async def list_summaries(
             | EmailSummary.summary.ilike(pattern)
         )
 
-
     # Sort by mail_date (actual email date), falling back to created_at for records without a mail_date
     sort_col = case(
         (EmailSummary.mail_date.is_not(None), EmailSummary.mail_date),

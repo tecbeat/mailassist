@@ -10,8 +10,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.services.summary import evaluate_summary_filter, _URGENCY_LEVELS
-
+from app.services.summary import _URGENCY_LEVELS, evaluate_summary_filter
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -199,11 +198,13 @@ class TestSummaryFilterEvaluation:
     @pytest.mark.asyncio
     async def test_combined_filters(self):
         """Multiple filter rules are AND-combined (all must pass)."""
-        config = _make_filter_config(filter_rules={
-            "exclude_spam": True,
-            "min_urgency": "medium",
-            "action_required_only": True,
-        })
+        config = _make_filter_config(
+            filter_rules={
+                "exclude_spam": True,
+                "min_urgency": "medium",
+                "action_required_only": True,
+            }
+        )
         db = _mock_db_with_config(config)
         summary = _make_summary(urgency="high", action_required=True)
         result = await evaluate_summary_filter(db, uuid4(), summary, [], None, False, is_spam=False)
@@ -212,11 +213,13 @@ class TestSummaryFilterEvaluation:
     @pytest.mark.asyncio
     async def test_combined_filters_one_fails(self):
         """One failing filter in AND-combination blocks the notification."""
-        config = _make_filter_config(filter_rules={
-            "exclude_spam": True,
-            "min_urgency": "critical",
-            "action_required_only": True,
-        })
+        config = _make_filter_config(
+            filter_rules={
+                "exclude_spam": True,
+                "min_urgency": "critical",
+                "action_required_only": True,
+            }
+        )
         db = _mock_db_with_config(config)
         # urgency=medium < critical -> fails
         summary = _make_summary(urgency="medium", action_required=True)

@@ -29,6 +29,45 @@ render_pages:
   tags:
     - teccave
 
+backend_lint:
+  stage: lint
+  image: python:3.14-slim@sha256:5b3879b6f3cb77e712644d50262d05a7c146b7312d784a18eff7ff5462e77033
+  needs: []
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+      when: on_success
+    - when: never
+  before_script:
+    - pip install --no-cache-dir uv
+  script:
+    - cd backend
+    - uv venv .venv
+    - uv pip compile pyproject.toml --extra dev -o /tmp/requirements.txt
+    - uv pip install --python .venv/bin/python -r /tmp/requirements.txt
+    - .venv/bin/ruff check .
+    - .venv/bin/ruff format --check .
+  tags:
+    - teccave
+
+backend_typecheck:
+  stage: lint
+  image: python:3.14-slim@sha256:5b3879b6f3cb77e712644d50262d05a7c146b7312d784a18eff7ff5462e77033
+  needs: []
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+      when: on_success
+    - when: never
+  before_script:
+    - pip install --no-cache-dir uv
+  script:
+    - cd backend
+    - uv venv .venv
+    - uv pip compile pyproject.toml --extra dev -o /tmp/requirements.txt
+    - uv pip install --python .venv/bin/python -r /tmp/requirements.txt
+    - PYTHONPATH=. .venv/bin/mypy app/
+  tags:
+    - teccave
+
 backend_unittest:
   stage: unittest
   image: python:3.14-slim@sha256:5b3879b6f3cb77e712644d50262d05a7c146b7312d784a18eff7ff5462e77033

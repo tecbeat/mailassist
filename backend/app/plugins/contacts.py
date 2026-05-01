@@ -10,9 +10,11 @@ Runs late in the pipeline (execution_order=80) so that other plugins
 have already enriched the context.
 """
 
+from typing import Any, ClassVar
+
 from pydantic import BaseModel, Field
 
-from app.plugins.base import AIFunctionPlugin, ActionResult, MailContext
+from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
 
 
@@ -50,7 +52,7 @@ class ContactsPlugin(AIFunctionPlugin[ContactAssignmentResponse]):
     approval_key = "contacts"
     has_view_page = True
     view_route = "/contacts"
-    default_config = {"confidence_threshold": 0.85}
+    default_config: ClassVar[dict[str, Any]] = {"confidence_threshold": 0.85}
 
     async def execute(self, context: MailContext, ai_response: ContactAssignmentResponse) -> ActionResult:
         # No match — AI explicitly said there's no matching contact
@@ -63,11 +65,7 @@ class ContactsPlugin(AIFunctionPlugin[ContactAssignmentResponse]):
 
         # If the deterministic pre-pipeline match already found the same
         # contact, just persist quietly (no approval needed)
-        if (
-            context.contact
-            and ai_response.contact_id
-            and context.contact.get("id") == ai_response.contact_id
-        ):
+        if context.contact and ai_response.contact_id and context.contact.get("id") == ai_response.contact_id:
             return ActionResult(
                 success=True,
                 actions_taken=[f"confirm_contact:{ai_response.contact_id}"],

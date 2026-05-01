@@ -29,12 +29,10 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from itertools import cycle
-from uuid import UUID
+from typing import TYPE_CHECKING, Any
 
 import structlog
-from arq import ArqRedis
 from sqlalchemy import func, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.constants import PIPELINE_PLUGIN_NAMES, PLUGIN_TO_APPROVAL_COLUMN
@@ -48,10 +46,16 @@ from app.models import (
 )
 from app.models.user import ApprovalMode
 
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from arq import ArqRedis
+    from sqlalchemy.ext.asyncio import AsyncSession
+
 logger = structlog.get_logger()
 
 
-async def schedule_pending_mails(ctx: dict) -> None:
+async def schedule_pending_mails(ctx: dict[str, Any]) -> None:
     """Main entry point called by ARQ cron every minute.
 
     1. Reset stale PROCESSING mails (orphan recovery).
@@ -129,9 +133,7 @@ async def _schedule(db: AsyncSession, arq_redis: ArqRedis) -> None:
     # Only PROCESSING counts against worker capacity (QUEUED mails are
     # waiting in the DB, not occupying ARQ slots).
     processing_stmt = (
-        select(func.count())
-        .select_from(TrackedEmail)
-        .where(TrackedEmail.status == TrackedEmailStatus.PROCESSING)
+        select(func.count()).select_from(TrackedEmail).where(TrackedEmail.status == TrackedEmailStatus.PROCESSING)
     )
     processing_result = await db.execute(processing_stmt)
     global_processing = processing_result.scalar() or 0
@@ -174,12 +176,9 @@ async def _schedule(db: AsyncSession, arq_redis: ArqRedis) -> None:
     user_ids = {row.user_id for row in queued_rows}
 
     # --- 3. Filter accounts: active AND not paused ---
-    acct_stmt = (
-        select(MailAccount.id)
-        .where(
-            MailAccount.id.in_(account_ids),
-            MailAccount.is_paused.is_(False),
-        )
+    acct_stmt = select(MailAccount.id).where(
+        MailAccount.id.in_(account_ids),
+        MailAccount.is_paused.is_(False),
     )
     acct_result = await db.execute(acct_stmt)
     healthy_account_ids: set[UUID] = {row[0] for row in acct_result.all()}
@@ -190,10 +189,7 @@ async def _schedule(db: AsyncSession, arq_redis: ArqRedis) -> None:
     # healthy.  This prevents a single unhealthy provider (that isn't even
     # used) from blocking the entire pipeline.
 
-    provider_stmt = (
-        select(AIProvider)
-        .where(AIProvider.user_id.in_(user_ids))
-    )
+    provider_stmt = select(AIProvider).where(AIProvider.user_id.in_(user_ids))
     provider_result = await db.execute(provider_stmt)
     all_providers: list[AIProvider] = list(provider_result.scalars().all())
 
@@ -205,9 +201,7 @@ async def _schedule(db: AsyncSession, arq_redis: ArqRedis) -> None:
     # Load full UserSettings for enabled-plugin + provider-map resolution
     user_settings_stmt = select(UserSettings).where(UserSettings.user_id.in_(user_ids))
     user_settings_result = await db.execute(user_settings_stmt)
-    user_settings_map: dict[UUID, UserSettings] = {
-        us.user_id: us for us in user_settings_result.scalars().all()
-    }
+    user_settings_map: dict[UUID, UserSettings] = {us.user_id: us for us in user_settings_result.scalars().all()}
 
     def _user_has_healthy_provider(uid: UUID) -> bool:
         """Check that ALL enabled plugins have a healthy provider.
@@ -254,9 +248,7 @@ async def _schedule(db: AsyncSession, arq_redis: ArqRedis) -> None:
 
         return has_any_enabled
 
-    users_with_healthy_provider: set[UUID] = {
-        uid for uid in user_ids if _user_has_healthy_provider(uid)
-    }
+    users_with_healthy_provider: set[UUID] = {uid for uid in user_ids if _user_has_healthy_provider(uid)}
 
     # --- 5. Per-user slot enforcement ---
     # 5a. Count PROCESSING mails per user
@@ -269,14 +261,10 @@ async def _schedule(db: AsyncSession, arq_redis: ArqRedis) -> None:
         .group_by(TrackedEmail.user_id)
     )
     per_user_result = await db.execute(per_user_processing_stmt)
-    user_processing_counts: dict[UUID, int] = {
-        row[0]: row[1] for row in per_user_result.all()
-    }
+    user_processing_counts: dict[UUID, int] = {row[0]: row[1] for row in per_user_result.all()}
 
     # 5b. Per-user max_concurrent_processing (from settings loaded in step 4)
-    user_max_concurrent: dict[UUID, int] = {
-        uid: us.max_concurrent_processing for uid, us in user_settings_map.items()
-    }
+    user_max_concurrent: dict[UUID, int] = {uid: us.max_concurrent_processing for uid, us in user_settings_map.items()}
 
     # 5c. Calculate free slots per user
     user_free_slots: dict[UUID, int] = {}
@@ -300,9 +288,7 @@ async def _schedule(db: AsyncSession, arq_redis: ArqRedis) -> None:
         if row.user_id not in users_with_healthy_provider:
             skipped_provider += 1
             continue
-        user_mail_queues[row.user_id].append(
-            (row.id, row.mail_account_id, row.mail_uid, row.current_folder)
-        )
+        user_mail_queues[row.user_id].append((row.id, row.mail_account_id, row.mail_uid, row.current_folder))
 
     if not user_mail_queues:
         if skipped_account or skipped_provider:

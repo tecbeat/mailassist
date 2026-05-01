@@ -10,7 +10,6 @@ import pytest
 
 from app.services.email_parser import parse_email
 
-
 # ---------------------------------------------------------------------------
 # Helpers — minimal RFC822 messages
 # ---------------------------------------------------------------------------
@@ -34,12 +33,7 @@ EMPTY_BODY = (
 )
 
 SHORT_BODY = (
-    b"From: sender@example.com\r\n"
-    b"To: user@example.com\r\n"
-    b"Subject: Short\r\n"
-    b"Message-ID: <short-1@example.com>\r\n"
-    b"\r\n"
-    b"Hi"
+    b"From: sender@example.com\r\nTo: user@example.com\r\nSubject: Short\r\nMessage-ID: <short-1@example.com>\r\n\r\nHi"
 )
 
 WHITESPACE_BODY = (
@@ -207,33 +201,42 @@ class TestFetchRawMailResponse:
 
         mock_account = MagicMock()
 
-        with patch(
-            "app.workers.pipeline_orchestrator.imap_connection",
-            fake_imap_connection,
-        ), patch(
-            "app.workers.pipeline_orchestrator.fetch_raw_message",
-            AsyncMock(return_value=small_msg),
-        ), patch(
-            "app.workers.pipeline_orchestrator.list_folders",
-            AsyncMock(return_value=["INBOX"]),
-        ), patch(
-            # ``fetch_raw_mail`` now consults the Valkey folder cache before
-            # listing folders.  Without these patches the test runs against
-            # an uninitialised Valkey client, the ``except`` branch fires and
-            # ``folders`` returns ``[]``.
-            "app.workers.pipeline_orchestrator.get_cached_folders",
-            AsyncMock(return_value=None),
-        ), patch(
-            "app.workers.pipeline_orchestrator.set_cached_folders",
-            AsyncMock(),
+        with (
+            patch(
+                "app.workers.pipeline_orchestrator.imap_connection",
+                fake_imap_connection,
+            ),
+            patch(
+                "app.workers.pipeline_orchestrator.fetch_raw_message",
+                AsyncMock(return_value=small_msg),
+            ),
+            patch(
+                "app.workers.pipeline_orchestrator.list_folders",
+                AsyncMock(return_value=["INBOX"]),
+            ),
+            patch(
+                # ``fetch_raw_mail`` now consults the Valkey folder cache before
+                # listing folders.  Without these patches the test runs against
+                # an uninitialised Valkey client, the ``except`` branch fires and
+                # ``folders`` returns ``[]``.
+                "app.workers.pipeline_orchestrator.get_cached_folders",
+                AsyncMock(return_value=None),
+            ),
+            patch(
+                "app.workers.pipeline_orchestrator.set_cached_folders",
+                AsyncMock(),
+            ),
         ):
-            from app.workers.pipeline_orchestrator import fetch_raw_mail
-
             import structlog
+
+            from app.workers.pipeline_orchestrator import fetch_raw_mail
 
             log = structlog.get_logger()
             raw, folders, sep = await fetch_raw_mail(
-                mock_account, "123", "INBOX", log,
+                mock_account,
+                "123",
+                "INBOX",
+                log,
             )
 
         assert raw == small_msg
@@ -245,12 +248,7 @@ class TestFetchRawMailResponse:
         """fetch_raw_mail returns the raw bytes from fetch_raw_message."""
         from unittest.mock import AsyncMock, MagicMock, patch
 
-        email_body = (
-            b"From: sender@example.com\r\n"
-            b"Subject: Test\r\n"
-            b"\r\n"
-            b"Hello world"
-        )
+        email_body = b"From: sender@example.com\r\nSubject: Test\r\n\r\nHello world"
 
         mock_conn = MagicMock()
         mock_conn.separator = "/"
@@ -263,23 +261,30 @@ class TestFetchRawMailResponse:
 
         mock_account = MagicMock()
 
-        with patch(
-            "app.workers.pipeline_orchestrator.imap_connection",
-            fake_imap_connection,
-        ), patch(
-            "app.workers.pipeline_orchestrator.fetch_raw_message",
-            AsyncMock(return_value=email_body),
-        ), patch(
-            "app.workers.pipeline_orchestrator.list_folders",
-            AsyncMock(return_value=["INBOX"]),
+        with (
+            patch(
+                "app.workers.pipeline_orchestrator.imap_connection",
+                fake_imap_connection,
+            ),
+            patch(
+                "app.workers.pipeline_orchestrator.fetch_raw_message",
+                AsyncMock(return_value=email_body),
+            ),
+            patch(
+                "app.workers.pipeline_orchestrator.list_folders",
+                AsyncMock(return_value=["INBOX"]),
+            ),
         ):
-            from app.workers.pipeline_orchestrator import fetch_raw_mail
-
             import structlog
 
+            from app.workers.pipeline_orchestrator import fetch_raw_mail
+
             log = structlog.get_logger()
-            raw, folders, sep = await fetch_raw_mail(
-                mock_account, "123", "INBOX", log,
+            raw, _folders, _sep = await fetch_raw_mail(
+                mock_account,
+                "123",
+                "INBOX",
+                log,
             )
 
         assert raw == email_body
@@ -301,19 +306,22 @@ class TestFetchRawMailResponse:
 
         mock_account = MagicMock()
 
-        with patch(
-            "app.workers.pipeline_orchestrator.imap_connection",
-            fake_imap_connection,
-        ), patch(
-            "app.workers.pipeline_orchestrator.fetch_raw_message",
-            AsyncMock(side_effect=ValueError("no_message_body_in_response")),
+        with (
+            patch(
+                "app.workers.pipeline_orchestrator.imap_connection",
+                fake_imap_connection,
+            ),
+            patch(
+                "app.workers.pipeline_orchestrator.fetch_raw_message",
+                AsyncMock(side_effect=ValueError("no_message_body_in_response")),
+            ),
         ):
+            import structlog
+
             from app.workers.pipeline_orchestrator import (
                 IMAPFetchError,
                 fetch_raw_mail,
             )
-
-            import structlog
 
             log = structlog.get_logger()
             with pytest.raises(IMAPFetchError, match="no_message_body_in_response"):
@@ -336,19 +344,22 @@ class TestFetchRawMailResponse:
 
         mock_account = MagicMock()
 
-        with patch(
-            "app.workers.pipeline_orchestrator.imap_connection",
-            fake_imap_connection,
-        ), patch(
-            "app.workers.pipeline_orchestrator.fetch_raw_message",
-            AsyncMock(side_effect=ValueError("imap_fetch_failed: NO")),
+        with (
+            patch(
+                "app.workers.pipeline_orchestrator.imap_connection",
+                fake_imap_connection,
+            ),
+            patch(
+                "app.workers.pipeline_orchestrator.fetch_raw_message",
+                AsyncMock(side_effect=ValueError("imap_fetch_failed: NO")),
+            ),
         ):
+            import structlog
+
             from app.workers.pipeline_orchestrator import (
                 IMAPFetchError,
                 fetch_raw_mail,
             )
-
-            import structlog
 
             log = structlog.get_logger()
             with pytest.raises(IMAPFetchError):

@@ -22,6 +22,7 @@ eliminating the need for sequence-number-to-UID resolution.
 
 import asyncio
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 import structlog
@@ -29,8 +30,8 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_session_ctx
 from app.core.config import get_settings
+from app.core.database import get_session_ctx
 from app.models import MailAccount, TrackedEmail, TrackedEmailStatus
 from app.services.mail import (
     ImapConnection,
@@ -44,11 +45,11 @@ from app.services.mail import (
     set_cached_folders,
     update_account_sync_status,
 )
+from app.workers.health import timed_operation
+from app.workers.idle_monitor import is_idle_active
 from app.workers.utils import (
     get_backoff_seconds,
 )
-from app.workers.health import timed_operation
-from app.workers.idle_monitor import is_idle_active
 
 logger = structlog.get_logger()
 
@@ -59,7 +60,7 @@ POLLER_BACKOFF_SCHEDULE = [30, 60, 120, 300]
 _ENVELOPE_SUBBATCH_SIZE = 100
 
 
-async def poll_mail_accounts(ctx: dict) -> None:
+async def poll_mail_accounts(ctx: dict[str, Any]) -> None:
     """Poll all active mail accounts for new messages.
 
     Fair queuing: processes accounts round-robin across users.
@@ -224,7 +225,9 @@ async def _poll_single_account(
             total_inserted = 0
             for folder in folders:
                 inserted = await _poll_folder(
-                    conn, account, folder,
+                    conn,
+                    account,
+                    folder,
                     search_criterion=search_criterion,
                     is_initial_scan=is_initial_scan,
                 )
@@ -349,7 +352,11 @@ async def _poll_folder(
         # Bulk insert into tracked_emails with correct folder (short DB session)
         async with get_session_ctx() as db:
             inserted = await _insert_tracked_batch(
-                db, account.user_id, account.id, batch, envelopes,
+                db,
+                account.user_id,
+                account.id,
+                batch,
+                envelopes,
                 current_folder=folder,
             )
         total_inserted += inserted
@@ -386,8 +393,7 @@ async def _get_new_uids(
     if not candidate_uids:
         return []
 
-    from sqlalchemy import text
-    from sqlalchemy import bindparam, ARRAY, String
+    from sqlalchemy import ARRAY, String, bindparam, text
 
     # Use PostgreSQL unnest() to turn the candidate array into a virtual
     # table, then exclude UIDs that already exist in tracked_emails.
@@ -410,7 +416,8 @@ async def _get_new_uids(
     for i in range(0, len(candidate_uids), batch_size):
         batch = candidate_uids[i : i + batch_size]
         result = await db.execute(
-            query, {"uids": batch, "account_id": acct_uuid, "folder": folder},
+            query,
+            {"uids": batch, "account_id": acct_uuid, "folder": folder},
         )
         new_uids.extend(row[0] for row in result.all())
 
@@ -462,19 +469,15 @@ async def _insert_tracked_batch(
 
     for i in range(0, len(rows), max_rows_per_insert):
         batch = rows[i : i + max_rows_per_insert]
-        stmt = (
-            pg_insert(TrackedEmail)
-            .values(batch)
-            .on_conflict_do_nothing(constraint="uq_tracked_email_account_uid")
-        )
+        stmt = pg_insert(TrackedEmail).values(batch).on_conflict_do_nothing(constraint="uq_tracked_email_account_uid")
         result = await db.execute(stmt)
-        total_inserted += result.rowcount
+        total_inserted += result.rowcount  # type: ignore[attr-defined]
 
     await db.flush()
     return total_inserted
 
 
-async def poll_single_account(ctx: dict, user_id: str, account_id: str) -> None:
+async def poll_single_account(ctx: dict[str, Any], user_id: str, account_id: str) -> None:
     """Poll a specific mail account (manual trigger from API)."""
     uid = UUID(account_id)
     account = None

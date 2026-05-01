@@ -2,14 +2,33 @@
 
 import enum
 from datetime import UTC, datetime
-from uuid import uuid4
-from uuid import UUID
+from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, Enum, Integer, String, ForeignKey
-from sqlalchemy.dialects.postgresql import JSON, UUID as PgUUID
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.ai import AIProvider, Prompt
+    from app.models.contacts import Contact
+    from app.models.mail import (
+        AIDraft,
+        AppliedLabel,
+        AssignedFolder,
+        AutoReplyRecord,
+        CalendarEvent,
+        ContactAssignment,
+        DetectedNewsletter,
+        EmailSummary,
+        ExtractedCoupon,
+        MailAccount,
+    )
+    from app.models.rules import Approval, Rule
+    from app.models.spam import SpamBlocklistEntry
 
 
 class ApprovalMode(str, enum.Enum):
@@ -42,17 +61,29 @@ class User(Base):
     approvals: Mapped[list["Approval"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     contacts: Mapped[list["Contact"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     rules: Mapped[list["Rule"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    extracted_coupons: Mapped[list["ExtractedCoupon"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    detected_newsletters: Mapped[list["DetectedNewsletter"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    extracted_coupons: Mapped[list["ExtractedCoupon"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    detected_newsletters: Mapped[list["DetectedNewsletter"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
     ai_drafts: Mapped[list["AIDraft"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     email_summaries: Mapped[list["EmailSummary"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    user_settings: Mapped["UserSettings | None"] = relationship(back_populates="user", cascade="all, delete-orphan", uselist=False)
-    spam_blocklist_entries: Mapped[list["SpamBlocklistEntry"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    user_settings: Mapped["UserSettings | None"] = relationship(
+        back_populates="user", cascade="all, delete-orphan", uselist=False
+    )
+    spam_blocklist_entries: Mapped[list["SpamBlocklistEntry"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
     applied_labels: Mapped[list["AppliedLabel"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     assigned_folders: Mapped[list["AssignedFolder"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     calendar_events: Mapped[list["CalendarEvent"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    auto_reply_records: Mapped[list["AutoReplyRecord"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    contact_assignments: Mapped[list["ContactAssignment"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    auto_reply_records: Mapped[list["AutoReplyRecord"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    contact_assignments: Mapped[list["ContactAssignment"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class UserSettings(Base):
@@ -74,17 +105,39 @@ class UserSettings(Base):
     max_concurrent_processing: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
     ai_timeout_seconds: Mapped[int] = mapped_column(Integer, default=120, nullable=False)
     _approval_enum = Enum(ApprovalMode, values_callable=lambda e: [m.value for m in e], name="approvalmode")
-    approval_mode_spam: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.APPROVAL, nullable=False)
-    approval_mode_labeling: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.APPROVAL, nullable=False)
-    approval_mode_smart_folder: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.APPROVAL, nullable=False)
-    approval_mode_newsletter: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.APPROVAL, nullable=False)
-    approval_mode_auto_reply: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.APPROVAL, nullable=False)
-    approval_mode_coupon: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.APPROVAL, nullable=False)
-    approval_mode_calendar: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.APPROVAL, nullable=False)
-    approval_mode_summary: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.APPROVAL, nullable=False)
-    approval_mode_rules: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.APPROVAL, nullable=False)
-    approval_mode_contacts: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.APPROVAL, nullable=False)
-    approval_mode_notifications: Mapped[ApprovalMode] = mapped_column(_approval_enum, default=ApprovalMode.AUTO, nullable=False)
+    approval_mode_spam: Mapped[ApprovalMode] = mapped_column(
+        _approval_enum, default=ApprovalMode.APPROVAL, nullable=False
+    )
+    approval_mode_labeling: Mapped[ApprovalMode] = mapped_column(
+        _approval_enum, default=ApprovalMode.APPROVAL, nullable=False
+    )
+    approval_mode_smart_folder: Mapped[ApprovalMode] = mapped_column(
+        _approval_enum, default=ApprovalMode.APPROVAL, nullable=False
+    )
+    approval_mode_newsletter: Mapped[ApprovalMode] = mapped_column(
+        _approval_enum, default=ApprovalMode.APPROVAL, nullable=False
+    )
+    approval_mode_auto_reply: Mapped[ApprovalMode] = mapped_column(
+        _approval_enum, default=ApprovalMode.APPROVAL, nullable=False
+    )
+    approval_mode_coupon: Mapped[ApprovalMode] = mapped_column(
+        _approval_enum, default=ApprovalMode.APPROVAL, nullable=False
+    )
+    approval_mode_calendar: Mapped[ApprovalMode] = mapped_column(
+        _approval_enum, default=ApprovalMode.APPROVAL, nullable=False
+    )
+    approval_mode_summary: Mapped[ApprovalMode] = mapped_column(
+        _approval_enum, default=ApprovalMode.APPROVAL, nullable=False
+    )
+    approval_mode_rules: Mapped[ApprovalMode] = mapped_column(
+        _approval_enum, default=ApprovalMode.APPROVAL, nullable=False
+    )
+    approval_mode_contacts: Mapped[ApprovalMode] = mapped_column(
+        _approval_enum, default=ApprovalMode.APPROVAL, nullable=False
+    )
+    approval_mode_notifications: Mapped[ApprovalMode] = mapped_column(
+        _approval_enum, default=ApprovalMode.AUTO, nullable=False
+    )
     plugin_order: Mapped[list[str] | None] = mapped_column(JSON, nullable=True, default=None)
     plugin_provider_map: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))

@@ -16,7 +16,9 @@ class AIProviderCreate(BaseModel):
     model_name: str = Field(max_length=100, description="Model identifier (e.g. 'gpt-4o', 'llama3.1')")
     max_tokens: int = Field(default=1024, ge=64, le=32768)
     temperature: float = Field(default=0.3, ge=0.0, le=2.0)
-    timeout_seconds: int | None = Field(default=None, ge=10, le=600, description="Per-provider LLM timeout in seconds (overrides global default)")
+    timeout_seconds: int | None = Field(
+        default=None, ge=10, le=600, description="Per-provider LLM timeout in seconds (overrides global default)"
+    )
 
     @field_validator("provider_type")
     @classmethod

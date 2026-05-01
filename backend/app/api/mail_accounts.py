@@ -4,6 +4,7 @@ Provides CRUD operations for mail accounts with credential encryption.
 Credentials are write-only -- GET endpoints never return plaintext passwords.
 """
 
+import contextlib
 import json
 from datetime import UTC, datetime
 from uuid import UUID
@@ -20,8 +21,8 @@ from app.schemas.mail_account import (
     ExcludedFoldersRequest,
     ExcludedFoldersResponse,
     FolderDeletedResponse,
-    FolderRenameRequest,
     FolderRenamedResponse,
+    FolderRenameRequest,
     ImapFolderListResponse,
     JobEnqueuedResponse,
     MailAccountCreate,
@@ -38,18 +39,20 @@ router = APIRouter(prefix="/api/mail-accounts", tags=["mail-accounts"])
 # Fields that may be updated via the PATCH endpoint.  Sensitive columns
 # (id, user_id, encrypted_credentials, …) are intentionally excluded as
 # a defense-in-depth measure on top of the Pydantic schema validation.
-_UPDATABLE_FIELDS: frozenset[str] = frozenset({
-    "name",
-    "email_address",
-    "imap_host",
-    "imap_port",
-    "imap_use_ssl",
-    "polling_enabled",
-    "polling_interval_minutes",
-    "idle_enabled",
-    "scan_existing_emails",
-    "excluded_folders",
-})
+_UPDATABLE_FIELDS: frozenset[str] = frozenset(
+    {
+        "name",
+        "email_address",
+        "imap_host",
+        "imap_port",
+        "imap_use_ssl",
+        "polling_enabled",
+        "polling_interval_minutes",
+        "idle_enabled",
+        "scan_existing_emails",
+        "excluded_folders",
+    }
+)
 
 
 @router.get("")
@@ -58,11 +61,7 @@ async def list_mail_accounts(
     user_id: CurrentUserId,
 ) -> list[MailAccountResponse]:
     """List all mail accounts for the current user."""
-    stmt = (
-        select(MailAccount)
-        .where(MailAccount.user_id == UUID(user_id))
-        .order_by(MailAccount.created_at)
-    )
+    stmt = select(MailAccount).where(MailAccount.user_id == UUID(user_id)).order_by(MailAccount.created_at)
     result = await db.execute(stmt)
     accounts = result.scalars().all()
     return [MailAccountResponse.model_validate(a) for a in accounts]
@@ -157,7 +156,7 @@ async def update_mail_account(
             raise HTTPException(
                 status_code=500,
                 detail="Failed to decrypt existing credentials. Please re-enter both username and password.",
-            )
+            ) from None
         if "username" in update_data:
             existing_creds["username"] = update_data.pop("username")
         if "password" in update_data:
@@ -240,16 +239,15 @@ async def test_connection(
             except Exception:
                 pass
 
-            try:
+            with contextlib.suppress(Exception):
                 mb.logout()
-            except Exception:
-                pass
 
             return True, "IMAP connection successful", _imap_caps, _idle, _count
 
         import asyncio as _asyncio
-        imap_success, imap_message, imap_capabilities, idle_supported, email_count = (
-            await _asyncio.to_thread(_test_imap)
+
+        imap_success, imap_message, imap_capabilities, idle_supported, email_count = await _asyncio.to_thread(
+            _test_imap
         )
     except Exception as e:
         imap_success = False
@@ -355,7 +353,14 @@ async def list_folders(
     duplicating parsing logic. When ``counts=true``, includes per-folder
     message and unseen counts (slower due to IMAP STATUS per folder).
     """
-    from app.services.mail import connect_imap, list_folders as svc_list_folders, list_folders_with_counts, safe_imap_logout, get_cached_folders, set_cached_folders
+    from app.services.mail import (
+        connect_imap,
+        get_cached_folders,
+        list_folders_with_counts,
+        safe_imap_logout,
+        set_cached_folders,
+    )
+    from app.services.mail import list_folders as svc_list_folders
 
     account = await get_or_404(db, MailAccount, account_id, user_id, "Mail account not found")
 
@@ -382,13 +387,11 @@ async def list_folders(
                     excluded_folders=account.excluded_folders or [],
                 )
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 await safe_imap_logout(conn.mailbox)
-            except Exception:
-                pass
     except Exception as e:
         logger.error("list_folders_failed", account_id=str(account_id), error=str(e))
-        raise HTTPException(status_code=502, detail="Failed to list folders")
+        raise HTTPException(status_code=502, detail="Failed to list folders") from None
 
 
 @router.post("/{account_id}/poll")
@@ -466,7 +469,13 @@ async def delete_imap_folder(
     back to INBOX before the folder is deleted.  Otherwise emails in
     the folder may be lost.
     """
-    from app.services.mail import connect_imap, delete_folder, move_all_to_inbox, safe_imap_logout, invalidate_folder_cache
+    from app.services.mail import (
+        connect_imap,
+        delete_folder,
+        invalidate_folder_cache,
+        move_all_to_inbox,
+        safe_imap_logout,
+    )
 
     account = await get_or_404(db, MailAccount, account_id, user_id, "Mail account not found")
 
@@ -481,15 +490,13 @@ async def delete_imap_folder(
             await invalidate_folder_cache(account_id)
             return FolderDeletedResponse(status="deleted", folder=folder_path)
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 await safe_imap_logout(conn.mailbox)
-            except Exception:
-                pass
     except HTTPException:
         raise
     except Exception as e:
         logger.error("delete_imap_folder_failed", account_id=str(account_id), folder=folder_path, error=str(e))
-        raise HTTPException(status_code=502, detail="IMAP operation failed")
+        raise HTTPException(status_code=502, detail="IMAP operation failed") from None
 
 
 @router.post("/{account_id}/folders/rename")
@@ -500,7 +507,7 @@ async def rename_imap_folder(
     user_id: CurrentUserId,
 ) -> FolderRenamedResponse:
     """Rename/move an IMAP folder on the mail server."""
-    from app.services.mail import connect_imap, rename_folder, safe_imap_logout, invalidate_folder_cache
+    from app.services.mail import connect_imap, invalidate_folder_cache, rename_folder, safe_imap_logout
 
     account = await get_or_404(db, MailAccount, account_id, user_id, "Mail account not found")
 
@@ -509,19 +516,19 @@ async def rename_imap_folder(
         try:
             success = await rename_folder(conn, data.old_name, data.new_name)
             if not success:
-                raise HTTPException(status_code=400, detail=f"Failed to rename folder: {data.old_name} -> {data.new_name}")
+                raise HTTPException(
+                    status_code=400, detail=f"Failed to rename folder: {data.old_name} -> {data.new_name}"
+                )
             await invalidate_folder_cache(account_id)
             return FolderRenamedResponse(status="renamed", old_name=data.old_name, new_name=data.new_name)
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 await safe_imap_logout(conn.mailbox)
-            except Exception:
-                pass
     except HTTPException:
         raise
     except Exception as e:
         logger.error("rename_imap_folder_failed", account_id=str(account_id), error=str(e))
-        raise HTTPException(status_code=502, detail="IMAP operation failed")
+        raise HTTPException(status_code=502, detail="IMAP operation failed") from None
 
 
 @router.put("/{account_id}/excluded-folders")
@@ -538,7 +545,3 @@ async def update_excluded_folders(
     await db.flush()
     logger.info("excluded_folders_updated", account_id=str(account_id), folders=data.excluded_folders)
     return ExcludedFoldersResponse(excluded_folders=data.excluded_folders)
-
-
-
-

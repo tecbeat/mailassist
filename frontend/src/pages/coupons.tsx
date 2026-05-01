@@ -8,7 +8,6 @@ import {
   Undo2,
   Store,
   Clock,
-  RotateCcw,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -23,7 +22,7 @@ import {
 
 import { useToast } from "@/components/ui/toast";
 import { PageHeader } from "@/components/layout/page-header";
-import { SortToggle } from "@/components/sort-toggle";
+import { SortFilterContent } from "@/components/sort-filter-content";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { SearchableCardList } from "@/components/searchable-card-list";
 import { FilterListItem } from "@/components/filter-list-item";
@@ -73,7 +72,7 @@ export default function CouponsPage() {
   usePageTitle("Coupons");
   const list = useSearchableList();
   const [activeOnly, setActiveOnly] = useState(false);
-  const [sortOrder, setSortOrder] = useState<string>("newest");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -177,7 +176,13 @@ export default function CouponsPage() {
             searchPlaceholder="Search by store..."
             hasActiveFilters={hasActiveFilters}
             filterContent={
-              <div className="space-y-3">
+              <SortFilterContent
+                sortOrder={sortOrder}
+                onSortChange={(o) => { setSortOrder(o); list.setPage(1); }}
+                isFetching={couponsQuery.isFetching}
+                hasActiveFilters={hasActiveFilters}
+                onClearFilters={() => { setActiveOnly(false); setSortOrder("newest"); list.setPage(1); }}
+              >
                 <div className="flex items-center justify-between">
                   <Label htmlFor="active-only-switch" className="text-xs">Active only</Label>
                   <Switch
@@ -189,31 +194,7 @@ export default function CouponsPage() {
                     }}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Sort Order</Label>
-                   <SortToggle
-                    sortOrder={sortOrder}
-                    onToggle={(o) => { setSortOrder(o); list.setPage(1); }}
-                    isFetching={couponsQuery.isFetching}
-                    variant="inline"
-                  />
-                </div>
-                {hasActiveFilters && (
-                  <AppButton
-                    icon={<RotateCcw />}
-                    label="Clear filters"
-                    variant="ghost"
-                    className="h-7 w-full text-xs"
-                    onClick={() => {
-                      setActiveOnly(false);
-                      setSortOrder("newest");
-                      list.setPage(1);
-                    }}
-                  >
-                    Clear filters
-                  </AppButton>
-                )}
-              </div>
+              </SortFilterContent>
             }
             emptyIcon={<Ticket className="mb-3 h-10 w-10 text-muted-foreground" />}
             emptyMessage="No coupons found. Coupons will appear here as they are extracted from your emails."

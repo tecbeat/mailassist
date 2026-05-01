@@ -16,7 +16,6 @@ import pytest
 
 from app.models import TrackedEmailStatus
 
-
 # ---------------------------------------------------------------------------
 # Completion reason determination (unit tests for the logic)
 # ---------------------------------------------------------------------------
@@ -166,11 +165,14 @@ class TestUpdateTrackedStatusPluginFields:
 
         account_id = str(uuid4())
 
-        with         patch("app.workers.mail_processor.get_session_ctx", fake_get_session):
+        with patch("app.workers.mail_processor.get_session_ctx", fake_get_session):
             from app.workers.mail_processor import _update_tracked_status
 
             await _update_tracked_status(
-                account_id, "12345", TrackedEmailStatus.COMPLETED, log,
+                account_id,
+                "12345",
+                TrackedEmailStatus.COMPLETED,
+                log,
                 plugins_completed=["spam_detection", "labeling"],
                 plugins_failed=["email_summary"],
                 plugins_skipped=["smart_folder"],
@@ -212,11 +214,14 @@ class TestUpdateTrackedStatusPluginFields:
 
         account_id = str(uuid4())
 
-        with         patch("app.workers.mail_processor.get_session_ctx", fake_get_session):
+        with patch("app.workers.mail_processor.get_session_ctx", fake_get_session):
             from app.workers.mail_processor import _update_tracked_status
 
             await _update_tracked_status(
-                account_id, "12345", TrackedEmailStatus.FAILED, log,
+                account_id,
+                "12345",
+                TrackedEmailStatus.FAILED,
+                log,
                 error="permanent_error",
             )
 
@@ -250,9 +255,7 @@ class TestProcessMailStatusTransitions:
 
         status_updates: list[TrackedEmailStatus] = []
 
-        async def fake_update_tracked_status(
-            _account_id, _mail_uid, status, _log, **_kwargs
-        ):
+        async def fake_update_tracked_status(_account_id, _mail_uid, status, _log, **_kwargs):
             status_updates.append(status)
 
         # Mock a minimal account object
@@ -333,9 +336,7 @@ class TestProcessMailStatusTransitions:
         status_updates: list[TrackedEmailStatus] = []
         update_kwargs_list: list[dict] = []
 
-        async def fake_update_tracked_status(
-            _account_id, _mail_uid, status, _log, **kwargs
-        ):
+        async def fake_update_tracked_status(_account_id, _mail_uid, status, _log, **kwargs):
             status_updates.append(status)
             update_kwargs_list.append(kwargs)
 
@@ -392,9 +393,7 @@ class TestProcessMailStatusTransitions:
         status_updates: list[TrackedEmailStatus] = []
         update_kwargs_list: list[dict] = []
 
-        async def fake_update_tracked_status(
-            _account_id, _mail_uid, status, _log, **kwargs
-        ):
+        async def fake_update_tracked_status(_account_id, _mail_uid, status, _log, **kwargs):
             status_updates.append(status)
             update_kwargs_list.append(kwargs)
 
@@ -449,9 +448,7 @@ class TestProcessMailStatusTransitions:
         status_updates: list[TrackedEmailStatus] = []
         update_kwargs_list: list[dict] = []
 
-        async def fake_update_tracked_status(
-            _account_id, _mail_uid, status, _log, **kwargs
-        ):
+        async def fake_update_tracked_status(_account_id, _mail_uid, status, _log, **kwargs):
             status_updates.append(status)
             update_kwargs_list.append(kwargs)
 
@@ -507,9 +504,7 @@ class TestProcessMailStatusTransitions:
         status_updates: list[TrackedEmailStatus] = []
         update_kwargs_list: list[dict] = []
 
-        async def fake_update_tracked_status(
-            _account_id, _mail_uid, status, _log, **kwargs
-        ):
+        async def fake_update_tracked_status(_account_id, _mail_uid, status, _log, **kwargs):
             status_updates.append(status)
             update_kwargs_list.append(kwargs)
 
@@ -594,9 +589,7 @@ class TestProcessMailStatusTransitions:
         status_updates: list[TrackedEmailStatus] = []
         update_kwargs_list: list[dict] = []
 
-        async def fake_update_tracked_status(
-            _account_id, _mail_uid, status, _log, **kwargs
-        ):
+        async def fake_update_tracked_status(_account_id, _mail_uid, status, _log, **kwargs):
             status_updates.append(status)
             update_kwargs_list.append(kwargs)
 
@@ -653,9 +646,7 @@ class TestProcessMailStatusTransitions:
         status_updates: list[TrackedEmailStatus] = []
         update_kwargs_list: list[dict] = []
 
-        async def fake_update_tracked_status(
-            _account_id, _mail_uid, status, _log, **kwargs
-        ):
+        async def fake_update_tracked_status(_account_id, _mail_uid, status, _log, **kwargs):
             status_updates.append(status)
             update_kwargs_list.append(kwargs)
 
@@ -730,11 +721,14 @@ class TestUpdateTrackedStatusErrorType:
 
         account_id = str(uuid4())
 
-        with         patch("app.workers.mail_processor.get_session_ctx", fake_get_session):
+        with patch("app.workers.mail_processor.get_session_ctx", fake_get_session):
             from app.workers.mail_processor import _update_tracked_status
 
             await _update_tracked_status(
-                account_id, "12345", TrackedEmailStatus.QUEUED, log,
+                account_id,
+                "12345",
+                TrackedEmailStatus.QUEUED,
+                log,
                 error="imap_connection_failed: timeout",
                 error_type="provider_imap",
             )
@@ -767,11 +761,14 @@ class TestUpdateTrackedStatusErrorType:
 
         account_id = str(uuid4())
 
-        with         patch("app.workers.mail_processor.get_session_ctx", fake_get_session):
+        with patch("app.workers.mail_processor.get_session_ctx", fake_get_session):
             from app.workers.mail_processor import _update_tracked_status
 
             await _update_tracked_status(
-                account_id, "12345", TrackedEmailStatus.COMPLETED, log,
+                account_id,
+                "12345",
+                TrackedEmailStatus.COMPLETED,
+                log,
                 completion_reason="full_pipeline",
             )
 
@@ -843,9 +840,7 @@ class TestSavepointRollback:
         status_updates: list[TrackedEmailStatus] = []
         update_kwargs_list: list[dict] = []
 
-        async def fake_update_tracked_status(
-            _account_id, _mail_uid, status, _log, **kwargs
-        ):
+        async def fake_update_tracked_status(_account_id, _mail_uid, status, _log, **kwargs):
             status_updates.append(status)
             update_kwargs_list.append(kwargs)
 
@@ -925,9 +920,7 @@ class TestSavepointRollback:
         status_updates: list[TrackedEmailStatus] = []
         update_kwargs_list: list[dict] = []
 
-        async def fake_update_tracked_status(
-            _account_id, _mail_uid, status, _log, **kwargs
-        ):
+        async def fake_update_tracked_status(_account_id, _mail_uid, status, _log, **kwargs):
             status_updates.append(status)
             update_kwargs_list.append(kwargs)
 
@@ -1008,9 +1001,7 @@ class TestSavepointRollback:
         status_updates: list[TrackedEmailStatus] = []
         update_kwargs_list: list[dict] = []
 
-        async def fake_update_tracked_status(
-            _account_id, _mail_uid, status, _log, **kwargs
-        ):
+        async def fake_update_tracked_status(_account_id, _mail_uid, status, _log, **kwargs):
             status_updates.append(status)
             update_kwargs_list.append(kwargs)
 
@@ -1105,8 +1096,7 @@ class TestPluginExecutorPipelineStop:
         plugin.display_name = name.replace("_", " ").title()
         return plugin
 
-    def _make_provider(self, *, is_paused=False,
-                       paused_reason=None):
+    def _make_provider(self, *, is_paused=False, paused_reason=None):
         """Create a mock AIProvider."""
         provider = MagicMock()
         provider.id = uuid4()
@@ -1121,11 +1111,16 @@ class TestPluginExecutorPipelineStop:
         settings = MagicMock()
         # Use the real column names from PLUGIN_TO_APPROVAL_COLUMN
         for col in [
-            "approval_mode_summary", "approval_mode_labeling",
-            "approval_mode_smart_folder", "approval_mode_spam",
-            "approval_mode_newsletter", "approval_mode_coupon",
-            "approval_mode_calendar", "approval_mode_auto_reply",
-            "approval_mode_rules", "approval_mode_contacts",
+            "approval_mode_summary",
+            "approval_mode_labeling",
+            "approval_mode_smart_folder",
+            "approval_mode_spam",
+            "approval_mode_newsletter",
+            "approval_mode_coupon",
+            "approval_mode_calendar",
+            "approval_mode_auto_reply",
+            "approval_mode_rules",
+            "approval_mode_contacts",
             "approval_mode_notifications",
         ]:
             setattr(settings, col, approval_mode)
@@ -1234,29 +1229,39 @@ class TestPluginExecutorPipelineStop:
 
         # Case 1: no provider
         outcome_no = await execute_plugin(
-            db=AsyncMock(), plugin=plugin,
+            db=AsyncMock(),
+            plugin=plugin,
             context=MagicMock(user_id=str(uuid4()), account_id=str(uuid4())),
-            pipeline=MagicMock(), user_settings=user_settings,
-            plugin_provider_map={}, providers_by_id={},
-            default_provider=None, log=MagicMock(),
+            pipeline=MagicMock(),
+            user_settings=user_settings,
+            plugin_provider_map={},
+            providers_by_id={},
+            default_provider=None,
+            log=MagicMock(),
         )
 
         # Case 2: paused provider (was "inactive")
         outcome_inactive = await execute_plugin(
-            db=AsyncMock(), plugin=plugin,
+            db=AsyncMock(),
+            plugin=plugin,
             context=MagicMock(user_id=str(uuid4()), account_id=str(uuid4())),
-            pipeline=MagicMock(), user_settings=user_settings,
-            plugin_provider_map={}, providers_by_id={},
+            pipeline=MagicMock(),
+            user_settings=user_settings,
+            plugin_provider_map={},
+            providers_by_id={},
             default_provider=self._make_provider(is_paused=True),
             log=MagicMock(),
         )
 
         # Case 3: paused provider
         outcome_paused = await execute_plugin(
-            db=AsyncMock(), plugin=plugin,
+            db=AsyncMock(),
+            plugin=plugin,
             context=MagicMock(user_id=str(uuid4()), account_id=str(uuid4())),
-            pipeline=MagicMock(), user_settings=user_settings,
-            plugin_provider_map={}, providers_by_id={},
+            pipeline=MagicMock(),
+            user_settings=user_settings,
+            plugin_provider_map={},
+            providers_by_id={},
             default_provider=self._make_provider(is_paused=True),
             log=MagicMock(),
         )

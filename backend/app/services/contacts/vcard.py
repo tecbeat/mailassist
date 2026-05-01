@@ -3,13 +3,15 @@
 Extracts structured contact data from vCard text using vobject.
 """
 
+from typing import Any
+
 import structlog
-import vobject
+import vobject  # type: ignore[import-untyped]
 
 logger = structlog.get_logger()
 
 
-def parse_vcard(vcard_text: str) -> dict:
+def parse_vcard(vcard_text: str) -> dict[str, Any]:
     """Parse a vCard string into a structured dict.
 
     Extracts display name, emails, phones, organization, title, and photo URL.
@@ -23,7 +25,7 @@ def parse_vcard(vcard_text: str) -> dict:
         logger.warning("vcard_parse_failed")
         return {}
 
-    result: dict = {
+    result: dict[str, Any] = {
         "display_name": "",
         "first_name": None,
         "last_name": None,

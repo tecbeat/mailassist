@@ -5,9 +5,11 @@ Prefers existing folders, creates new ones (including nested) only when necessar
 Tracks new folders in FolderChangeLog for re-processing.
 """
 
+from typing import Any, ClassVar
+
 from pydantic import BaseModel, Field
 
-from app.plugins.base import AIFunctionPlugin, ActionResult, MailContext
+from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
 
 
@@ -32,7 +34,7 @@ class SmartFolderPlugin(AIFunctionPlugin[SmartFolderResponse]):
     approval_key = "smart_folder"
     has_view_page = True
     view_route = "/smart-folders"
-    default_config = {"confidence_threshold": 0.7}
+    default_config: ClassVar[dict[str, Any]] = {"confidence_threshold": 0.7}
 
     async def execute(self, context: MailContext, ai_response: SmartFolderResponse) -> ActionResult:
         folder = ai_response.folder

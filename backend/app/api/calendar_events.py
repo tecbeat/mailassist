@@ -4,12 +4,15 @@ Provides listing, update, and delete views for calendar events
 extracted by the AI calendar plugin.
 """
 
-from typing import Literal
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import select
+
+if TYPE_CHECKING:
+    from sqlalchemy.sql.elements import UnaryExpression
 
 from app.api.deps import CurrentUserId, DbSession, get_or_404, paginate, sanitize_like
 from app.models import CalendarEvent
@@ -41,6 +44,7 @@ async def list_calendar_events(
     if search:
         base_stmt = base_stmt.where(CalendarEvent.title.ilike(f"%{sanitize_like(search)}%"))
 
+    order_col: UnaryExpression[Any]
     if sort == "oldest":
         order_col = CalendarEvent.created_at.asc()
     elif sort == "title":
@@ -90,6 +94,7 @@ async def update_calendar_event(
 
     # Re-sync to CalDAV with updated data
     from app.services.persistence import _sync_event_to_caldav
+
     await _sync_event_to_caldav(event)
 
     await db.refresh(event)
@@ -106,6 +111,7 @@ async def sync_calendar_event(
     event = await get_or_404(db, CalendarEvent, event_id, user_id, "Calendar event not found")
 
     from app.services.persistence import _sync_event_to_caldav
+
     await _sync_event_to_caldav(event)
 
     await db.refresh(event)

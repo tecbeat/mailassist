@@ -9,6 +9,7 @@ live progress as each plugin step is processed.
 import json
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 import structlog
@@ -22,7 +23,7 @@ from app.core.security import get_encryption
 from app.core.templating import get_template_engine
 from app.models import AIProvider, LabelChangeLog, UserSettings
 from app.models.user import ApprovalMode
-from app.plugins.base import AIFunctionPlugin, MailContext, PipelineContext
+from app.plugins.base import MailContext, PipelineContext
 from app.plugins.registry import get_plugin_registry
 from app.schemas.pipeline import (
     PipelineTestRequest,
@@ -37,7 +38,7 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
 
 
-def _sse(event: str, data: dict) -> str:
+def _sse(event: str, data: dict[str, Any]) -> str:
     """Format a single Server-Sent Event."""
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
@@ -59,7 +60,7 @@ async def test_pipeline(
       - ``error``: fatal pipeline error
     """
 
-    async def _generate() -> AsyncGenerator[str, None]:
+    async def _generate() -> AsyncGenerator[str]:
         log = logger.bind(user_id=user_id, test_pipeline=True)
         total_tokens = 0
         results: list[PluginTestResult] = []
@@ -72,9 +73,7 @@ async def test_pipeline(
 
             # Fetch existing labels for context
             existing_labels_stmt = (
-                select(LabelChangeLog.label)
-                .where(LabelChangeLog.user_id == UUID(user_id))
-                .distinct()
+                select(LabelChangeLog.label).where(LabelChangeLog.user_id == UUID(user_id)).distinct()
             )
             existing_labels_result = await db.execute(existing_labels_stmt)
             existing_labels = [row[0] for row in existing_labels_result.all()]
@@ -142,13 +141,13 @@ async def test_pipeline(
             total_steps = len(pipeline_plugins)
 
             # Stream: init event with plugin list
-            yield _sse("init", {
-                "total_steps": total_steps,
-                "plugins": [
-                    {"name": p.name, "display_name": p.display_name}
-                    for p in pipeline_plugins
-                ],
-            })
+            yield _sse(
+                "init",
+                {
+                    "total_steps": total_steps,
+                    "plugins": [{"name": p.name, "display_name": p.display_name} for p in pipeline_plugins],
+                },
+            )
 
             for step_index, plugin in enumerate(pipeline_plugins):
                 # Check client disconnect
@@ -168,11 +167,14 @@ async def test_pipeline(
                             skip_reason="Plugin disabled by user settings",
                         )
                         results.append(skip_result)
-                        yield _sse("skip", {
-                            "step": step_index,
-                            "total_steps": total_steps,
-                            "result": skip_result.model_dump(),
-                        })
+                        yield _sse(
+                            "skip",
+                            {
+                                "step": step_index,
+                                "total_steps": total_steps,
+                                "result": skip_result.model_dump(),
+                            },
+                        )
                         continue
                 elif not user_settings:
                     skip_result = PluginTestResult(
@@ -183,33 +185,46 @@ async def test_pipeline(
                         skip_reason="No user settings configured",
                     )
                     results.append(skip_result)
-                    yield _sse("skip", {
-                        "step": step_index,
-                        "total_steps": total_steps,
-                        "result": skip_result.model_dump(),
-                    })
+                    yield _sse(
+                        "skip",
+                        {
+                            "step": step_index,
+                            "total_steps": total_steps,
+                            "result": skip_result.model_dump(),
+                        },
+                    )
                     break
 
                 # Stream: step starting
-                yield _sse("step", {
-                    "step": step_index,
-                    "total_steps": total_steps,
-                    "plugin_name": plugin.name,
-                    "display_name": plugin.display_name,
-                    "status": "running",
-                })
+                yield _sse(
+                    "step",
+                    {
+                        "step": step_index,
+                        "total_steps": total_steps,
+                        "plugin_name": plugin.name,
+                        "display_name": plugin.display_name,
+                        "status": "running",
+                    },
+                )
 
                 try:
                     # Resolve prompts
                     system_prompt, user_prompt = await resolve_prompts(
-                        db, UUID(user_id), plugin, engine, context,
+                        db,
+                        UUID(user_id),
+                        plugin,
+                        engine,
+                        context,
                         language=user_settings.language if user_settings else "en",
                         timezone=user_settings.timezone if user_settings else "UTC",
                     )
 
                     # Resolve provider
                     provider = resolve_plugin_provider(
-                        plugin.name, plugin_provider_map, providers_by_id, default_provider,
+                        plugin.name,
+                        plugin_provider_map,
+                        providers_by_id,
+                        default_provider,
                     )
                     if provider is None:
                         skip_result = PluginTestResult(
@@ -220,11 +235,14 @@ async def test_pipeline(
                             skip_reason="No AI provider assigned",
                         )
                         results.append(skip_result)
-                        yield _sse("skip", {
-                            "step": step_index,
-                            "total_steps": total_steps,
-                            "result": skip_result.model_dump(),
-                        })
+                        yield _sse(
+                            "skip",
+                            {
+                                "step": step_index,
+                                "total_steps": total_steps,
+                                "result": skip_result.model_dump(),
+                            },
+                        )
                         continue
 
                     api_key = None
@@ -243,7 +261,8 @@ async def test_pipeline(
                         max_tokens=provider.max_tokens,
                         temperature=provider.temperature,
                         user_id=user_id,
-                        timeout=provider.timeout_seconds or (user_settings.ai_timeout_seconds if user_settings else None),
+                        timeout=provider.timeout_seconds
+                        or (user_settings.ai_timeout_seconds if user_settings else None),
                     )
 
                     total_tokens += tokens_used
@@ -261,11 +280,14 @@ async def test_pipeline(
                     )
                     results.append(plugin_result)
 
-                    yield _sse("result", {
-                        "step": step_index,
-                        "total_steps": total_steps,
-                        "result": plugin_result.model_dump(),
-                    })
+                    yield _sse(
+                        "result",
+                        {
+                            "step": step_index,
+                            "total_steps": total_steps,
+                            "result": plugin_result.model_dump(),
+                        },
+                    )
 
                     log.info(
                         "test_plugin_executed",
@@ -288,11 +310,14 @@ async def test_pipeline(
                         error="Invalid LLM output",
                     )
                     results.append(err_result)
-                    yield _sse("result", {
-                        "step": step_index,
-                        "total_steps": total_steps,
-                        "result": err_result.model_dump(),
-                    })
+                    yield _sse(
+                        "result",
+                        {
+                            "step": step_index,
+                            "total_steps": total_steps,
+                            "result": err_result.model_dump(),
+                        },
+                    )
                 except Exception as e:
                     log.exception("test_plugin_failed", plugin=plugin.name)
                     err_result = PluginTestResult(
@@ -302,25 +327,34 @@ async def test_pipeline(
                         error=f"Plugin execution failed: {type(e).__name__}",
                     )
                     results.append(err_result)
-                    yield _sse("result", {
-                        "step": step_index,
-                        "total_steps": total_steps,
-                        "result": err_result.model_dump(),
-                    })
+                    yield _sse(
+                        "result",
+                        {
+                            "step": step_index,
+                            "total_steps": total_steps,
+                            "result": err_result.model_dump(),
+                        },
+                    )
 
             # Stream: done
             plugins_executed = sum(1 for r in results if not r.skipped)
-            yield _sse("done", {
-                "success": True,
-                "plugins_executed": plugins_executed,
-                "total_tokens": total_tokens,
-            })
+            yield _sse(
+                "done",
+                {
+                    "success": True,
+                    "plugins_executed": plugins_executed,
+                    "total_tokens": total_tokens,
+                },
+            )
 
         except Exception:
             log.exception("test_pipeline_failed")
-            yield _sse("error", {
-                "error": "Pipeline test failed unexpectedly. Check server logs for details.",
-            })
+            yield _sse(
+                "error",
+                {
+                    "error": "Pipeline test failed unexpectedly. Check server logs for details.",
+                },
+            )
 
     return StreamingResponse(
         _generate(),

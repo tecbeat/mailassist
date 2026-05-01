@@ -9,14 +9,13 @@ coupons) to the database.  Provides a single implementation used by both
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from collections.abc import AsyncIterator
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 import structlog
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session_ctx
 from app.models import (
@@ -32,6 +31,11 @@ from app.models import (
     SpamDetectionResult,
 )
 from app.models.mail import UrgencyLevel
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
 
@@ -70,6 +74,7 @@ def parse_date_field(value: str | datetime) -> datetime | None:
         pass
     try:
         from email.utils import parsedate_to_datetime
+
         return parsedate_to_datetime(str(value))
     except (ValueError, TypeError):
         logger.warning("unparseable_date_field", raw=str(value)[:50])
@@ -100,27 +105,26 @@ async def save_email_summary(
     """
     now = datetime.now(UTC)
     parsed_mail_date = parse_date_field(mail_date) if mail_date is not None else None
-    values = dict(
-        id=uuid4(),
-        user_id=user_id,
-        mail_account_id=account_id,
-        mail_uid=mail_uid,
-        mail_subject=mail_subject[:998] if mail_subject else None,
-        mail_from=mail_from[:320] if mail_from else None,
-        mail_date=parsed_mail_date,
-        summary=summary,
-        key_points=key_points,
-        urgency=urgency,
-        action_required=action_required,
-        action_description=action_description,
-        created_at=now,
-        updated_at=now,
-    )
+    values = {
+        "id": uuid4(),
+        "user_id": user_id,
+        "mail_account_id": account_id,
+        "mail_uid": mail_uid,
+        "mail_subject": mail_subject[:998] if mail_subject else None,
+        "mail_from": mail_from[:320] if mail_from else None,
+        "mail_date": parsed_mail_date,
+        "summary": summary,
+        "key_points": key_points,
+        "urgency": urgency,
+        "action_required": action_required,
+        "action_description": action_description,
+        "created_at": now,
+        "updated_at": now,
+    }
 
     # Columns to overwrite on conflict (everything except PK + created_at)
     update_cols = {
-        k: v for k, v in values.items()
-        if k not in ("id", "user_id", "mail_account_id", "mail_uid", "created_at")
+        k: v for k, v in values.items() if k not in ("id", "user_id", "mail_account_id", "mail_uid", "created_at")
     }
     update_cols["updated_at"] = now
 
@@ -201,7 +205,7 @@ async def save_coupons(
     account_id: UUID,
     mail_uid: str,
     has_coupons: bool,
-    coupons: list[dict],
+    coupons: list[dict[str, Any]],
     sender_email: str | None = None,
     mail_subject: str | None = None,
     own_session: bool = False,
@@ -225,18 +229,20 @@ async def save_coupons(
         raw_expires = coupon.get("expires_at") if isinstance(coupon, dict) else getattr(coupon, "expires_at", None)
         raw_valid_from = coupon.get("valid_from") if isinstance(coupon, dict) else getattr(coupon, "valid_from", None)
 
-        records.append(ExtractedCoupon(
-            user_id=user_id,
-            mail_account_id=account_id,
-            mail_uid=mail_uid,
-            sender_email=sender_email[:320] if sender_email else None,
-            mail_subject=mail_subject[:998] if mail_subject else None,
-            code=code[:100] if code else None,
-            description=description[:300] if description else None,
-            store=store[:200] if store else None,
-            expires_at=_parse_coupon_expiry(raw_expires),
-            valid_from=_parse_coupon_expiry(raw_valid_from),
-        ))
+        records.append(
+            ExtractedCoupon(
+                user_id=user_id,
+                mail_account_id=account_id,
+                mail_uid=mail_uid,
+                sender_email=sender_email[:320] if sender_email else None,
+                mail_subject=mail_subject[:998] if mail_subject else None,
+                code=code[:100] if code else None,
+                description=description[:300] if description else None,
+                store=store[:200] if store else None,
+                expires_at=_parse_coupon_expiry(raw_expires),
+                valid_from=_parse_coupon_expiry(raw_valid_from),
+            )
+        )
 
     async with _persist(own_session, db) as session:
         for record in records:
@@ -267,15 +273,17 @@ async def save_applied_labels(
     existing_set = {lbl.lower() for lbl in (existing_labels or set())}
     records = []
     for lbl in labels:
-        records.append(AppliedLabel(
-            user_id=user_id,
-            mail_account_id=account_id,
-            mail_uid=mail_uid,
-            mail_subject=mail_subject[:998] if mail_subject else None,
-            mail_from=mail_from[:320] if mail_from else None,
-            label=lbl[:200],
-            is_new_label=lbl.lower() not in existing_set,
-        ))
+        records.append(
+            AppliedLabel(
+                user_id=user_id,
+                mail_account_id=account_id,
+                mail_uid=mail_uid,
+                mail_subject=mail_subject[:998] if mail_subject else None,
+                mail_from=mail_from[:320] if mail_from else None,
+                label=lbl[:200],
+                is_new_label=lbl.lower() not in existing_set,
+            )
+        )
 
     async with _persist(own_session, db) as session:
         for record in records:
@@ -300,22 +308,21 @@ async def save_assigned_folder(
 ) -> None:
     """Persist an assigned folder record (upsert on account+uid)."""
     existing_set = {f.lower() for f in (existing_folders or set())}
-    values = dict(
-        id=uuid4(),
-        user_id=user_id,
-        mail_account_id=account_id,
-        mail_uid=mail_uid,
-        mail_subject=mail_subject[:998] if mail_subject else None,
-        mail_from=mail_from[:320] if mail_from else None,
-        folder=folder[:500],
-        confidence=confidence,
-        reason=reason[:200] if reason else None,
-        is_new_folder=folder.lower() not in existing_set,
-        created_at=datetime.now(UTC),
-    )
+    values = {
+        "id": uuid4(),
+        "user_id": user_id,
+        "mail_account_id": account_id,
+        "mail_uid": mail_uid,
+        "mail_subject": mail_subject[:998] if mail_subject else None,
+        "mail_from": mail_from[:320] if mail_from else None,
+        "folder": folder[:500],
+        "confidence": confidence,
+        "reason": reason[:200] if reason else None,
+        "is_new_folder": folder.lower() not in existing_set,
+        "created_at": datetime.now(UTC),
+    }
     update_cols = {
-        k: v for k, v in values.items()
-        if k not in ("id", "user_id", "mail_account_id", "mail_uid", "created_at")
+        k: v for k, v in values.items() if k not in ("id", "user_id", "mail_account_id", "mail_uid", "created_at")
     }
     stmt = (
         pg_insert(AssignedFolder)
@@ -395,11 +402,8 @@ async def _sync_event_to_caldav(record: CalendarEvent) -> None:
 
     # Persist sync status
     async with get_session_ctx() as session:
-        stmt = (
-            select(CalendarEvent)
-            .where(CalendarEvent.id == record.id)
-        )
-        event = (await session.execute(stmt)).scalar_one_or_none()
+        event_stmt = select(CalendarEvent).where(CalendarEvent.id == record.id)
+        event = (await session.execute(event_stmt)).scalar_one_or_none()
         if event:
             event.caldav_synced = caldav_synced
             event.caldav_error = caldav_error
@@ -583,24 +587,23 @@ async def save_spam_detection(
     detection, ``"blocklist"`` for blocklist matches.
     """
     now = datetime.now(UTC)
-    values = dict(
-        id=uuid4(),
-        user_id=user_id,
-        mail_account_id=account_id,
-        mail_uid=mail_uid,
-        mail_subject=mail_subject[:998] if mail_subject else None,
-        mail_from=mail_from[:320] if mail_from else None,
-        is_spam=is_spam,
-        confidence=confidence,
-        reason=reason[:500] if reason else None,
-        source=source,
-        created_at=now,
-        updated_at=now,
-    )
+    values = {
+        "id": uuid4(),
+        "user_id": user_id,
+        "mail_account_id": account_id,
+        "mail_uid": mail_uid,
+        "mail_subject": mail_subject[:998] if mail_subject else None,
+        "mail_from": mail_from[:320] if mail_from else None,
+        "is_spam": is_spam,
+        "confidence": confidence,
+        "reason": reason[:500] if reason else None,
+        "source": source,
+        "created_at": now,
+        "updated_at": now,
+    }
 
     update_cols = {
-        k: v for k, v in values.items()
-        if k not in ("id", "user_id", "mail_account_id", "mail_uid", "created_at")
+        k: v for k, v in values.items() if k not in ("id", "user_id", "mail_account_id", "mail_uid", "created_at")
     }
     update_cols["updated_at"] = now
 

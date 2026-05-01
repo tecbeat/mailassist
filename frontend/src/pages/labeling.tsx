@@ -3,7 +3,6 @@ import { usePageTitle } from "@/hooks/use-page-title";
 import {
   Tags,
   Trash2,
-  RotateCcw,
   X,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,12 +17,11 @@ import {
 import { AppButton } from "@/components/app-button";
 import { useToast } from "@/components/ui/toast";
 import { PageHeader } from "@/components/layout/page-header";
-import { SortToggle } from "@/components/sort-toggle";
+import { SortFilterContent } from "@/components/sort-filter-content";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { SearchableCardList } from "@/components/searchable-card-list";
 import { FilterListItem } from "@/components/filter-list-item";
 import { useSearchableList } from "@/hooks/use-searchable-list";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -48,7 +46,7 @@ import type {
 export default function LabelingPage() {
   usePageTitle("Labels");
   const list = useSearchableList();
-  const [sortOrder, setSortOrder] = useState<string>("newest");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [deleteTarget, setDeleteTarget] = useState<AppliedLabelResponse | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -159,34 +157,16 @@ export default function LabelingPage() {
             onRetry={() => labelsQuery.refetch()}
             searchPlaceholder="Search by label..."
             hasActiveFilters={hasActiveFilters}
-            filterContent={
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Sort Order</Label>
-                  <SortToggle
-                    sortOrder={sortOrder}
-                    onToggle={(o) => { setSortOrder(o); list.setPage(1); }}
-                    isFetching={labelsQuery.isFetching}
-                    variant="inline"
-                  />
-                </div>
-                {hasActiveFilters && (
-                  <AppButton
-                    icon={<RotateCcw />}
-                    label="Clear filters"
-                    variant="ghost"
-                    className="h-7 w-full text-xs"
-                    onClick={() => {
-                      setSortOrder("newest");
-                      list.setPage(1);
-                    }}
-                  >
-                    Clear filters
-                  </AppButton>
-                )}
-              </div>
-            }
-            emptyIcon={<Tags className="mb-3 h-10 w-10 text-muted-foreground" />}
+             filterContent={
+               <SortFilterContent
+                 sortOrder={sortOrder}
+                 onSortChange={(o) => { setSortOrder(o); list.setPage(1); }}
+                 isFetching={labelsQuery.isFetching}
+                 hasActiveFilters={hasActiveFilters}
+                 onClearFilters={() => { setSortOrder("newest"); list.setPage(1); }}
+               />
+             }
+             emptyIcon={<Tags className="mb-3 h-10 w-10 text-muted-foreground" />}
             emptyMessage="No labels applied yet. Labels will appear here as emails are processed."
             renderItem={(item: AppliedLabelResponse) => (
               <FilterListItem

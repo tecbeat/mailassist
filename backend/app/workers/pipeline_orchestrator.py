@@ -17,17 +17,15 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import structlog
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.constants import PLUGIN_TO_APPROVAL_COLUMN
 from app.core.database import get_session_ctx
 from app.core.events import (
-    AIProcessingCompleteEvent,
     ContactMatchedEvent,
     MailParsedEvent,
     RulesEvaluatedEvent,
@@ -58,12 +56,16 @@ from app.services.mail import (
 from app.services.provider_resolver import get_default_provider
 from app.workers.plugin_executor import PluginOutcome, execute_plugin
 
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
 logger = structlog.get_logger()
 
 
 # ---------------------------------------------------------------------------
 # Result container returned to the entry point
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class PipelineResult:
@@ -119,17 +121,21 @@ async def _set_pipeline_progress(
     """
     try:
         from app.core.redis import get_task_client
+
         client = get_task_client()
-        value = json.dumps({
-            "phase": phase,
-            "current_plugin": current_plugin,
-            "current_plugin_display": current_plugin_display,
-            "plugin_index": plugin_index,
-            "plugins_total": plugins_total,
-        })
+        value = json.dumps(
+            {
+                "phase": phase,
+                "current_plugin": current_plugin,
+                "current_plugin_display": current_plugin_display,
+                "plugin_index": plugin_index,
+                "plugins_total": plugins_total,
+            }
+        )
         await client.set(
             _progress_key(account_id, mail_uid, current_folder),
-            value, ex=get_settings().pipeline_progress_ttl_seconds,
+            value,
+            ex=get_settings().pipeline_progress_ttl_seconds,
         )
     except Exception:
         # Progress tracking is best-effort — never block the pipeline
@@ -137,11 +143,14 @@ async def _set_pipeline_progress(
 
 
 async def _clear_pipeline_progress(
-    account_id: str, mail_uid: str, current_folder: str = "INBOX",
+    account_id: str,
+    mail_uid: str,
+    current_folder: str = "INBOX",
 ) -> None:
     """Remove the pipeline progress key when processing completes."""
     try:
         from app.core.redis import get_task_client
+
         client = get_task_client()
         await client.delete(_progress_key(account_id, mail_uid, current_folder))
     except Exception:
@@ -151,6 +160,7 @@ async def _clear_pipeline_progress(
 # ---------------------------------------------------------------------------
 # Phase 1 — Account fetch
 # ---------------------------------------------------------------------------
+
 
 async def fetch_account(
     user_id: str,
@@ -178,6 +188,7 @@ async def fetch_account(
 # ---------------------------------------------------------------------------
 # Phase 2 — IMAP fetch + parse
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class FetchedMail:
@@ -231,8 +242,7 @@ async def fetch_raw_mail(
             err_msg = str(e).lower()
             if "select" in err_msg or "folder" in err_msg or "mailbox" in err_msg:
                 raise IMAPFolderError(
-                    f"imap_select_failed: folder '{current_folder}' "
-                    f"may have been deleted ({e})"
+                    f"imap_select_failed: folder '{current_folder}' may have been deleted ({e})"
                 ) from e
             raise
 
@@ -279,6 +289,7 @@ def parse_raw_mail(
 # Phase 3 — AI pipeline
 # ---------------------------------------------------------------------------
 
+
 async def run_ai_pipeline(
     *,
     db: AsyncSession,
@@ -300,13 +311,15 @@ async def run_ai_pipeline(
     parsed = fetched.parsed
     event_bus = get_event_bus()
 
-    await event_bus.emit(MailParsedEvent(
-        user_id=UUID(user_id),
-        account_id=UUID(account_id),
-        mail_uid=mail_uid,
-        sender=parsed.sender,
-        subject=parsed.subject,
-    ))
+    await event_bus.emit(
+        MailParsedEvent(
+            user_id=UUID(user_id),
+            account_id=UUID(account_id),
+            mail_uid=mail_uid,
+            sender=parsed.sender,
+            subject=parsed.subject,
+        )
+    )
 
     # --- Contact matching ---
     contact_data = await _match_contact(db, user_id, account_id, mail_uid, parsed, event_bus, log)
@@ -315,19 +328,17 @@ async def run_ai_pipeline(
     # Instead of sending ALL contacts (which can overflow the LLM context
     # window), pre-filter to the most relevant candidates based on email
     # domain and name similarity to the sender.
-    user_contacts_data: list[dict] = []
+    user_contacts_data: list[dict[str, Any]] = []
     try:
         sender_email = (parsed.sender or "").lower()
         sender_domain = sender_email.split("@")[-1] if "@" in sender_email else ""
         sender_name = (parsed.sender_name or "").lower().strip()
 
         # Pre-filter contacts in SQL by email/domain match to avoid loading all contacts
-        from sqlalchemy import cast, String as SAString, or_
+        from sqlalchemy import String as SAString
+        from sqlalchemy import cast, or_
 
-        contacts_stmt = (
-            select(Contact)
-            .where(Contact.user_id == UUID(user_id))
-        )
+        contacts_stmt = select(Contact).where(Contact.user_id == UUID(user_id))
         # Add SQL-level pre-filter: match on sender email or domain in the JSON emails array
         sql_filters = []
         if sender_email:
@@ -345,14 +356,35 @@ async def run_ai_pipeline(
         all_contacts = contacts_result.scalars().all()
         # Filter out stopwords and short tokens for name matching
         _NAME_STOPWORDS = {
-            "dr", "mr", "mrs", "ms", "prof", "ing", "mag", "von", "van",
-            "de", "del", "der", "die", "das", "the", "and", "und", "jr",
-            "sr", "ii", "iii", "msc", "bsc", "phd", "mba",
+            "dr",
+            "mr",
+            "mrs",
+            "ms",
+            "prof",
+            "ing",
+            "mag",
+            "von",
+            "van",
+            "de",
+            "del",
+            "der",
+            "die",
+            "das",
+            "the",
+            "and",
+            "und",
+            "jr",
+            "sr",
+            "ii",
+            "iii",
+            "msc",
+            "bsc",
+            "phd",
+            "mba",
         }
-        sender_name_parts = {
-            t for t in sender_name.split()
-            if len(t) >= 3 and t not in _NAME_STOPWORDS
-        } if sender_name else set()
+        sender_name_parts = (
+            {t for t in sender_name.split() if len(t) >= 3 and t not in _NAME_STOPWORDS} if sender_name else set()
+        )
 
         scored: list[tuple[float, Contact]] = []
         for c in all_contacts:
@@ -368,8 +400,7 @@ async def run_ai_pipeline(
                     score += 10.0
             # Name overlap → score per overlapping token (filtered)
             c_name_parts = {
-                t for t in (c.display_name or "").lower().split()
-                if len(t) >= 3 and t not in _NAME_STOPWORDS
+                t for t in (c.display_name or "").lower().split() if len(t) >= 3 and t not in _NAME_STOPWORDS
             }
             if c.first_name and len(c.first_name) >= 3:
                 c_name_parts.add(c.first_name.lower())
@@ -390,15 +421,17 @@ async def run_ai_pipeline(
         for _score, c in scored[:max_contacts]:
             if _score <= 0.0:
                 break
-            user_contacts_data.append({
-                "id": str(c.id),
-                "display_name": c.display_name,
-                "first_name": c.first_name,
-                "last_name": c.last_name,
-                "organization": c.organization,
-                "title": c.title,
-                "emails": c.emails,
-            })
+            user_contacts_data.append(
+                {
+                    "id": str(c.id),
+                    "display_name": c.display_name,
+                    "first_name": c.first_name,
+                    "last_name": c.last_name,
+                    "organization": c.organization,
+                    "title": c.title,
+                    "emails": c.emails,
+                }
+            )
         if len(all_contacts) > max_contacts:
             log.info(
                 "contacts_filtered_for_prompt",
@@ -421,7 +454,7 @@ async def run_ai_pipeline(
     existing_labels = [row[0] for row in existing_labels_result.all()]
 
     # --- Build mail context ---
-    excluded = set(f.lower() for f in (account.excluded_folders or []))
+    excluded = {f.lower() for f in (account.excluded_folders or [])}
     filtered_folders = [f for f in fetched.imap_folders if f.lower() not in excluded]
 
     context = MailContext(
@@ -490,10 +523,7 @@ async def run_ai_pipeline(
 
     # Pre-compute pipeline plugins for progress tracking (exclude
     # non-pipeline and explicitly skipped plugins).
-    pipeline_plugins = [
-        p for p in all_plugins
-        if p.runs_in_pipeline and not (skip_plugins and p.name in skip_plugins)
-    ]
+    pipeline_plugins = [p for p in all_plugins if p.runs_in_pipeline and not (skip_plugins and p.name in skip_plugins)]
     plugins_total = len(pipeline_plugins)
 
     try:
@@ -510,7 +540,8 @@ async def run_ai_pipeline(
 
                 plugin_index += 1
                 await _set_pipeline_progress(
-                    account_id, mail_uid,
+                    account_id,
+                    mail_uid,
                     current_folder=current_folder,
                     phase="ai_pipeline",
                     current_plugin=plugin.name,
@@ -525,7 +556,7 @@ async def run_ai_pipeline(
                         plugin=plugin,
                         context=context,
                         pipeline=pipeline,
-                        user_settings=user_settings,
+                        user_settings=user_settings,  # type: ignore[arg-type]
                         plugin_provider_map=plugin_provider_map,
                         providers_by_id=providers_by_id,
                         default_provider=default_provider,
@@ -537,6 +568,7 @@ async def run_ai_pipeline(
                     # Create manual_input approval for unhandled exception
                     try:
                         from app.workers.plugin_executor import _create_manual_input_approval
+
                         await _create_manual_input_approval(
                             db,
                             user_id=UUID(user_id),
@@ -583,13 +615,15 @@ async def run_ai_pipeline(
         result.auto_actions.clear()
         return result
 
-    await db.commit()
+    # Transaction is committed by the caller via get_session_ctx() — no
+    # explicit commit here to avoid a double-commit.
     return result
 
 
 # ---------------------------------------------------------------------------
 # Phase 4 — Post-pipeline IMAP actions
 # ---------------------------------------------------------------------------
+
 
 async def execute_post_pipeline(
     *,
@@ -636,7 +670,9 @@ async def execute_post_pipeline(
         return current_folder, None
 
     move_outcome = await execute_imap_actions(
-        account, mail_uid, auto_actions,
+        account,
+        mail_uid,
+        auto_actions,
         source_folder=current_folder,
     )
     if move_outcome.folder:
@@ -648,6 +684,7 @@ async def execute_post_pipeline(
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 class _SavepointRollback(Exception):
     """Raised inside the savepoint context to trigger a rollback.
@@ -666,9 +703,9 @@ async def _match_contact(
     parsed: ParsedEmail,
     event_bus: object,
     log: structlog.stdlib.BoundLogger,
-) -> dict | None:
+) -> dict[str, Any] | None:
     """Match sender to a contact; return contact dict or None."""
-    contact_data: dict | None = None
+    contact_data: dict[str, Any] | None = None
     try:
         async with db.begin_nested():
             matched_contact = await match_sender_to_contact(db, UUID(user_id), parsed.sender)
@@ -683,12 +720,14 @@ async def _match_contact(
                     "emails": matched_contact.emails,
                     "phones": matched_contact.phones,
                 }
-                await event_bus.emit(ContactMatchedEvent(
-                    user_id=UUID(user_id),
-                    account_id=UUID(account_id),
-                    mail_uid=mail_uid,
-                    contact_id=matched_contact.id,
-                ))
+                await event_bus.emit(  # type: ignore[attr-defined]
+                    ContactMatchedEvent(
+                        user_id=UUID(user_id),
+                        account_id=UUID(account_id),
+                        mail_uid=mail_uid,
+                        contact_id=matched_contact.id,
+                    )
+                )
     except Exception:
         log.warning("contact_match_failed", sender=parsed.sender)
     return contact_data
@@ -718,12 +757,14 @@ async def _evaluate_rules(
     except Exception:
         log.exception("rule_evaluation_failed")
 
-    await event_bus.emit(RulesEvaluatedEvent(
-        user_id=UUID(user_id),
-        account_id=UUID(account_id),
-        mail_uid=mail_uid,
-        actions_taken=rule_result.actions_taken if rule_result else [],
-    ))
+    await event_bus.emit(  # type: ignore[attr-defined]
+        RulesEvaluatedEvent(
+            user_id=UUID(user_id),
+            account_id=UUID(account_id),
+            mail_uid=mail_uid,
+            actions_taken=rule_result.actions_taken if rule_result else [],
+        )
+    )
 
 
 def _apply_outcome(result: PipelineResult, outcome: PluginOutcome) -> None:

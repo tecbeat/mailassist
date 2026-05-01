@@ -4,12 +4,15 @@ Provides listing and detail views for AI-detected newsletters,
 including unsubscribe URL access.
 """
 
-from typing import Literal
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import select
+
+if TYPE_CHECKING:
+    from sqlalchemy.sql.elements import UnaryExpression
 
 from app.api.deps import CurrentUserId, DbSession, get_or_404, paginate, sanitize_like
 from app.models import DetectedNewsletter
@@ -40,6 +43,7 @@ async def list_newsletters(
     if sender:
         base_stmt = base_stmt.where(DetectedNewsletter.sender_address.ilike(f"%{sanitize_like(sender)}%"))
 
+    order_col: UnaryExpression[Any]
     if sort == "oldest":
         order_col = DetectedNewsletter.created_at.asc()
     elif sort == "name":

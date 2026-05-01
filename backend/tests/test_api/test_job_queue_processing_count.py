@@ -16,18 +16,14 @@ class TestParseJobId:
 
     def test_process_mail_standard(self):
         """Standard process_mail job ID with account and UID."""
-        fn, mail_uid, account_id = _parse_job_id(
-            "process_mail:abc-123:42"
-        )
+        fn, mail_uid, account_id = _parse_job_id("process_mail:abc-123:42")
         assert fn == "process_mail"
         assert mail_uid == "42"
         assert account_id == "abc-123"
 
     def test_process_mail_retry(self):
         """Retry process_mail job ID includes a retry suffix."""
-        fn, mail_uid, account_id = _parse_job_id(
-            "process_mail:abc-123:42:retry1"
-        )
+        fn, mail_uid, account_id = _parse_job_id("process_mail:abc-123:42:retry1")
         assert fn == "process_mail"
         # The parser extracts parts[2] as mail_uid
         assert mail_uid == "42"
@@ -35,27 +31,21 @@ class TestParseJobId:
 
     def test_cron_job(self):
         """ARQ cron job IDs use 'cron:<function_name>:<hex>' pattern."""
-        fn, mail_uid, account_id = _parse_job_id(
-            "cron:poll_mail_accounts:a1b2c3"
-        )
+        fn, mail_uid, account_id = _parse_job_id("cron:poll_mail_accounts:a1b2c3")
         assert fn == "poll_mail_accounts"
         assert mail_uid is None
         assert account_id is None
 
     def test_cron_schedule_pending(self):
         """schedule_pending_mails cron job."""
-        fn, mail_uid, account_id = _parse_job_id(
-            "cron:schedule_pending_mails:deadbeef"
-        )
+        fn, mail_uid, account_id = _parse_job_id("cron:schedule_pending_mails:deadbeef")
         assert fn == "schedule_pending_mails"
         assert mail_uid is None
         assert account_id is None
 
     def test_cron_health_check(self):
         """worker_health_check cron job."""
-        fn, mail_uid, account_id = _parse_job_id(
-            "cron:worker_health_check:1234"
-        )
+        fn, mail_uid, _account_id = _parse_job_id("cron:worker_health_check:1234")
         assert fn == "worker_health_check"
         assert mail_uid is None
 

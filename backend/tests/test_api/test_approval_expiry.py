@@ -43,9 +43,8 @@ async def test_expired_approval_raises_410():
     approval = _make_approval(expires_at=past)
     db = AsyncMock()
 
-    with patch("app.api.approvals.get_or_404", return_value=approval):
-        with pytest.raises(HTTPException) as exc_info:
-            await _get_pending_or_404(db, approval.id, "user-1")
+    with patch("app.api.approvals.get_or_404", return_value=approval), pytest.raises(HTTPException) as exc_info:
+        await _get_pending_or_404(db, approval.id, "user-1")
 
     assert exc_info.value.status_code == 410
 

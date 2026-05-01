@@ -1,6 +1,7 @@
 """Pydantic schemas for CalDAV calendar API requests and responses."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
@@ -62,4 +63,4 @@ class CalDAVTestResponse(BaseModel):
     success: bool
     message: str
     calendars: list[str] = Field(default_factory=list)
-    details: dict | None = Field(default=None, description="Additional info like discovered URLs")
+    details: dict[str, Any] | None = Field(default=None, description="Additional info like discovered URLs")

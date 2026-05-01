@@ -7,13 +7,16 @@ and extraction of email metadata. Robust against malformed emails.
 import email
 import email.policy
 import re
-from datetime import datetime
 from email.header import decode_header as decode_email_header
 from email.utils import parseaddr, parsedate_to_datetime
+from typing import TYPE_CHECKING
 
 import structlog
 
 from app.services.mail import ParsedEmail
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 logger = structlog.get_logger()
 
@@ -64,9 +67,9 @@ def _extract_body(msg: email.message.Message, max_size: int = DEFAULT_MAX_BODY_S
 
                 charset = part.get_content_charset() or "utf-8"
                 try:
-                    text = payload.decode(charset, errors="replace")
+                    text = payload.decode(charset, errors="replace")  # type: ignore[union-attr]
                 except (LookupError, UnicodeDecodeError):
-                    text = payload.decode("utf-8", errors="replace")
+                    text = payload.decode("utf-8", errors="replace")  # type: ignore[union-attr]
 
                 if content_type == "text/plain" and not body_plain:
                     body_plain = text[:max_size]
@@ -83,9 +86,9 @@ def _extract_body(msg: email.message.Message, max_size: int = DEFAULT_MAX_BODY_S
             if payload:
                 charset = msg.get_content_charset() or "utf-8"
                 try:
-                    text = payload.decode(charset, errors="replace")
+                    text = payload.decode(charset, errors="replace")  # type: ignore[union-attr]
                 except (LookupError, UnicodeDecodeError):
-                    text = payload.decode("utf-8", errors="replace")
+                    text = payload.decode("utf-8", errors="replace")  # type: ignore[union-attr]
 
                 if msg.get_content_type() == "text/html":
                     body_html = text[:max_size]
@@ -107,6 +110,7 @@ def _sanitize_html(html: str) -> str:
         return html
     try:
         import nh3
+
         return nh3.clean(html)
     except ImportError:
         # Basic fallback: strip all tags
@@ -177,13 +181,19 @@ def parse_email(raw_bytes: bytes, uid: str, max_body_size: int = DEFAULT_MAX_BOD
     body_html_sanitized = _sanitize_html(body_html)
 
     # Determine combined body (prefer plain text)
-    body = body_plain if body_plain else body_html_sanitized
 
     # Extract attachments
     has_attachments, attachment_names = _extract_attachments(msg)
 
-    # Extract all headers as dict
-    headers = {k: _decode_header(str(v)) for k, v in msg.items()}
+    # Extract all headers, preserving duplicate header names (valid per RFC 2822,
+    # e.g. multiple Received headers) by joining repeated values with a newline.
+    headers: dict[str, str] = {}
+    for k, v in msg.items():
+        decoded = _decode_header(str(v))
+        if k in headers:
+            headers[k] = f"{headers[k]}\n{decoded}"
+        else:
+            headers[k] = decoded
 
     # Calculate size
     size = len(raw_bytes)

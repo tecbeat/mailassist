@@ -6,12 +6,14 @@ CRUD / NL-to-rule / test request/response models.
 
 from __future__ import annotations
 
-from datetime import datetime
-from enum import Enum
-from typing import Annotated, Any, Literal
-from uuid import UUID
+from enum import StrEnum
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, model_validator
+
+if TYPE_CHECKING:
+    from datetime import datetime
+    from uuid import UUID
 
 # -- Enums -----------------------------------------------------------------
 
@@ -19,14 +21,14 @@ MAX_NESTING_DEPTH = 5
 MAX_RULES_PER_GROUP = 20
 
 
-class ConditionOperator(str, Enum):
+class ConditionOperator(StrEnum):
     """Logical grouping operator for condition groups."""
 
     AND = "AND"
     OR = "OR"
 
 
-class FieldOperator(str, Enum):
+class FieldOperator(StrEnum):
     """Comparison operators for individual condition rules."""
 
     EQUALS = "equals"
@@ -42,7 +44,7 @@ class FieldOperator(str, Enum):
     IS_NOT_EMPTY = "is_not_empty"
 
 
-class ActionType(str, Enum):
+class ActionType(StrEnum):
     """Available rule action types."""
 
     MOVE = "move"
@@ -101,9 +103,7 @@ class ConditionGroup(BaseModel):
 def _check_depth(group: ConditionGroup, current_depth: int) -> None:
     """Recursively verify that nesting does not exceed MAX_NESTING_DEPTH."""
     if current_depth > MAX_NESTING_DEPTH:
-        raise ValueError(
-            f"Condition nesting exceeds maximum depth of {MAX_NESTING_DEPTH}"
-        )
+        raise ValueError(f"Condition nesting exceeds maximum depth of {MAX_NESTING_DEPTH}")
     for rule in group.rules:
         if isinstance(rule, ConditionGroup):
             _check_depth(rule, current_depth + 1)
@@ -179,8 +179,8 @@ class RuleResponse(BaseModel):
     description: str | None
     priority: int
     is_active: bool
-    conditions: dict
-    actions: list[dict]
+    conditions: dict[str, Any]
+    actions: list[dict[str, Any]]
     stop_processing: bool
     match_count: int
     last_matched_at: datetime | None
@@ -235,8 +235,8 @@ class NLRuleResponse(BaseModel):
 
     name: str
     description: str | None = None
-    conditions: dict
-    actions: list[dict]
+    conditions: dict[str, Any]
+    actions: list[dict[str, Any]]
     stop_processing: bool = False
     ai_reasoning: str | None = Field(
         default=None,
@@ -270,7 +270,7 @@ class TestRuleResult(BaseModel):
     """Result of testing a rule against sample mail data."""
 
     matched: bool
-    actions_that_would_execute: list[dict]
+    actions_that_would_execute: list[dict[str, Any]]
     evaluation_details: str | None = Field(
         default=None,
         description="Human-readable trace of condition evaluation.",

@@ -1,10 +1,10 @@
 """Pydantic schemas for Contacts API requests and responses."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
-
 
 # --- CardDAV Config ---
 
@@ -78,7 +78,7 @@ class CardDAVTestResult(BaseModel):
 
     success: bool
     message: str
-    details: dict | None = Field(default=None, description="Additional info like discovered address books")
+    details: dict[str, Any] | None = Field(default=None, description="Additional info like discovered address books")
 
 
 # --- Contact ---
@@ -124,7 +124,9 @@ class SenderResponse(BaseModel):
 
     email_address: str
     mail_count: int = Field(description="Number of mails from this sender")
-    matched_contact_id: UUID | None = Field(default=None, description="Contact ID if this sender is assigned to a contact")
+    matched_contact_id: UUID | None = Field(
+        default=None, description="Contact ID if this sender is assigned to a contact"
+    )
 
 
 class AssignEmailRequest(BaseModel):

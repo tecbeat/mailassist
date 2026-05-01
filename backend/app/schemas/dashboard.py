@@ -116,9 +116,7 @@ class JobQueueStatusResponse(BaseModel):
     )
     in_progress: int = Field(
         default=0,
-        description=(
-            "Mail jobs currently being processed (IMAP fetch, AI pipeline, etc.)"
-        ),
+        description=("Mail jobs currently being processed (IMAP fetch, AI pipeline, etc.)"),
     )
     in_progress_system: int = Field(
         default=0,
@@ -128,21 +126,11 @@ class JobQueueStatusResponse(BaseModel):
     queued_jobs: list[QueuedJob] = Field(default_factory=list)
     queue_page: int = 1
     queue_pages: int = 1
-    results_stored: int = Field(
-        default=0, description="Transient Valkey result count (TTL-based, for debugging)"
-    )
-    completed_total: int = Field(
-        default=0, description="Total completed mails from DB (persistent)"
-    )
-    completed_today: int = Field(
-        default=0, description="Mails completed in the last 24 hours"
-    )
-    completed_last_hour: int = Field(
-        default=0, description="Mails completed in the last hour"
-    )
-    failed_total: int = Field(
-        default=0, description="Total failed mails from DB (persistent)"
-    )
+    results_stored: int = Field(default=0, description="Transient Valkey result count (TTL-based, for debugging)")
+    completed_total: int = Field(default=0, description="Total completed mails from DB (persistent)")
+    completed_today: int = Field(default=0, description="Mails completed in the last 24 hours")
+    completed_last_hour: int = Field(default=0, description="Mails completed in the last hour")
+    failed_total: int = Field(default=0, description="Total failed mails from DB (persistent)")
     error: str | None = None
 
 
@@ -153,21 +141,15 @@ class CronJobInfo(BaseModel):
     display_name: str = Field(description="Human-readable name")
     description: str = Field(description="What this cron job does")
     schedule: str = Field(description="Human-readable schedule description")
-    last_run: str | None = Field(
-        default=None, description="ISO timestamp of last successful run"
-    )
-    is_running: bool = Field(
-        default=False, description="Whether this cron is currently executing"
-    )
+    last_run: str | None = Field(default=None, description="ISO timestamp of last successful run")
+    is_running: bool = Field(default=False, description="Whether this cron is currently executing")
 
 
 class CronJobsResponse(BaseModel):
     """List of all cron jobs with their current status."""
 
     jobs: list[CronJobInfo]
-    interval_minutes: int = Field(
-        description="Current cron interval in minutes (from CRON_INTERVAL_MINUTES env var)"
-    )
+    interval_minutes: int = Field(description="Current cron interval in minutes (from CRON_INTERVAL_MINUTES env var)")
 
 
 class FailedMailItem(BaseModel):

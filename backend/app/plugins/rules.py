@@ -7,7 +7,7 @@ pipeline -- rule evaluation is handled separately in the mail processor.
 
 from pydantic import BaseModel
 
-from app.plugins.base import AIFunctionPlugin, ActionResult, MailContext
+from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
 
 

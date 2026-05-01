@@ -9,21 +9,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import structlog
-from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.constants import PLUGIN_TO_APPROVAL_COLUMN
 from app.core.security import get_encryption
 from app.models import AIProvider, Approval, ApprovalStatus, UserSettings
 from app.models.user import ApprovalMode
-from app.plugins.base import AIFunctionPlugin, ActionResult, MailContext, PipelineContext
+from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext, PipelineContext
 from app.services.ai import (
-    TransientLLMError,
     PermanentLLMError,
+    TransientLLMError,
     call_llm,
     check_ai_circuit_breaker,
     update_provider_health,
@@ -45,11 +44,26 @@ from app.services.prompt_resolver import resolve_prompts
 from app.services.provider_resolver import resolve_plugin_provider
 from app.services.spam import is_blocked as check_blocklist
 
+if TYPE_CHECKING:
+    from pydantic import BaseModel
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.plugins.auto_reply import AutoReplyResponse
+    from app.plugins.calendar_extraction import CalendarEventResponse
+    from app.plugins.contacts import ContactAssignmentResponse
+    from app.plugins.coupon_extraction import CouponExtractionResponse
+    from app.plugins.email_summary import EmailSummaryResponse
+    from app.plugins.labeling import LabelingResponse
+    from app.plugins.newsletter_detection import NewsletterDetectionResponse
+    from app.plugins.smart_folder import SmartFolderResponse
+    from app.plugins.spam_detection import SpamDetectionResponse
+
 logger = structlog.get_logger()
 
 # ---------------------------------------------------------------------------
 # Result container returned to the orchestrator
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class PluginOutcome:
@@ -74,10 +88,11 @@ class PluginOutcome:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 async def execute_plugin(
     *,
     db: AsyncSession,
-    plugin: AIFunctionPlugin,
+    plugin: AIFunctionPlugin[Any],
     context: MailContext,
     pipeline: PipelineContext,
     user_settings: UserSettings,
@@ -117,7 +132,7 @@ async def execute_plugin(
             context=context,
             pipeline=pipeline,
             approval_col=approval_col,
-            approval_mode=approval_mode,  # type: ignore[possibly-undefined]
+            approval_mode=approval_mode,
             user_settings=user_settings,
             log=log,
         )
@@ -126,7 +141,10 @@ async def execute_plugin(
 
     # --- Resolve provider ---
     provider = resolve_plugin_provider(
-        plugin.name, plugin_provider_map, providers_by_id, default_provider,
+        plugin.name,
+        plugin_provider_map,
+        providers_by_id,
+        default_provider,
     )
     if provider is None:
         log.warning("no_provider_for_plugin", plugin=plugin.name)
@@ -156,7 +174,11 @@ async def execute_plugin(
 
     engine = get_template_engine()
     system_prompt, user_prompt = await resolve_prompts(
-        db, UUID(context.user_id), plugin, engine, context,
+        db,
+        UUID(context.user_id),
+        plugin,
+        engine,
+        context,
         language=user_settings.language if user_settings else "en",
         timezone=user_settings.timezone if user_settings else "UTC",
     )
@@ -184,7 +206,12 @@ async def execute_plugin(
         )
     except TransientLLMError as e:
         return await _handle_transient_error(
-            db=db, provider=provider, plugin=plugin, error=e, outcome=outcome, log=log,
+            db=db,
+            provider=provider,
+            plugin=plugin,
+            error=e,
+            outcome=outcome,
+            log=log,
         )
     except PermanentLLMError as e:
         log.error(
@@ -257,7 +284,11 @@ async def execute_plugin(
     # --- Persist results (auto mode) ---
     if not needs_approval:
         await _persist_plugin_result(
-            db=db, plugin=plugin, context=context, ai_response=ai_response, log=log,
+            db=db,
+            plugin=plugin,
+            context=context,
+            ai_response=ai_response,
+            log=log,
         )
         if action_result.actions_taken:
             outcome.actions_taken = action_result.actions_taken
@@ -283,10 +314,11 @@ async def execute_plugin(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 async def _handle_blocklist(
     *,
     db: AsyncSession,
-    plugin: AIFunctionPlugin,
+    plugin: AIFunctionPlugin[Any],
     context: MailContext,
     pipeline: PipelineContext,
     approval_col: str | None,
@@ -296,7 +328,10 @@ async def _handle_blocklist(
 ) -> PluginOutcome | None:
     """Check blocklist for spam_detection; return outcome if blocked, else None."""
     sender_blocked = await check_blocklist(
-        db, UUID(context.user_id), context.sender, context.subject,
+        db,
+        UUID(context.user_id),
+        context.sender,
+        context.subject,
     )
     if not sender_blocked:
         return None
@@ -319,13 +354,20 @@ async def _handle_blocklist(
         if approval_mode != ApprovalMode.APPROVAL:
             outcome.actions_taken = action_result.actions_taken
             await save_spam_detection(
-                user_id=UUID(context.user_id), account_id=UUID(context.account_id),
-                mail_uid=context.mail_uid, mail_subject=context.subject,
-                mail_from=context.sender, is_spam=True, confidence=1.0,
-                reason="Sender on blocklist", source="blocklist", db=db,
+                user_id=UUID(context.user_id),
+                account_id=UUID(context.account_id),
+                mail_uid=context.mail_uid,
+                mail_subject=context.subject,
+                mail_from=context.sender,
+                is_spam=True,
+                confidence=1.0,
+                reason="Sender on blocklist",
+                source="blocklist",
+                db=db,
             )
         else:
             from app.plugins.spam_detection import SpamDetectionResponse
+
             await _create_approval(
                 db,
                 user_id=UUID(context.user_id),
@@ -333,7 +375,9 @@ async def _handle_blocklist(
                 plugin=plugin,
                 context=context,
                 ai_response=SpamDetectionResponse(
-                    is_spam=True, confidence=1.0, reason="Sender on blocklist",
+                    is_spam=True,
+                    confidence=1.0,
+                    reason="Sender on blocklist",
                 ),
                 action_result=action_result,
             )
@@ -347,7 +391,7 @@ async def _handle_transient_error(
     *,
     db: AsyncSession,
     provider: AIProvider,
-    plugin: AIFunctionPlugin,
+    plugin: AIFunctionPlugin[Any],
     error: TransientLLMError,
     outcome: PluginOutcome,
     log: structlog.stdlib.BoundLogger,
@@ -372,6 +416,7 @@ async def _handle_transient_error(
     # partially-completed plugin results from the main pipeline session.
     try:
         from app.core.database import get_session
+
         async for health_db in get_session():
             await update_provider_health(health_db, provider.id, error=error.user_message)
             tripped = await check_ai_circuit_breaker(health_db, provider.id)
@@ -391,7 +436,7 @@ async def _handle_transient_error(
 async def _persist_plugin_result(
     *,
     db: AsyncSession,
-    plugin: AIFunctionPlugin,
+    plugin: AIFunctionPlugin[Any],
     context: MailContext,
     ai_response: BaseModel,
     log: structlog.stdlib.BoundLogger,
@@ -402,104 +447,141 @@ async def _persist_plugin_result(
     mail_uid = context.mail_uid
 
     if plugin.name == "email_summary":
-        from app.plugins.email_summary import EmailSummaryResponse
         resp: EmailSummaryResponse = ai_response  # type: ignore[assignment]
         await save_email_summary(
-            user_id=user_id, account_id=account_id, mail_uid=mail_uid,
-            mail_subject=context.subject, mail_from=context.sender,
-            mail_date=context.date, summary=resp.summary,
-            key_points=resp.key_points, urgency=resp.urgency,
+            user_id=user_id,
+            account_id=account_id,
+            mail_uid=mail_uid,
+            mail_subject=context.subject,
+            mail_from=context.sender,
+            mail_date=context.date,
+            summary=resp.summary,
+            key_points=resp.key_points,
+            urgency=resp.urgency,
             action_required=resp.action_required,
-            action_description=resp.action_description, db=db,
+            action_description=resp.action_description,
+            db=db,
         )
 
     elif plugin.name == "newsletter_detection":
-        from app.plugins.newsletter_detection import NewsletterDetectionResponse
         resp_nl: NewsletterDetectionResponse = ai_response  # type: ignore[assignment]
         await save_newsletter(
-            user_id=user_id, account_id=account_id, mail_uid=mail_uid,
+            user_id=user_id,
+            account_id=account_id,
+            mail_uid=mail_uid,
             is_newsletter=resp_nl.is_newsletter,
             newsletter_name=resp_nl.newsletter_name or "Unknown",
-            sender_address=context.sender, mail_subject=context.subject,
+            sender_address=context.sender,
+            mail_subject=context.subject,
             unsubscribe_url=resp_nl.unsubscribe_url,
-            has_unsubscribe=resp_nl.has_unsubscribe, db=db,
+            has_unsubscribe=resp_nl.has_unsubscribe,
+            db=db,
         )
 
     elif plugin.name == "coupon_extraction":
-        from app.plugins.coupon_extraction import CouponExtractionResponse
         resp_cp: CouponExtractionResponse = ai_response  # type: ignore[assignment]
         await save_coupons(
-            user_id=user_id, account_id=account_id, mail_uid=mail_uid,
+            user_id=user_id,
+            account_id=account_id,
+            mail_uid=mail_uid,
             has_coupons=resp_cp.has_coupons,
             coupons=[c.model_dump() for c in resp_cp.coupons] if resp_cp.coupons else [],
-            sender_email=context.sender, mail_subject=context.subject, db=db,
+            sender_email=context.sender,
+            mail_subject=context.subject,
+            db=db,
         )
 
     elif plugin.name == "labeling":
-        from app.plugins.labeling import LabelingResponse
         resp_lbl: LabelingResponse = ai_response  # type: ignore[assignment]
         await save_applied_labels(
-            user_id=user_id, account_id=account_id, mail_uid=mail_uid,
-            mail_subject=context.subject, mail_from=context.sender,
+            user_id=user_id,
+            account_id=account_id,
+            mail_uid=mail_uid,
+            mail_subject=context.subject,
+            mail_from=context.sender,
             labels=resp_lbl.labels,
             existing_labels=set(context.existing_labels) if context.existing_labels else None,
             db=db,
         )
 
     elif plugin.name == "smart_folder":
-        from app.plugins.smart_folder import SmartFolderResponse
         resp_cat: SmartFolderResponse = ai_response  # type: ignore[assignment]
         await save_assigned_folder(
-            user_id=user_id, account_id=account_id, mail_uid=mail_uid,
-            mail_subject=context.subject, mail_from=context.sender,
-            folder=resp_cat.folder, confidence=resp_cat.confidence,
+            user_id=user_id,
+            account_id=account_id,
+            mail_uid=mail_uid,
+            mail_subject=context.subject,
+            mail_from=context.sender,
+            folder=resp_cat.folder,
+            confidence=resp_cat.confidence,
             reason=resp_cat.reason,
             existing_folders=set(context.existing_folders) if context.existing_folders else None,
             db=db,
         )
 
     elif plugin.name == "calendar_extraction":
-        from app.plugins.calendar_extraction import CalendarEventResponse
         resp_cal: CalendarEventResponse = ai_response  # type: ignore[assignment]
         await save_calendar_event(
-            user_id=user_id, account_id=account_id, mail_uid=mail_uid,
-            mail_subject=context.subject, mail_from=context.sender,
-            has_event=resp_cal.has_event, title=resp_cal.title,
-            start=resp_cal.start, end=resp_cal.end,
-            location=resp_cal.location, description=resp_cal.description,
-            is_all_day=resp_cal.is_all_day, db=db,
+            user_id=user_id,
+            account_id=account_id,
+            mail_uid=mail_uid,
+            mail_subject=context.subject,
+            mail_from=context.sender,
+            has_event=resp_cal.has_event,
+            title=resp_cal.title,
+            start=resp_cal.start,
+            end=resp_cal.end,
+            location=resp_cal.location,
+            description=resp_cal.description,
+            is_all_day=resp_cal.is_all_day,
+            db=db,
         )
 
     elif plugin.name == "auto_reply":
-        from app.plugins.auto_reply import AutoReplyResponse
         resp_ar: AutoReplyResponse = ai_response  # type: ignore[assignment]
         await save_auto_reply(
-            user_id=user_id, account_id=account_id, mail_uid=mail_uid,
-            mail_subject=context.subject, mail_from=context.sender,
-            should_reply=resp_ar.should_reply, draft_body=resp_ar.draft_body,
-            tone=resp_ar.tone, reasoning=resp_ar.reasoning, db=db,
+            user_id=user_id,
+            account_id=account_id,
+            mail_uid=mail_uid,
+            mail_subject=context.subject,
+            mail_from=context.sender,
+            should_reply=resp_ar.should_reply,
+            draft_body=resp_ar.draft_body,
+            tone=resp_ar.tone,
+            reasoning=resp_ar.reasoning,
+            db=db,
         )
 
     elif plugin.name == "contacts":
-        from app.plugins.contacts import ContactAssignmentResponse
         resp_ct: ContactAssignmentResponse = ai_response  # type: ignore[assignment]
         await save_contact_assignment(
-            user_id=user_id, account_id=account_id, mail_uid=mail_uid,
-            mail_subject=context.subject, mail_from=context.sender,
-            contact_id=resp_ct.contact_id, contact_name=resp_ct.contact_name,
-            confidence=resp_ct.confidence, reasoning=resp_ct.reasoning,
+            user_id=user_id,
+            account_id=account_id,
+            mail_uid=mail_uid,
+            mail_subject=context.subject,
+            mail_from=context.sender,
+            contact_id=resp_ct.contact_id,
+            contact_name=resp_ct.contact_name,
+            confidence=resp_ct.confidence,
+            reasoning=resp_ct.reasoning,
             is_new_contact_suggestion=resp_ct.is_new_contact_suggestion,
-            auto_writeback=True, db=db,
+            auto_writeback=True,
+            db=db,
         )
 
     elif plugin.name == "spam_detection":
-        from app.plugins.spam_detection import SpamDetectionResponse
         resp_sd: SpamDetectionResponse = ai_response  # type: ignore[assignment]
         await save_spam_detection(
-            user_id=user_id, account_id=account_id, mail_uid=mail_uid,
-            mail_subject=context.subject, mail_from=context.sender,
-            is_spam=resp_sd.is_spam, confidence=resp_sd.confidence,
-            reason=resp_sd.reason, source="ai", db=db,
+            user_id=user_id,
+            account_id=account_id,
+            mail_uid=mail_uid,
+            mail_subject=context.subject,
+            mail_from=context.sender,
+            is_spam=resp_sd.is_spam,
+            confidence=resp_sd.confidence,
+            reason=resp_sd.reason,
+            source="ai",
+            db=db,
         )
 
 
@@ -507,7 +589,7 @@ async def _create_approval(
     db: AsyncSession,
     user_id: UUID,
     account_id: UUID,
-    plugin: AIFunctionPlugin,
+    plugin: AIFunctionPlugin[Any],
     context: MailContext,
     ai_response: BaseModel,
     action_result: ActionResult,
@@ -533,12 +615,11 @@ async def _create_approval(
     await db.flush()
 
 
-
 async def _create_manual_input_approval(
     db: AsyncSession,
     user_id: UUID,
     account_id: UUID,
-    plugin: AIFunctionPlugin,
+    plugin: AIFunctionPlugin[Any],
     context: MailContext,
     error: str,
 ) -> None:

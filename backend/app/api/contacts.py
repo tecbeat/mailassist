@@ -6,14 +6,16 @@ and email assignment to contacts.
 
 import json
 from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID, uuid4
 
 import structlog
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import or_, select, func
+from sqlalchemy import func, or_, select
 
 from app.api.deps import CurrentUserId, DbSession, get_or_404, paginate, sanitize_like
+from app.core.redis import get_cache_client
 from app.core.security import get_encryption
 from app.models import CardDAVConfig, Contact, ContactAssignment, EmailSummary, UserSettings
 from app.schemas.contacts import (
@@ -21,10 +23,8 @@ from app.schemas.contacts import (
     AssignEmailResponse,
     CardDAVConfigCreate,
     CardDAVConfigResponse,
-    CardDAVConfigUpdate,
     CardDAVTestRequest,
     CardDAVTestResult,
-    ContactAssignmentResponse as ContactAssignmentSchema,
     ContactCreateRequest,
     ContactExtractedData,
     ContactExtractRequest,
@@ -36,8 +36,15 @@ from app.schemas.contacts import (
     SenderResponse,
     SyncResult,
 )
-from app.services.contacts import sync_contacts, test_carddav_connection, write_back_email_to_contact, remove_email_from_contact
-from app.core.redis import get_cache_client
+from app.schemas.contacts import (
+    ContactAssignmentResponse as ContactAssignmentSchema,
+)
+from app.services.contacts import (
+    remove_email_from_contact,
+    sync_contacts,
+    test_carddav_connection,
+    write_back_email_to_contact,
+)
 
 logger = structlog.get_logger()
 
@@ -128,11 +135,14 @@ async def test_config(
     """Test a CardDAV connection before saving configuration."""
     try:
         result = await test_carddav_connection(
-            data.carddav_url, data.username, data.password, data.address_book,
+            data.carddav_url,
+            data.username,
+            data.password,
+            data.address_book,
         )
     except Exception as e:
         logger.error("carddav_test_failed", error=str(e))
-        raise HTTPException(status_code=502, detail="CardDAV connection test failed")
+        raise HTTPException(status_code=502, detail="CardDAV connection test failed") from None
     return CardDAVTestResult(success=result.success, message=result.message, details=result.details)
 
 
@@ -161,7 +171,7 @@ async def trigger_sync(
         stats = await sync_contacts(db, config)
     except Exception as e:
         logger.error("contact_sync_failed", user_id=user_id, error=str(e))
-        raise HTTPException(status_code=502, detail="Contact sync failed")
+        raise HTTPException(status_code=502, detail="Contact sync failed") from None
     return SyncResult(**stats)
 
 
@@ -211,7 +221,9 @@ async def list_all_senders(
     db: DbSession,
     user_id: CurrentUserId,
     search: str = Query(default="", max_length=200),
-    matched: bool | None = Query(default=None, description="Filter by match status: true=matched, false=unmatched, omit=all"),
+    matched: bool | None = Query(
+        default=None, description="Filter by match status: true=matched, false=unmatched, omit=all"
+    ),
 ) -> list[SenderResponse]:
     """List unique email addresses: senders from emails AND contact emails.
 
@@ -244,9 +256,7 @@ async def list_all_senders(
     )
 
     if search_term:
-        stmt = stmt.where(
-            func.lower(EmailSummary.mail_from).contains(search_term)
-        )
+        stmt = stmt.where(func.lower(EmailSummary.mail_from).contains(search_term))
 
     result = await db.execute(stmt)
     rows = result.all()
@@ -258,7 +268,7 @@ async def list_all_senders(
 
     email_to_contact: dict[str, UUID] = {}
     for contact in contacts:
-        for email in (contact.emails or []):
+        for email in contact.emails or []:
             if not email or not email.strip():
                 continue
             email_to_contact[email.lower()] = contact.id
@@ -354,12 +364,14 @@ async def extract_contact_from_sender(
 
     # Resolve AI provider
     from app.services.provider_resolver import get_default_provider
+
     provider = await get_default_provider(db, uid)
     if provider is None:
         raise HTTPException(status_code=422, detail="No active AI provider configured")
 
     # Render prompt
     from app.core.templating import get_template_engine
+
     engine = get_template_engine()
     mails_data = [
         {
@@ -371,13 +383,17 @@ async def extract_contact_from_sender(
         }
         for s in summaries
     ]
-    user_prompt = engine.render("prompts/contact_extraction.j2", {
-        "mails": mails_data,
-        "language": "en",
-    })
+    user_prompt = engine.render(
+        "prompts/contact_extraction.j2",
+        {
+            "mails": mails_data,
+            "language": "en",
+        },
+    )
 
     # Call LLM
     from app.services.ai import call_llm
+
     encryption = get_encryption()
     api_key = encryption.decrypt(provider.api_key) if provider.api_key else None
     user_settings = (await db.execute(select(UserSettings).where(UserSettings.user_id == uid))).scalar_one_or_none()
@@ -397,9 +413,9 @@ async def extract_contact_from_sender(
         )
     except Exception as e:
         logger.error("contact_extraction_failed", sender=sender_lower, error=str(e))
-        raise HTTPException(status_code=502, detail="AI extraction failed")
+        raise HTTPException(status_code=502, detail="AI extraction failed") from None
 
-    extracted = ai_response  # type: ignore[assignment]
+    extracted = cast("_AIExtractedContact", ai_response)
 
     # Ensure the sender email is always in the list
     emails = [e.lower() for e in (extracted.emails or [])]
@@ -444,9 +460,9 @@ async def create_contact(
     ]
     if data.first_name or data.last_name:
         vcard_lines.append(f"N:{data.last_name or ''};{data.first_name or ''};;;")
-    for email in (data.emails or []):
+    for email in data.emails or []:
         vcard_lines.append(f"EMAIL:{email}")
-    for phone in (data.phones or []):
+    for phone in data.phones or []:
         vcard_lines.append(f"TEL:{phone}")
     if data.organization:
         vcard_lines.append(f"ORG:{data.organization}")
@@ -476,8 +492,9 @@ async def create_contact(
     # Update Valkey cache for each email
     cache = get_cache_client()
     from app.core.config import get_settings
+
     settings = get_settings()
-    for email in (contact.emails or []):
+    for email in contact.emails or []:
         cache_key = f"contact_match:{uid}:{email.lower()}"
         await cache.setex(cache_key, settings.contact_cache_ttl_seconds, str(contact.id))
 
@@ -625,9 +642,7 @@ async def assign_email_to_contact(
         await db.flush()
 
         # Trigger CardDAV write-back
-        config_stmt = select(CardDAVConfig).where(
-            CardDAVConfig.user_id == uid, CardDAVConfig.is_active.is_(True)
-        )
+        config_stmt = select(CardDAVConfig).where(CardDAVConfig.user_id == uid, CardDAVConfig.is_active.is_(True))
         config_result = await db.execute(config_stmt)
         carddav_config = config_result.scalar_one_or_none()
         if carddav_config:
@@ -645,6 +660,7 @@ async def assign_email_to_contact(
     cache = get_cache_client()
     cache_key = f"contact_match:{uid}:{email_lower}"
     from app.core.config import get_settings
+
     await cache.setex(cache_key, get_settings().contact_cache_ttl_seconds, str(contact.id))
 
     logger.info(
@@ -689,9 +705,7 @@ async def remove_email_from_contact_endpoint(
         await db.flush()
 
         # Trigger CardDAV write-back to remove from vCard
-        config_stmt = select(CardDAVConfig).where(
-            CardDAVConfig.user_id == uid, CardDAVConfig.is_active.is_(True)
-        )
+        config_stmt = select(CardDAVConfig).where(CardDAVConfig.user_id == uid, CardDAVConfig.is_active.is_(True))
         config_result = await db.execute(config_stmt)
         carddav_config = config_result.scalar_one_or_none()
         if carddav_config:

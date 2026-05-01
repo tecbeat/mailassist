@@ -7,7 +7,7 @@ and the registry for automatic plugin discovery.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from types import get_original_bases
-from typing import Any, Generic, TypeVar, get_args
+from typing import Any, ClassVar, TypeVar, get_args
 
 import structlog
 from pydantic import BaseModel
@@ -166,7 +166,7 @@ class PipelineContext:
         return list(self._additive_actions.get(key, []))
 
 
-class AIFunctionPlugin(ABC, Generic[ResponseT]):
+class AIFunctionPlugin[ResponseT: BaseModel](ABC):
     """Base class for all AI function plugins.
 
     Parameterised with the plugin's Pydantic response model so that
@@ -225,7 +225,7 @@ class AIFunctionPlugin(ABC, Generic[ResponseT]):
     # Subclasses override this dict to declare tuneable parameters
     # (e.g. confidence thresholds).  Values can be read at runtime via
     # ``self.get_config(key)`` which also checks Settings overrides.
-    default_config: dict[str, Any] = {}
+    default_config: ClassVar[dict[str, Any]] = {}
 
     # Resolved concrete response type (set by __init_subclass__)
     _response_type: type[BaseModel]
@@ -233,7 +233,12 @@ class AIFunctionPlugin(ABC, Generic[ResponseT]):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Validate required class attributes and resolve the response type."""
         super().__init_subclass__(**kwargs)
-        # Skip validation on intermediate abstract classes
+        # Give every subclass its own default_config dict so that runtime
+        # mutations (e.g. tests patching config values) in one plugin do not
+        # bleed into sibling plugins that share the inherited empty dict.
+        if "default_config" not in cls.__dict__:
+            cls.default_config = dict(cls.default_config)
+        # Skip further validation on intermediate abstract classes
         if ABC in cls.__bases__:
             return
         required = ["name", "display_name", "description", "execution_order"]
@@ -242,9 +247,7 @@ class AIFunctionPlugin(ABC, Generic[ResponseT]):
             required.append("default_prompt_template")
         missing = [attr for attr in required if not hasattr(cls, attr)]
         if missing:
-            raise TypeError(
-                f"Plugin {cls.__name__} must define class attributes: {', '.join(missing)}"
-            )
+            raise TypeError(f"Plugin {cls.__name__} must define class attributes: {', '.join(missing)}")
         # Resolve Generic[ResponseT] → concrete type (only meaningful for AI plugins)
         for base in get_original_bases(cls):
             origin = getattr(base, "__origin__", None)
@@ -257,7 +260,7 @@ class AIFunctionPlugin(ABC, Generic[ResponseT]):
     @property
     def logger(self) -> structlog.stdlib.BoundLogger:
         """Return a logger bound to this plugin's name."""
-        return structlog.get_logger().bind(plugin=self.name)
+        return structlog.get_logger().bind(plugin=self.name)  # type: ignore[no-any-return]
 
     def get_config(self, key: str) -> Any:
         """Return the value of a plugin configuration parameter.
@@ -268,8 +271,7 @@ class AIFunctionPlugin(ABC, Generic[ResponseT]):
         """
         if key not in self.default_config:
             raise KeyError(
-                f"Plugin {self.name!r} has no config key {key!r}. "
-                f"Declared keys: {list(self.default_config)}"
+                f"Plugin {self.name!r} has no config key {key!r}. Declared keys: {list(self.default_config)}"
             )
         return self.default_config[key]
 

@@ -5,16 +5,16 @@ missing name attribute, get_plugin, get_all_plugins sorted by order,
 plugin info serialization, and __contains__/__len__.
 """
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import BaseModel
 
-from app.plugins.base import AIFunctionPlugin, ActionResult, MailContext
+from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import (
     PluginRegistry,
-    register_plugin,
     _registered_plugins,
+    register_plugin,
 )
 
 
@@ -189,9 +189,48 @@ class TestPluginRegistry:
             mi.name = mi._mock_name
 
         reg = PluginRegistry()
-        with patch("app.plugins.registry.pkgutil.iter_modules", return_value=module_infos):
-            with patch("app.plugins.registry.importlib.import_module") as mock_import:
-                reg.discover_plugins()
+        with (
+            patch("app.plugins.registry.pkgutil.iter_modules", return_value=module_infos),
+            patch("app.plugins.registry.importlib.import_module") as mock_import,
+        ):
+            reg.discover_plugins()
 
         # None of the skipped modules should be imported
         mock_import.assert_not_called()
+
+
+class TestDefaultConfigIsolation:
+    """Regression tests for mutable default_config sharing across plugins (#25)."""
+
+    def test_sibling_plugins_do_not_share_default_config(self):
+        """Two plugins that inherit default_config must not share the same dict instance."""
+
+        class PluginAlpha(_BaseDummyPlugin):
+            name = "config_alpha"
+
+        class PluginBeta(_BaseDummyPlugin):
+            name = "config_beta"
+
+        assert PluginAlpha.default_config is not PluginBeta.default_config
+
+    def test_mutation_in_one_plugin_does_not_affect_sibling(self):
+        """Mutating one plugin's default_config must not change another's."""
+
+        class PluginGamma(_BaseDummyPlugin):
+            name = "config_gamma"
+
+        class PluginDelta(_BaseDummyPlugin):
+            name = "config_delta"
+
+        PluginGamma.default_config["injected"] = "value"
+
+        assert "injected" not in PluginDelta.default_config
+
+    def test_explicit_override_is_preserved(self):
+        """A subclass that explicitly sets default_config keeps its own values."""
+
+        class PluginWithConfig(_BaseDummyPlugin):
+            name = "config_explicit"
+            default_config = {"threshold": 0.8}  # noqa: RUF012
+
+        assert PluginWithConfig.default_config == {"threshold": 0.8}

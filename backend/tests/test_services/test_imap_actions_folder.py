@@ -4,13 +4,12 @@ Verifies that execute_imap_actions correctly uses the source_folder
 parameter and returns the move destination.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from app.services.imap_actions import (
     ActionKind,
-    MoveOutcome,
     execute_imap_actions,
     parse_action,
 )
@@ -58,7 +57,8 @@ class TestExecuteImapActionsSourceFolder:
             patch("app.services.imap_actions.store_flags", return_value=True) as mock_store,
         ):
             result = await execute_imap_actions(
-                account, "123",
+                account,
+                "123",
                 ["mark_as_read"],
                 source_folder="Work/Projects",
             )
@@ -80,11 +80,14 @@ class TestExecuteImapActionsSourceFolder:
 
         with (
             patch("app.services.imap_actions.connect_imap", return_value=mock_conn),
-            patch("app.services.imap_actions.move_message", return_value=MoveResult(success=True, new_uid="456")) as mock_move,
+            patch(
+                "app.services.imap_actions.move_message", return_value=MoveResult(success=True, new_uid="456")
+            ) as mock_move,
             patch("app.services.imap_actions.store_flags", return_value=True),
         ):
             result = await execute_imap_actions(
-                account, "123",
+                account,
+                "123",
                 ["mark_as_read", "move_to:Archive"],
                 source_folder="INBOX",
             )
@@ -108,7 +111,8 @@ class TestExecuteImapActionsSourceFolder:
             patch("app.services.imap_actions.move_message", return_value=MoveResult(success=False)),
         ):
             result = await execute_imap_actions(
-                account, "123",
+                account,
+                "123",
                 ["move_to:Archive"],
                 source_folder="INBOX",
             )
@@ -130,7 +134,8 @@ class TestExecuteImapActionsSourceFolder:
             patch("app.services.imap_actions.store_flags", return_value=True) as mock_store,
         ):
             await execute_imap_actions(
-                account, "123",
+                account,
+                "123",
                 ["mark_as_read"],
                 source_folder="Work/Projects",
                 select_inbox=True,
@@ -146,7 +151,8 @@ class TestExecuteImapActionsSourceFolder:
         account.id = "test-account-id"
 
         result = await execute_imap_actions(
-            account, "123",
+            account,
+            "123",
             ["store_summary"],
             source_folder="INBOX",
         )
