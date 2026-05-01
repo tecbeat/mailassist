@@ -583,7 +583,8 @@ async def run_ai_pipeline(
         result.auto_actions.clear()
         return result
 
-    await db.commit()
+    # Transaction is committed by the caller via get_session_ctx() — no
+    # explicit commit here to avoid a double-commit.
     return result
 
 
