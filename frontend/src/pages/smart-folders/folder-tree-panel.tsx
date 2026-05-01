@@ -159,6 +159,7 @@ function SortableFolderRow({
             {hasChildren ? (
               <button
                 type="button"
+                aria-label={isExpanded ? `Collapse ${node.name}` : `Expand ${node.name}`}
                 onClick={() => toggleExpanded(node.fullPath)}
                 className="shrink-0 text-muted-foreground hover:text-foreground"
               >
