@@ -70,6 +70,7 @@ async def resolve_prompts(
         "is_forwarded": context.is_forwarded,
         "contact": context.contact,
         "user_contacts": context.user_contacts or [],
+        "technical_indicators": context.technical_indicators or {},
         "current_time": now.isoformat(),
         "current_date": now.strftime("%Y-%m-%d"),
         "current_weekday": now.strftime("%A"),

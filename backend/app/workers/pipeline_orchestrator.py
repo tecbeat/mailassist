@@ -44,6 +44,7 @@ from app.plugins.registry import get_plugin_registry
 from app.services.change_logger import save_new_folders, save_new_labels
 from app.services.contacts import match_sender_to_contact
 from app.services.email_parser import parse_email
+from app.services.header_analysis import analyze_headers
 from app.services.imap_actions import execute_imap_actions
 from app.services.mail import (
     ParsedEmail,
@@ -457,6 +458,13 @@ async def run_ai_pipeline(
     excluded = {f.lower() for f in (account.excluded_folders or [])}
     filtered_folders = [f for f in fetched.imap_folders if f.lower() not in excluded]
 
+    # --- Extract technical indicators from headers ---
+    technical_indicators = analyze_headers(
+        headers=parsed.headers,
+        sender_email=parsed.sender,
+        sender_name=parsed.sender_name,
+    )
+
     context = MailContext(
         user_id=user_id,
         account_id=account_id,
@@ -484,6 +492,7 @@ async def run_ai_pipeline(
         is_forwarded=parsed.is_forwarded,
         contact=contact_data,
         user_contacts=user_contacts_data,
+        technical_indicators=technical_indicators,
     )
 
     # --- Rule evaluation ---
@@ -514,6 +523,7 @@ async def run_ai_pipeline(
     # created and the pipeline continues with remaining plugins.
     registry = get_plugin_registry()
     pipeline = PipelineContext()
+    pipeline.set_result("header_analysis", technical_indicators)
 
     all_plugins = registry.get_all_plugins()
     if user_settings and user_settings.plugin_order:
