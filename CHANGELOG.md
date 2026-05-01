@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 
 ### 🐛 Bug Fixes
 
+- *(frontend)* Add favicon.ico to resolve 502 on all pages - ([7af996a](https://git.teccave.de/tecbeat/mailassist/commit/7af996a9ea143eb4a32ca41055da21b26c9c5eea))
 - Use async tests for changelog endpoint - ([728c49d](https://git.teccave.de/tecbeat/mailassist/commit/728c49d046976a5e90339d36586b258381506dc6))
 - Sort imports in alembic files - ([f2cc9bc](https://git.teccave.de/tecbeat/mailassist/commit/f2cc9bc6373663e55f97be3e664b9c9483f713b5))
 - Resolve all ruff lint and mypy type-check errors - ([615b9a4](https://git.teccave.de/tecbeat/mailassist/commit/615b9a48807bdc033fbc5884a223a82135ebcff4))
@@ -18,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - Give each plugin subclass its own default_config dict (#25) - ([6248920](https://git.teccave.de/tecbeat/mailassist/commit/6248920eb71f2d65f4b726e3402ffd46f6630248))
 - Preserve duplicate email headers by concatenating values (#24) - ([4c14d30](https://git.teccave.de/tecbeat/mailassist/commit/4c14d30f053923f0e0a766593c2464462f1892b9))
 - Remove redundant db.commit() in run_ai_pipeline (#23) - ([1adcd60](https://git.teccave.de/tecbeat/mailassist/commit/1adcd609419376ee574d3080d69e16756d987b91))
+- Fix beta tag - ([47808c6](https://git.teccave.de/tecbeat/mailassist/commit/47808c684c9c39605cb71b71b3d4a01b0dbde201))
 
 ### 🚜 Refactor
 
