@@ -8,6 +8,12 @@ All notable changes to this project will be documented in this file.
 
 - *(spam)* Add deterministic header checks before LLM - ([5146c5e](https://git.teccave.de/tecbeat/mailassist/commit/5146c5e3bd28bbec3769d100a4939563c871af6d))
 
+### 🐛 Bug Fixes
+
+- Skip envelope fetch for large backlogs to avoid job timeout - ([bd8600c](https://git.teccave.de/tecbeat/mailassist/commit/bd8600c3c2a886ac2a013ba17a6a6aa415801e7f))
+- Always batch envelope fetching regardless of scan type - ([7303e23](https://git.teccave.de/tecbeat/mailassist/commit/7303e23ea1c25c173213eda59bb9aef441e5beec))
+- Batch idle_monitor bulk INSERT to respect PostgreSQL parameter limit - ([bdb4b3b](https://git.teccave.de/tecbeat/mailassist/commit/bdb4b3bc3afe0b892bd75a9334aa19551a47122b))
+
 ## [2.0.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.0.1-beta) - 2026-05-01
 
 ### 🐛 Bug Fixes
