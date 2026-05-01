@@ -35,12 +35,14 @@ from __future__ import annotations
 import asyncio
 import time
 from datetime import UTC, datetime
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import structlog
 from sqlalchemy import select, update
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from app.core.database import get_session_ctx
 from app.core.events import AIProcessingCompleteEvent, get_event_bus
