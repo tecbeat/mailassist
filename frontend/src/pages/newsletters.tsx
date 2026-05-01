@@ -4,7 +4,6 @@ import {
   Newspaper,
   ExternalLink,
   Trash2,
-  RotateCcw,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -17,13 +16,12 @@ import {
 import { SpamButton } from "@/components/spam-button";
 import { useToast } from "@/components/ui/toast";
 import { PageHeader } from "@/components/layout/page-header";
-import { SortToggle } from "@/components/sort-toggle";
+import { SortFilterContent } from "@/components/sort-filter-content";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { SearchableCardList } from "@/components/searchable-card-list";
 import { FilterListItem } from "@/components/filter-list-item";
 import { useSearchableList } from "@/hooks/use-searchable-list";
 import { AppButton } from "@/components/app-button";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -52,7 +50,7 @@ import type {
 export default function NewslettersPage() {
   usePageTitle("Newsletters");
   const list = useSearchableList();
-  const [sortOrder, setSortOrder] = useState<string>("newest");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [deleteTarget, setDeleteTarget] = useState<DetectedNewsletterResponse | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -117,31 +115,13 @@ export default function NewslettersPage() {
             searchPlaceholder="Search by sender..."
             hasActiveFilters={hasActiveFilters}
             filterContent={
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Sort Order</Label>
-                   <SortToggle
-                    sortOrder={sortOrder}
-                    onToggle={(o) => { setSortOrder(o); list.setPage(1); }}
-                    isFetching={newslettersQuery.isFetching}
-                    variant="inline"
-                  />
-                </div>
-                {hasActiveFilters && (
-                  <AppButton
-                    icon={<RotateCcw />}
-                    label="Clear filters"
-                    variant="ghost"
-                    className="h-7 w-full text-xs"
-                    onClick={() => {
-                      setSortOrder("newest");
-                      list.setPage(1);
-                    }}
-                  >
-                    Clear filters
-                  </AppButton>
-                )}
-              </div>
+              <SortFilterContent
+                sortOrder={sortOrder}
+                onSortChange={(o) => { setSortOrder(o); list.setPage(1); }}
+                isFetching={newslettersQuery.isFetching}
+                hasActiveFilters={hasActiveFilters}
+                onClearFilters={() => { setSortOrder("newest"); list.setPage(1); }}
+              />
             }
             emptyIcon={<Newspaper className="mb-3 h-10 w-10 text-muted-foreground" />}
             emptyMessage="No newsletters detected yet. Newsletters will appear here as they are processed."

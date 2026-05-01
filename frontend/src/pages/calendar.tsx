@@ -12,7 +12,6 @@ import {
   MapPin,
   Clock,
   RefreshCw,
-  RotateCcw,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -33,7 +32,7 @@ import {
 import { SpamButton } from "@/components/spam-button";
 import { useToast } from "@/components/ui/toast";
 import { PageHeader } from "@/components/layout/page-header";
-import { SortToggle } from "@/components/sort-toggle";
+import { SortFilterContent } from "@/components/sort-filter-content";
 import { QueryError } from "@/components/query-error";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import {
@@ -253,7 +252,7 @@ export default function CalendarPage() {
 
   // --- Events list ---
   const list = useSearchableList();
-  const [sortOrder, setSortOrder] = useState<string>("newest");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [deleteTarget, setDeleteTarget] = useState<CalendarEventResponse | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
@@ -337,31 +336,13 @@ export default function CalendarPage() {
             searchPlaceholder="Search by title or subject..."
             hasActiveFilters={hasActiveFilters}
             filterContent={
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Sort Order</Label>
-                  <SortToggle
-                    sortOrder={sortOrder}
-                    onToggle={(o) => { setSortOrder(o); list.setPage(1); }}
-                    isFetching={eventsQuery.isFetching}
-                    variant="inline"
-                  />
-                </div>
-                {hasActiveFilters && (
-                  <AppButton
-                    icon={<RotateCcw />}
-                    label="Clear filters"
-                    variant="ghost"
-                    className="h-7 w-full text-xs"
-                    onClick={() => {
-                      setSortOrder("newest");
-                      list.setPage(1);
-                    }}
-                  >
-                    Clear filters
-                  </AppButton>
-                )}
-              </div>
+              <SortFilterContent
+                sortOrder={sortOrder}
+                onSortChange={(o) => { setSortOrder(o); list.setPage(1); }}
+                isFetching={eventsQuery.isFetching}
+                hasActiveFilters={hasActiveFilters}
+                onClearFilters={() => { setSortOrder("newest"); list.setPage(1); }}
+              />
             }
             emptyIcon={<CalendarDays className="mb-3 h-10 w-10 text-muted-foreground" />}
             emptyMessage="No calendar events extracted yet. Events will appear here as emails with date/time references are processed."

@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { usePageTitle } from "@/hooks/use-page-title";
-import {
-  RotateCcw,
-  Trash2,
-} from "lucide-react";
+import { Trash2 } from "lucide-react";
 import {
   useListSummariesApiSummariesGet,
   useDeleteSummaryApiSummariesSummaryIdDelete,
@@ -14,7 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { SpamButton } from "@/components/spam-button";
 import { CreateContactButton } from "@/components/create-contact-button";
 import { PageHeader } from "@/components/layout/page-header";
-import { SortToggle } from "@/components/sort-toggle";
+import { SortFilterContent } from "@/components/sort-filter-content";
 import { ListSkeleton } from "@/components/list-skeleton";
 import { SearchableCardList } from "@/components/searchable-card-list";
 import { FilterListItem } from "@/components/filter-list-item";
@@ -67,7 +64,7 @@ export default function SummariesPage() {
   const list = useSearchableList({ perPage: 10 });
   const [urgencyFilter, setUrgencyFilter] = useState<string>("all");
   const [actionFilter, setActionFilter] = useState<string>("all");
-  const [sortOrder, setSortOrder] = useState<string>("newest");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EmailSummaryResponse | null>(null);
   const { toast } = useToast();
@@ -141,7 +138,13 @@ export default function SummariesPage() {
             searchPlaceholder="Search summaries..."
             hasActiveFilters={hasActiveFilters}
             filterContent={
-              <div className="space-y-3">
+              <SortFilterContent
+                sortOrder={sortOrder}
+                onSortChange={(o) => { setSortOrder(o); list.setPage(1); }}
+                isFetching={summariesQuery.isFetching}
+                hasActiveFilters={hasActiveFilters}
+                onClearFilters={() => { setUrgencyFilter("all"); setActionFilter("all"); setSortOrder("newest"); list.setPage(1); }}
+              >
                 <div className="space-y-1.5">
                   <Label className="text-xs">Urgency</Label>
                   <Select
@@ -182,32 +185,7 @@ export default function SummariesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Sort Order</Label>
-                   <SortToggle
-                    sortOrder={sortOrder}
-                    onToggle={(o) => { setSortOrder(o); list.setPage(1); }}
-                    isFetching={summariesQuery.isFetching}
-                    variant="inline"
-                  />
-                </div>
-                {hasActiveFilters && (
-                  <AppButton
-                    icon={<RotateCcw />}
-                    label="Clear filters"
-                    variant="ghost"
-                    className="h-7 w-full text-xs"
-                    onClick={() => {
-                      setUrgencyFilter("all");
-                      setActionFilter("all");
-                      setSortOrder("newest");
-                      list.setPage(1);
-                    }}
-                  >
-                    Clear filters
-                  </AppButton>
-                )}
-              </div>
+              </SortFilterContent>
             }
             skeleton={<ListSkeleton lines={["w-1/3", "w-full"]} />}
             emptyMessage="No email summaries found."
