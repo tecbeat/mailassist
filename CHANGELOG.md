@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.2.0-beta) - 2026-05-01
+
+### ⛰️  Features
+
+- Extract shared _update_tracked_email helper to deduplicate DB update pattern - ([d7f95f4](https://git.teccave.de/tecbeat/mailassist/commit/d7f95f4d8d08f56e39ed364a51370f0f34adf122))
+- Centralise field truncation in persistence layer - ([55fb2d4](https://git.teccave.de/tecbeat/mailassist/commit/55fb2d44a85fe1833ffb223aff5e48a1b5839c42))
+
+### 🐛 Bug Fixes
+
+- Move Callable import into TYPE_CHECKING block and fix import order - ([c07cf6b](https://git.teccave.de/tecbeat/mailassist/commit/c07cf6bcd62a2937bb17c2cdf4dae9f5d0ad64d8))
+
 ## [2.1.2-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.1.2-beta) - 2026-05-01
 
 ### 🐛 Bug Fixes
