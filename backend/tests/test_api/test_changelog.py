@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.api.changelog import _parse_changelog
+from app.api.changelog import _parse_changelog, get_changelog
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -60,7 +60,7 @@ class TestParseChangelog:
 class TestChangelogEndpoint:
     """Tests for GET /api/changelog."""
 
-    def test_changelog_enabled_returns_entries(self, tmp_path: Path) -> None:
+    async def test_changelog_enabled_returns_entries(self, tmp_path: Path) -> None:
         """Returns version and entries when enabled and file exists."""
         changelog_file = tmp_path / "CHANGELOG.md"
         changelog_file.write_text(SAMPLE_CHANGELOG)
@@ -72,32 +72,24 @@ class TestChangelogEndpoint:
             mock_settings.return_value.enable_changelog = True
             mock_settings.return_value.app_version = "1.2.0"
 
-            import asyncio
-
-            from app.api.changelog import get_changelog
-
-            result = asyncio.get_event_loop().run_until_complete(get_changelog())
+            result = await get_changelog()
 
         assert result["version"] == "1.2.0"
         assert "1.2.0" in result["entries"]
         assert "1.1.0" in result["entries"]
 
-    def test_changelog_disabled_raises_404(self) -> None:
+    async def test_changelog_disabled_raises_404(self) -> None:
         """Returns 404 when ENABLE_CHANGELOG=false."""
         from fastapi import HTTPException
 
         with patch("app.api.changelog.get_settings") as mock_settings:
             mock_settings.return_value.enable_changelog = False
 
-            import asyncio
-
-            from app.api.changelog import get_changelog
-
             with pytest.raises(HTTPException) as exc_info:
-                asyncio.get_event_loop().run_until_complete(get_changelog())
+                await get_changelog()
             assert exc_info.value.status_code == 404
 
-    def test_changelog_missing_file_raises_404(self, tmp_path: Path) -> None:
+    async def test_changelog_missing_file_raises_404(self, tmp_path: Path) -> None:
         """Returns 404 when CHANGELOG.md does not exist."""
         from fastapi import HTTPException
 
@@ -107,12 +99,8 @@ class TestChangelogEndpoint:
         ):
             mock_settings.return_value.enable_changelog = True
 
-            import asyncio
-
-            from app.api.changelog import get_changelog
-
             with pytest.raises(HTTPException) as exc_info:
-                asyncio.get_event_loop().run_until_complete(get_changelog())
+                await get_changelog()
             assert exc_info.value.status_code == 404
 
 
