@@ -392,7 +392,7 @@ export function Sidebar() {
         </button>
 
         <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-          <DialogContent className="sm:max-w-sm">
+          <DialogContent className="sm:max-w-lg min-h-[360px]">
             <DialogHeader>
               <DialogTitle>User Settings</DialogTitle>
               {user?.email && (

@@ -122,7 +122,7 @@ export function ChangelogDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleDismiss()}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col" aria-describedby="changelog-description">
+      <DialogContent className="sm:max-w-lg min-h-[360px] max-h-[90vh] flex flex-col" aria-describedby="changelog-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" />
