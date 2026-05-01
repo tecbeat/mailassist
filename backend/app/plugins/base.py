@@ -53,6 +53,7 @@ class MailContext:
     is_forwarded: bool
     contact: dict[str, Any] | None = None
     user_contacts: list[dict[str, Any]] | None = None
+    technical_indicators: dict[str, Any] | None = None
 
 
 @dataclass

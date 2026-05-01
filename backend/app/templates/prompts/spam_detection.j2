@@ -40,6 +40,19 @@ Subject: {{ subject }}
 Date: {{ date }}
 {% if has_attachments %}Attachments: {{ attachment_names | join(', ') }}{% endif %}
 
+{% if technical_indicators and (technical_indicators.spf is defined or technical_indicators.dkim is defined or technical_indicators.dmarc is defined or technical_indicators.reply_to_mismatch is defined or technical_indicators.display_name_spoofing is defined or technical_indicators.return_path_mismatch is defined) %}
+
+=== TECHNICAL INDICATORS (pre-verified, deterministic) ===
+{% for line in [] -%}{% endfor -%}
+{% if technical_indicators.spf is defined %}SPF: {{ technical_indicators.spf.result }}{% if technical_indicators.spf.detail %} ({{ technical_indicators.spf.detail }}){% endif %}{{ "\n" }}{% endif -%}
+{% if technical_indicators.dkim is defined %}DKIM: {{ technical_indicators.dkim.result }}{% if technical_indicators.dkim.detail %} ({{ technical_indicators.dkim.detail }}){% endif %}{{ "\n" }}{% endif -%}
+{% if technical_indicators.dmarc is defined %}DMARC: {{ technical_indicators.dmarc.result }}{% if technical_indicators.dmarc.detail %} ({{ technical_indicators.dmarc.detail }}){% endif %}{{ "\n" }}{% endif -%}
+{% if technical_indicators.reply_to_mismatch is defined and technical_indicators.reply_to_mismatch %}Reply-To domain mismatch: YES (reply-to={{ technical_indicators.reply_to_domain }}, from={{ technical_indicators.from_domain }}){{ "\n" }}{% endif -%}
+{% if technical_indicators.display_name_spoofing is defined and technical_indicators.display_name_spoofing %}Display-name spoofing: YES (name contains "{{ technical_indicators.display_name_email }}", actual from={{ sender }}){{ "\n" }}{% endif -%}
+{% if technical_indicators.return_path_mismatch is defined and technical_indicators.return_path_mismatch %}Return-Path mismatch: YES (return-path={{ technical_indicators.return_path }}, from={{ technical_indicators.from_domain }}){{ "\n" }}{% endif -%}
+These indicators are verified from email headers. Weigh them heavily in your assessment.
+=== END TECHNICAL INDICATORS ===
+{% endif %}
 {{ body | sanitize_for_llm | truncate(3000) }}
 === END UNTRUSTED EMAIL CONTENT ===
 
