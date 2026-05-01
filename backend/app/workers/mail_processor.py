@@ -7,8 +7,10 @@ ARQ entry point for email processing.  Delegates the heavy lifting to
 This module owns:
 
 * ``process_mail`` — the ARQ task registered in the worker.
-* ``_update_tracked_status`` / ``_update_current_folder`` — tracked
-  email status bookkeeping (independent DB sessions, non-fatal).
+* ``_update_tracked_email`` — shared helper for tracked email updates
+  (independent DB sessions, non-fatal).
+* ``_update_tracked_status`` / ``_update_tracked_metadata`` /
+  ``_update_current_folder`` — high-level wrappers built on the helper.
 * ``_pause_account`` / ``_pause_provider`` — set pause flags on
   the responsible provider or account on transient errors.
 
@@ -33,11 +35,14 @@ from __future__ import annotations
 import asyncio
 import time
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import structlog
 from sqlalchemy import select, update
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from app.core.database import get_session_ctx
 from app.core.events import AIProcessingCompleteEvent, get_event_bus
@@ -67,6 +72,54 @@ logger = structlog.get_logger()
 # ---------------------------------------------------------------------------
 
 
+async def _update_tracked_email(
+    account_id: str,
+    mail_uid: str,
+    current_folder: str,
+    log: structlog.stdlib.BoundLogger,
+    *,
+    updater: Callable[[TrackedEmail], None],
+    log_event: str = "tracked_email_updated",
+    log_failure: str = "tracked_email_update_failed",
+    not_found_event: str | None = None,
+    extra_log: dict[str, Any] | None = None,
+) -> None:
+    """Shared helper for tracked email updates.
+
+    Handles the DB session lifecycle, lookup, and error handling.
+    The ``updater`` callable receives the ``TrackedEmail`` row and
+    applies the desired mutations — it must not commit or flush.
+
+    Args:
+        updater: ``Callable[[TrackedEmail], None]`` — mutates fields.
+        log_event: Structured log event on success.
+        log_failure: Structured log event on failure.
+        not_found_event: Optional log event when row is missing.
+        extra_log: Extra key/value pairs for the success log message.
+    """
+    try:
+        async with get_session_ctx() as db:
+            stmt = select(TrackedEmail).where(
+                TrackedEmail.mail_account_id == UUID(account_id),
+                TrackedEmail.mail_uid == mail_uid,
+                TrackedEmail.current_folder == current_folder,
+            )
+            result = await db.execute(stmt)
+            tracked = result.scalar_one_or_none()
+            if tracked is None:
+                if not_found_event:
+                    log.debug(not_found_event, mail_uid=mail_uid)
+                return
+            updater(tracked)
+            await db.flush()
+        if extra_log:
+            log.debug(log_event, **extra_log)
+        else:
+            log.debug(log_event)
+    except Exception:
+        log.warning(log_failure, exc_info=True)
+
+
 async def _update_tracked_status(
     account_id: str,
     mail_uid: str,
@@ -92,39 +145,37 @@ async def _update_tracked_status(
         error_type: Classification of the error — ``"provider_imap"``,
             ``"provider_ai"``, ``"mail"``, or ``None`` to clear.
     """
-    try:
-        async with get_session_ctx() as db:
-            stmt = select(TrackedEmail).where(
-                TrackedEmail.mail_account_id == UUID(account_id),
-                TrackedEmail.mail_uid == mail_uid,
-                TrackedEmail.current_folder == current_folder,
-            )
-            result = await db.execute(stmt)
-            tracked = result.scalar_one_or_none()
-            if tracked is None:
-                log.debug("tracked_email_not_found", mail_uid=mail_uid)
-                return
-            # Increment retry_count when a mail is re-queued after an error
-            # so the scheduler can deprioritise previously-failed mails.
-            if status == TrackedEmailStatus.QUEUED and tracked.status != TrackedEmailStatus.QUEUED:
-                tracked.retry_count = tracked.retry_count + 1
-            tracked.status = status
-            if error is not None:
-                tracked.last_error = error
-            if error_type is not None:
-                tracked.error_type = error_type
-            if plugins_completed is not None:
-                tracked.plugins_completed = plugins_completed
-            if plugins_failed is not None:
-                tracked.plugins_failed = plugins_failed
-            if plugins_skipped is not None:
-                tracked.plugins_skipped = plugins_skipped
-            if completion_reason is not None:
-                tracked.completion_reason = completion_reason
-            await db.flush()
-        log.debug("tracked_status_updated", status=status.value)
-    except Exception:
-        log.warning("tracked_status_update_failed", status=status.value, exc_info=True)
+
+    def _apply(tracked: TrackedEmail) -> None:
+        # Increment retry_count when a mail is re-queued after an error
+        # so the scheduler can deprioritise previously-failed mails.
+        if status == TrackedEmailStatus.QUEUED and tracked.status != TrackedEmailStatus.QUEUED:
+            tracked.retry_count = tracked.retry_count + 1
+        tracked.status = status
+        if error is not None:
+            tracked.last_error = error
+        if error_type is not None:
+            tracked.error_type = error_type
+        if plugins_completed is not None:
+            tracked.plugins_completed = plugins_completed
+        if plugins_failed is not None:
+            tracked.plugins_failed = plugins_failed
+        if plugins_skipped is not None:
+            tracked.plugins_skipped = plugins_skipped
+        if completion_reason is not None:
+            tracked.completion_reason = completion_reason
+
+    await _update_tracked_email(
+        account_id,
+        mail_uid,
+        current_folder,
+        log,
+        updater=_apply,
+        log_event="tracked_status_updated",
+        log_failure="tracked_status_update_failed",
+        not_found_event="tracked_email_not_found",
+        extra_log={"status": status.value},
+    )
 
 
 async def _update_tracked_metadata(
@@ -143,26 +194,23 @@ async def _update_tracked_metadata(
     accurate, even when the mail was discovered by the IDLE monitor
     (which does not fetch IMAP envelopes).
     """
-    try:
-        async with get_session_ctx() as db:
-            stmt = select(TrackedEmail).where(
-                TrackedEmail.mail_account_id == UUID(account_id),
-                TrackedEmail.mail_uid == mail_uid,
-                TrackedEmail.current_folder == current_folder,
-            )
-            result = await db.execute(stmt)
-            tracked = result.scalar_one_or_none()
-            if tracked is None:
-                return
-            if subject is not None:
-                tracked.subject = subject
-            if sender is not None:
-                tracked.sender = sender
-            if received_at is not None:
-                tracked.received_at = received_at
-            await db.flush()
-    except Exception:
-        log.warning("tracked_metadata_update_failed", exc_info=True)
+
+    def _apply(tracked: TrackedEmail) -> None:
+        if subject is not None:
+            tracked.subject = subject
+        if sender is not None:
+            tracked.sender = sender
+        if received_at is not None:
+            tracked.received_at = received_at
+
+    await _update_tracked_email(
+        account_id,
+        mail_uid,
+        current_folder,
+        log,
+        updater=_apply,
+        log_failure="tracked_metadata_update_failed",
+    )
 
 
 async def _update_current_folder(
@@ -183,30 +231,23 @@ async def _update_current_folder(
 
     Uses an independent DB session.  Non-fatal on failure.
     """
-    try:
-        async with get_session_ctx() as db:
-            stmt = select(TrackedEmail).where(
-                TrackedEmail.mail_account_id == UUID(account_id),
-                TrackedEmail.mail_uid == mail_uid,
-                TrackedEmail.current_folder == old_folder,
-            )
-            result = await db.execute(stmt)
-            tracked = result.scalar_one_or_none()
-            if tracked is None:
-                log.debug("tracked_email_not_found_for_folder_update", mail_uid=mail_uid)
-                return
-            tracked.current_folder = new_folder
-            if new_mail_uid:
-                tracked.mail_uid = new_mail_uid
-            await db.flush()
-        log.info(
-            "current_folder_updated",
-            folder=new_folder,
-            old_uid=mail_uid,
-            new_uid=new_mail_uid,
-        )
-    except Exception:
-        log.warning("current_folder_update_failed", folder=new_folder, exc_info=True)
+
+    def _apply(tracked: TrackedEmail) -> None:
+        tracked.current_folder = new_folder
+        if new_mail_uid:
+            tracked.mail_uid = new_mail_uid
+
+    await _update_tracked_email(
+        account_id,
+        mail_uid,
+        old_folder,
+        log,
+        updater=_apply,
+        log_event="current_folder_updated",
+        log_failure="current_folder_update_failed",
+        not_found_event="tracked_email_not_found_for_folder_update",
+        extra_log={"folder": new_folder, "old_uid": mail_uid, "new_uid": new_mail_uid},
+    )
 
 
 async def _fail_queued_mails_for_folder(
