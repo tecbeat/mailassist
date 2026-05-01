@@ -1,6 +1,6 @@
 """Fix approval_mode_notifications default: approval -> auto.
 
-Revision ID: 20260501_fix_notification_approval_mode
+Revision ID: 20260501_fix_notif_mode
 Revises: 20260424_initial_schema
 Create Date: 2026-05-01
 
@@ -12,7 +12,7 @@ to 'auto', and the model default is updated to ApprovalMode.AUTO.
 
 from alembic import op
 
-revision = "20260501_fix_notification_approval_mode"
+revision = "20260501_fix_notif_mode"
 down_revision = "20260424_initial_schema"
 branch_labels = None
 depends_on = None

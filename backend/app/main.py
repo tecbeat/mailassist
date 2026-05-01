@@ -21,6 +21,7 @@ from app.api import (
     auto_replies,
     calendar,
     calendar_events,
+    changelog,
     contacts,
     coupons,
     dashboard,
@@ -222,7 +223,7 @@ def create_app() -> FastAPI:
 
     application = FastAPI(
         title=settings.app_name,
-        version="0.1.0",
+        version=settings.app_version,
         docs_url="/docs",
         redoc_url=None,
         lifespan=lifespan,
@@ -252,6 +253,7 @@ def create_app() -> FastAPI:
     # API routes
     application.include_router(health.router)
     application.include_router(auth.router)
+    application.include_router(changelog.router)
     application.include_router(mail_accounts.router)
     application.include_router(contacts.router)
     application.include_router(dashboard.router, prefix="/api")

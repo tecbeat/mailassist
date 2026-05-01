@@ -8,6 +8,7 @@ import structlog
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
+from app.core.config import get_settings
 from app.core.database import get_engine
 from app.core.redis import get_task_client
 
@@ -57,5 +58,5 @@ async def health_check() -> JSONResponse:
 
     return JSONResponse(
         status_code=200 if all_healthy else 503,
-        content={"status": "healthy" if all_healthy else "degraded", "services": status},
+        content={"status": "healthy" if all_healthy else "degraded", "version": get_settings().app_version, "services": status},
     )
