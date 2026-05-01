@@ -12,6 +12,28 @@ versioner:
     - versioner --suffix beta
     - more version.env
 
+# Inject APP_VERSION from versioner into the Docker image at build time (#127)
+.build_image_with_version:
+  script:
+    - '[ "$CHANGED" = "False" ] && exit 0;'
+    - |
+      buildctl-daemonless.sh build \
+        --frontend dockerfile.v0 \
+        --local context=. \
+        --local dockerfile=. \
+        --opt build-arg:APP_VERSION=${VERSION} \
+        --output type=image,name=$CI_REGISTRY_IMAGE:${VERSION},push=true
+
+test_build_image:
+  extends:
+    - .test_build_image
+    - .build_image_with_version
+
+build_image:
+  extends:
+    - .build_image
+    - .build_image_with_version
+
 templater:
   rules:
     - when: never

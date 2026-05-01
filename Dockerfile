@@ -22,6 +22,10 @@ RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser -m appuser
 
 WORKDIR /app
 
+# Version injected by CI versioner; falls back to "dev" for local builds
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
+
 # Ensure venv binaries (uvicorn, alembic, arq) are on PATH
 ENV VIRTUAL_ENV=/app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
