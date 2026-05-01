@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.2-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.1.2-beta) - 2026-05-01
+
+### 🐛 Bug Fixes
+
+- Ruff format config.py; update changelog test for renamed button - ([ad4d2b6](https://git.teccave.de/tecbeat/mailassist/commit/ad4d2b66f559a7fdbc0399ca97ae99d9b1b44af3))
+- Use v-prefixed default VERSION for consistency with CI tags - ([206aa32](https://git.teccave.de/tecbeat/mailassist/commit/206aa325d32a6b895ea1b98d4ac745e8c668407b))
+- Version badge always links to releases; shown below logout button - ([f22029a](https://git.teccave.de/tecbeat/mailassist/commit/f22029a42187d45a64819d48d8c1028862cd9f9f))
+- Standardise dialog width and add minimum height - ([426d5f8](https://git.teccave.de/tecbeat/mailassist/commit/426d5f83c508315a5906a2afa966dc6de3c367c1))
+- Align User Settings and What's New dialogs with app-wide UI standards - ([e530ca2](https://git.teccave.de/tecbeat/mailassist/commit/e530ca2c67725b3a93afe273d0fded19f36f3017))
+- Rename APP_VERSION to VERSION consistently throughout the stack - ([5c7bd38](https://git.teccave.de/tecbeat/mailassist/commit/5c7bd388f439cb084953828de0b769bc2af19421))
+- Use VERSION build-arg from shared CI template instead of custom override - ([9039cf1](https://git.teccave.de/tecbeat/mailassist/commit/9039cf11b9d1c74b9641fc6e538cf924e68b3dfc))
+- Prevent double v prefix in changelog dialog version display - ([13fc14f](https://git.teccave.de/tecbeat/mailassist/commit/13fc14f8b525cb594552717d2f28ec68d3c76140))
+- Inject CI versioner output as APP_VERSION into Docker image (#127) - ([5b09334](https://git.teccave.de/tecbeat/mailassist/commit/5b093341727fd7cd396d7494da895d1825d01ec9))
+
+## [2.1.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.1.1-beta) - 2026-05-01
+
 ## [2.1.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.1.0-beta) - 2026-05-01
 
 ### ⛰️  Features
