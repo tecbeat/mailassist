@@ -18,7 +18,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUserId, DbSession, get_or_404, paginate, sanitize_like
+from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
 from app.core.redis import get_arq_client
 from app.models import Approval, ApprovalStatus
 from app.schemas.approval import (
@@ -67,13 +67,7 @@ async def list_approvals(
 
     result = await paginate(db, base_stmt, page, per_page)
 
-    return ApprovalListResponse(
-        items=[ApprovalResponse.model_validate(a) for a in result.items],
-        total=result.total,
-        page=result.page,
-        per_page=result.per_page,
-        pages=result.pages,
-    )
+    return build_paginated_response(result, ApprovalResponse, ApprovalListResponse)
 
 
 @router.post("/{approval_id}/approve")

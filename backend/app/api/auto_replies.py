@@ -11,7 +11,7 @@ import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import select
 
-from app.api.deps import CurrentUserId, DbSession, get_or_404, paginate, sanitize_like
+from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
 from app.models import AutoReplyRecord
 from app.schemas.auto_reply import (
     AutoReplyRecordListResponse,
@@ -46,13 +46,7 @@ async def list_auto_replies(
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)
 
-    return AutoReplyRecordListResponse(
-        items=[AutoReplyRecordResponse.model_validate(r) for r in result.items],
-        total=result.total,
-        page=result.page,
-        per_page=result.per_page,
-        pages=result.pages,
-    )
+    return build_paginated_response(result, AutoReplyRecordResponse, AutoReplyRecordListResponse)
 
 
 @router.get("/{reply_id}")

@@ -11,7 +11,7 @@ import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import case, select
 
-from app.api.deps import CurrentUserId, DbSession, get_or_404, paginate, sanitize_like
+from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
 from app.models import EmailSummary
 from app.schemas.summary import (
     EmailSummaryListResponse,
@@ -62,13 +62,7 @@ async def list_summaries(
 
     result = await paginate(db, base_stmt, page, per_page)
 
-    return EmailSummaryListResponse(
-        items=[EmailSummaryResponse.model_validate(s) for s in result.items],
-        total=result.total,
-        page=result.page,
-        per_page=result.per_page,
-        pages=result.pages,
-    )
+    return build_paginated_response(result, EmailSummaryResponse, EmailSummaryListResponse)
 
 
 @router.get("/{summary_id}")

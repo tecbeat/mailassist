@@ -14,7 +14,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 
-from app.api.deps import CurrentUserId, DbSession, get_or_404, paginate, sanitize_like
+from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
 from app.core.redis import get_cache_client
 from app.core.security import get_encryption
 from app.models import CardDAVConfig, Contact, ContactAssignment, EmailSummary, UserSettings
@@ -204,13 +204,7 @@ async def list_contacts(
     base_stmt = base_stmt.order_by(Contact.display_name)
     result = await paginate(db, base_stmt, page, per_page)
 
-    return ContactListResponse(
-        items=[ContactResponse.model_validate(c) for c in result.items],
-        total=result.total,
-        page=result.page,
-        per_page=result.per_page,
-        pages=result.pages,
-    )
+    return build_paginated_response(result, ContactResponse, ContactListResponse)
 
 
 # --- All Senders ---
@@ -584,13 +578,7 @@ async def list_contact_mails(
         .order_by(ContactAssignment.created_at.desc())
     )
     result = await paginate(db, base_stmt, page, per_page)
-    return ContactMailsResponse(
-        items=[ContactAssignmentSchema.model_validate(a) for a in result.items],
-        total=result.total,
-        page=result.page,
-        per_page=result.per_page,
-        pages=result.pages,
-    )
+    return build_paginated_response(result, ContactAssignmentSchema, ContactMailsResponse)
 
 
 @router.delete("/{contact_id}/mails/{assignment_id}", status_code=204)
