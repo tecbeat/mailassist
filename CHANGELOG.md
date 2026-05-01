@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.0.0-beta) - 2026-05-01
+
+### 🐛 Bug Fixes
+
+- *(ui)* Add aria-label to expand/collapse buttons in folder tree (#55) - ([6e88c89](https://git.teccave.de/tecbeat/mailassist/commit/6e88c89a9aaf83be34d83150c3e7f7430573b9fe))
+- *(ui)* Add optimistic update and rollback to useRenameImapFolder (#54) - ([8b2f9f2](https://git.teccave.de/tecbeat/mailassist/commit/8b2f9f2736266d005a87c4f9a036e20263dc3d0b))
+
+### 🚜 Refactor
+
+- Extract build_paginated_response helper, apply across all list endpoints - ([38a416b](https://git.teccave.de/tecbeat/mailassist/commit/38a416bf3323db6360159b1ee5f375704493d7ab))
+
+### ⚡ Performance
+
+- *(ui)* Preserve object identity in sortChildren to fix React.memo (#59) - ([e110937](https://git.teccave.de/tecbeat/mailassist/commit/e110937f3724d4351f667c53beb1dfe126d2bd33))
+
+### 🎨 Styling
+
+- Apply ruff format to changelog.py and health.py - ([70a5ee8](https://git.teccave.de/tecbeat/mailassist/commit/70a5ee875208f576b85282aa760c4fadd3574365))
+
+## [1.0.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v1.0.1-beta) - 2026-05-01
+
 ## [1.0.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v1.0.0-beta) - 2026-05-01
 
 ### ⛰️  Features
