@@ -5,9 +5,22 @@ Settings are cached after first load to avoid repeated .env parsing.
 """
 
 from functools import lru_cache
+from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _read_pyproject_version() -> str:
+    """Read version from pyproject.toml without importing tomllib at module level."""
+    import tomllib
+
+    pyproject = Path(__file__).resolve().parent.parent.parent / "pyproject.toml"
+    if pyproject.exists():
+        with pyproject.open("rb") as f:
+            data = tomllib.load(f)
+        return str(data.get("project", {}).get("version", "0.0.0"))
+    return "0.0.0"
 
 
 class Settings(BaseSettings):
@@ -21,7 +34,9 @@ class Settings(BaseSettings):
 
     # Application
     app_name: str = "mailassist"
+    app_version: str = Field(default="", description="App version. Falls back to pyproject.toml if empty.")
     debug: bool = False
+    enable_changelog: bool = Field(default=True, description="Show 'What's New' changelog dialog after updates")
 
     # Database
     database_url: str = Field(
@@ -196,6 +211,13 @@ class Settings(BaseSettings):
         if v is not None and len(v) < 32:
             raise ValueError("APP_SECRET_KEY_OLD must be at least 32 characters")
         return v
+
+    @model_validator(mode="after")
+    def resolve_app_version(self) -> "Settings":
+        """Fall back to pyproject.toml version when APP_VERSION is not set."""
+        if not self.app_version:
+            object.__setattr__(self, "app_version", _read_pyproject_version())
+        return self
 
 
 @lru_cache

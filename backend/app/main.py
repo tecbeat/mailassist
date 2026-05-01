@@ -21,6 +21,7 @@ from app.api import (
     auto_replies,
     calendar,
     calendar_events,
+    changelog,
     contacts,
     coupons,
     dashboard,
@@ -33,17 +34,19 @@ from app.api import (
     pipeline,
     prompts,
     rules,
-    settings as settings_api,
     spam,
     summaries,
+)
+from app.api import (
+    settings as settings_api,
 )
 from app.core.config import get_settings
 from app.core.database import close_db, init_db
 from app.core.events import init_event_bus
 from app.core.exceptions import register_exception_handlers
 from app.core.middleware import (
-    CSRFMiddleware,
     CorrelationIdMiddleware,
+    CSRFMiddleware,
     RateLimitMiddleware,
     RequestLoggingMiddleware,
     RequestSizeLimitMiddleware,
@@ -147,14 +150,13 @@ async def _run_migrations() -> None:
     import os
     from concurrent.futures import ThreadPoolExecutor
 
-    from alembic import command
     from alembic.config import Config
-
-    from app.core.database import get_engine
-    from app.models.base import Base
 
     # Import all model modules so Base.metadata knows about them
     import app.models  # noqa: F401
+    from alembic import command
+    from app.core.database import get_engine
+    from app.models.base import Base
 
     # --- Alembic upgrade (runs in thread because env.py uses asyncio.run) ---
     backend_dir = Path(__file__).resolve().parent.parent
@@ -186,7 +188,7 @@ async def _run_migrations() -> None:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Application lifespan: startup and shutdown hooks."""
     settings = get_settings()
 
@@ -220,7 +222,7 @@ def create_app() -> FastAPI:
 
     application = FastAPI(
         title=settings.app_name,
-        version="0.1.0",
+        version=settings.app_version,
         docs_url="/docs",
         redoc_url=None,
         lifespan=lifespan,
@@ -254,6 +256,7 @@ def create_app() -> FastAPI:
     # API routes
     application.include_router(health.router)
     application.include_router(auth.router)
+    application.include_router(changelog.router)
     application.include_router(mail_accounts.router)
     application.include_router(contacts.router)
     application.include_router(dashboard.router, prefix="/api")

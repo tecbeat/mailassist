@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { Sidebar } from "./sidebar";
 import { Toaster } from "@/components/toaster";
+import { ChangelogDialog } from "@/components/changelog-dialog";
 import { useAuth } from "@/hooks/use-auth";
 
 interface AppLayoutProps {
@@ -35,6 +36,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <div className="container mx-auto p-6 pt-16 md:pt-6">{children}</div>
       </main>
       <Toaster />
+      <ChangelogDialog />
     </div>
   );
 }

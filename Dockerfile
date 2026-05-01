@@ -37,6 +37,9 @@ COPY backend/alembic/ ./alembic/
 # Copy backend source
 COPY backend/app/ ./app/
 
+# Copy changelog for the "What's New" dialog
+COPY CHANGELOG.md ./
+
 # Copy frontend build output (may not exist if frontend not yet built)
 COPY --from=frontend-builder /build/dist ./static/
 
