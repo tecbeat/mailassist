@@ -39,6 +39,38 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger()
 
+# ---------------------------------------------------------------------------
+# Field length limits (must match DB column constraints)
+# ---------------------------------------------------------------------------
+
+_LEN_MAIL_SUBJECT = 998
+_LEN_EMAIL_ADDRESS = 320
+_LEN_LABEL = 200
+_LEN_REASON = 500
+_LEN_FOLDER = 500
+_LEN_STORE = 200
+_LEN_CODE = 100
+_LEN_LOCATION = 500
+_LEN_TONE = 50
+_LEN_CONTACT_NAME = 255
+_LEN_REASONING = 500
+
+
+def _trunc(value: str | None, max_len: int) -> str | None:
+    """Truncate *value* to *max_len* characters, or return ``None`` if falsy.
+
+    Centralises the ``field[:n] if field else None`` pattern that was
+    scattered across every persistence save function.
+    """
+    if not value:
+        return None
+    return value[:max_len]
+
+
+def _trunc_required(value: str, max_len: int) -> str:
+    """Truncate a non-optional string field to *max_len* characters."""
+    return value[:max_len]
+
 
 @asynccontextmanager
 async def _persist(
@@ -110,8 +142,8 @@ async def save_email_summary(
         "user_id": user_id,
         "mail_account_id": account_id,
         "mail_uid": mail_uid,
-        "mail_subject": mail_subject[:998] if mail_subject else None,
-        "mail_from": mail_from[:320] if mail_from else None,
+        "mail_subject": _trunc(mail_subject, _LEN_MAIL_SUBJECT),
+        "mail_from": _trunc(mail_from, _LEN_EMAIL_ADDRESS),
         "mail_date": parsed_mail_date,
         "summary": summary,
         "key_points": key_points,
@@ -169,8 +201,8 @@ async def save_newsletter(
         mail_account_id=account_id,
         mail_uid=mail_uid,
         newsletter_name=newsletter_name or "Unknown",
-        sender_address=sender_address[:320] if sender_address else "unknown",
-        mail_subject=mail_subject[:998] if mail_subject else None,
+        sender_address=sender_address[:_LEN_EMAIL_ADDRESS] if sender_address else "unknown",
+        mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
         unsubscribe_url=unsubscribe_url,
         has_unsubscribe=has_unsubscribe,
     )
@@ -234,11 +266,11 @@ async def save_coupons(
                 user_id=user_id,
                 mail_account_id=account_id,
                 mail_uid=mail_uid,
-                sender_email=sender_email[:320] if sender_email else None,
-                mail_subject=mail_subject[:998] if mail_subject else None,
-                code=code[:100] if code else None,
+                sender_email=_trunc(sender_email, _LEN_EMAIL_ADDRESS),
+                mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
+                code=_trunc(code, _LEN_CODE),
                 description=description[:300] if description else None,
-                store=store[:200] if store else None,
+                store=_trunc(store, _LEN_STORE),
                 expires_at=_parse_coupon_expiry(raw_expires),
                 valid_from=_parse_coupon_expiry(raw_valid_from),
             )
@@ -278,9 +310,9 @@ async def save_applied_labels(
                 user_id=user_id,
                 mail_account_id=account_id,
                 mail_uid=mail_uid,
-                mail_subject=mail_subject[:998] if mail_subject else None,
-                mail_from=mail_from[:320] if mail_from else None,
-                label=lbl[:200],
+                mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
+                mail_from=_trunc(mail_from, _LEN_EMAIL_ADDRESS),
+                label=_trunc_required(lbl, _LEN_LABEL),
                 is_new_label=lbl.lower() not in existing_set,
             )
         )
@@ -313,11 +345,11 @@ async def save_assigned_folder(
         "user_id": user_id,
         "mail_account_id": account_id,
         "mail_uid": mail_uid,
-        "mail_subject": mail_subject[:998] if mail_subject else None,
-        "mail_from": mail_from[:320] if mail_from else None,
-        "folder": folder[:500],
+        "mail_subject": _trunc(mail_subject, _LEN_MAIL_SUBJECT),
+        "mail_from": _trunc(mail_from, _LEN_EMAIL_ADDRESS),
+        "folder": _trunc_required(folder, _LEN_FOLDER),
         "confidence": confidence,
-        "reason": reason[:200] if reason else None,
+        "reason": _trunc(reason, _LEN_REASON),
         "is_new_folder": folder.lower() not in existing_set,
         "created_at": datetime.now(UTC),
     }
@@ -445,12 +477,12 @@ async def save_calendar_event(
         user_id=user_id,
         mail_account_id=account_id,
         mail_uid=mail_uid,
-        mail_subject=mail_subject[:998] if mail_subject else None,
-        mail_from=mail_from[:320] if mail_from else None,
+        mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
+        mail_from=_trunc(mail_from, _LEN_EMAIL_ADDRESS),
         title=title[:300],
         start=parsed_start,
         end=parsed_end,
-        location=location[:500] if location else None,
+        location=_trunc(location, _LEN_LOCATION),
         description=description[:2000] if description else None,
         is_all_day=is_all_day,
     )
@@ -499,10 +531,10 @@ async def save_auto_reply(
         user_id=user_id,
         mail_account_id=account_id,
         mail_uid=mail_uid,
-        mail_subject=mail_subject[:998] if mail_subject else None,
-        mail_from=mail_from[:320] if mail_from else None,
+        mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
+        mail_from=_trunc(mail_from, _LEN_EMAIL_ADDRESS),
         draft_body=draft_body[:5000],
-        tone=tone[:50] if tone else None,
+        tone=_trunc(tone, _LEN_TONE),
         reasoning=reasoning[:300] if reasoning else None,
     )
 
@@ -540,12 +572,12 @@ async def save_contact_assignment(
         user_id=user_id,
         mail_account_id=account_id,
         mail_uid=mail_uid,
-        mail_subject=mail_subject[:998] if mail_subject else None,
-        mail_from=mail_from[:320] if mail_from else None,
+        mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
+        mail_from=_trunc(mail_from, _LEN_EMAIL_ADDRESS),
         contact_id=UUID(contact_id) if contact_id else None,
-        contact_name=contact_name[:255],
+        contact_name=_trunc_required(contact_name, _LEN_CONTACT_NAME),
         confidence=confidence,
-        reasoning=reasoning[:500] if reasoning else None,
+        reasoning=_trunc(reasoning, _LEN_REASONING),
         is_new_contact_suggestion=is_new_contact_suggestion,
     )
 
@@ -592,11 +624,11 @@ async def save_spam_detection(
         "user_id": user_id,
         "mail_account_id": account_id,
         "mail_uid": mail_uid,
-        "mail_subject": mail_subject[:998] if mail_subject else None,
-        "mail_from": mail_from[:320] if mail_from else None,
+        "mail_subject": _trunc(mail_subject, _LEN_MAIL_SUBJECT),
+        "mail_from": _trunc(mail_from, _LEN_EMAIL_ADDRESS),
         "is_spam": is_spam,
         "confidence": confidence,
-        "reason": reason[:500] if reason else None,
+        "reason": _trunc(reason, _LEN_REASON),
         "source": source,
         "created_at": now,
         "updated_at": now,
