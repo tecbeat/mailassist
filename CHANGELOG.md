@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.1.0-beta) - 2026-05-01
+
+### ⛰️  Features
+
+- *(spam)* Add deterministic header checks before LLM - ([5146c5e](https://git.teccave.de/tecbeat/mailassist/commit/5146c5e3bd28bbec3769d100a4939563c871af6d))
+
 ## [2.0.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.0.1-beta) - 2026-05-01
 
 ### 🐛 Bug Fixes
