@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.5-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.5-beta) - 2026-05-01
+
+### 🐛 Bug Fixes
+
+- *(backend)* Remove redundant IMAP SELECT in get_permanent_flags (#34) - ([83eeaa9](https://git.teccave.de/tecbeat/mailassist/commit/83eeaa9b68ce7fad336d49df91dd3c92bf7d04fc))
+
 ## [0.7.4-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.4-beta) - 2026-04-30
 
 ### 🐛 Bug Fixes
