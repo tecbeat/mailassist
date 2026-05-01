@@ -34,7 +34,9 @@ class Settings(BaseSettings):
 
     # Application
     app_name: str = "mailassist"
-    version: str = Field(default="", description="App version (VERSION env var). Falls back to pyproject.toml if empty.")
+    version: str = Field(
+        default="", description="App version (VERSION env var). Falls back to pyproject.toml if empty."
+    )
     debug: bool = False
     enable_changelog: bool = Field(default=True, description="Show 'What's New' changelog dialog after updates")
 

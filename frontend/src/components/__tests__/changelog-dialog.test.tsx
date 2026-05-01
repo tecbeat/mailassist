@@ -31,7 +31,7 @@ describe("ChangelogDialog", () => {
       expect(screen.getByText("What's New")).toBeInTheDocument();
     });
     expect(screen.getByText(/v1\.2\.0/)).toBeInTheDocument();
-    expect(screen.getByText("Okay, Let's Go!")).toBeInTheDocument();
+    expect(screen.getByText("Got it")).toBeInTheDocument();
   });
 
   it("does not show dialog when localStorage version matches", async () => {
@@ -56,10 +56,10 @@ describe("ChangelogDialog", () => {
     render(<ChangelogDialog />);
 
     await waitFor(() => {
-      expect(screen.getByText("Okay, Let's Go!")).toBeInTheDocument();
+      expect(screen.getByText("Got it")).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText("Okay, Let's Go!"));
+    await user.click(screen.getByText("Got it"));
 
     expect(localStorage.getItem("mailassist-last-seen-version")).toBe("1.2.0");
   });
