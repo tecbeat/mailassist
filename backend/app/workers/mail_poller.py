@@ -320,9 +320,22 @@ async def _poll_folder(
     if not new_uids:
         return 0
 
-    # Always batch envelope fetching — large mailboxes can have thousands of
-    # new UIDs even on a normal poll (e.g. first successful poll after a
-    # circuit-breaker reset), which would exceed the ARQ job timeout.
+    # Skip envelope fetching for very large backlogs — subject/sender/received_at
+    # are nullable and will be populated during mail processing.  Fetching
+    # envelopes for 10k+ UIDs via IMAP exceeds the ARQ job timeout on slow
+    # providers (e.g. Gmail).  The threshold is generous: 5,000 UIDs x ~30ms
+    # per sub-batch of 100 ≈ 25s, well within the 600s limit.
+    _ENVELOPE_SKIP_THRESHOLD = 5_000
+    skip_envelopes = len(new_uids) > _ENVELOPE_SKIP_THRESHOLD
+    if skip_envelopes:
+        logger.info(
+            "envelope_fetch_skipped_large_backlog",
+            account_id=account_id,
+            folder=folder,
+            new_uids=len(new_uids),
+            threshold=_ENVELOPE_SKIP_THRESHOLD,
+        )
+
     batch_size = get_settings().poll_initial_scan_batch
     total_inserted = 0
     total_envelopes_fetched = 0  # cumulative across all outer batches
@@ -330,26 +343,26 @@ async def _poll_folder(
     for i in range(0, len(new_uids), batch_size):
         batch = new_uids[i : i + batch_size]
 
-        # Fetch envelope metadata for the batch (IMAP I/O — no DB session)
-        # Split into sub-batches to avoid IMAP timeouts on large mailboxes
         envelopes: dict[str, tuple[str | None, str | None, datetime | None]] = {}
-        for j in range(0, len(batch), _ENVELOPE_SUBBATCH_SIZE):
-            subbatch = batch[j : j + _ENVELOPE_SUBBATCH_SIZE]
-            sub_envelopes = await fetch_envelopes(conn, subbatch, folder=folder)
-            envelopes.update(sub_envelopes)
-            total_envelopes_fetched += len(sub_envelopes)
+        if not skip_envelopes:
+            # Fetch envelope metadata for the batch (IMAP I/O — no DB session)
+            # Split into sub-batches to avoid IMAP timeouts on large mailboxes
+            for j in range(0, len(batch), _ENVELOPE_SUBBATCH_SIZE):
+                subbatch = batch[j : j + _ENVELOPE_SUBBATCH_SIZE]
+                sub_envelopes = await fetch_envelopes(conn, subbatch, folder=folder)
+                envelopes.update(sub_envelopes)
+                total_envelopes_fetched += len(sub_envelopes)
 
-            # Progress logging during initial scan for large mailboxes
-            if is_initial_scan:
-                progress_pct = (total_envelopes_fetched / len(new_uids)) * 100
-                logger.debug(
-                    "initial_scan_progress",
-                    account_id=account_id,
-                    folder=folder,
-                    fetched=total_envelopes_fetched,
-                    total=len(new_uids),
-                    progress_pct=progress_pct,
-                )
+                if is_initial_scan:
+                    progress_pct = (total_envelopes_fetched / len(new_uids)) * 100
+                    logger.debug(
+                        "initial_scan_progress",
+                        account_id=account_id,
+                        folder=folder,
+                        fetched=total_envelopes_fetched,
+                        total=len(new_uids),
+                        progress_pct=progress_pct,
+                    )
 
         # Bulk insert into tracked_emails with correct folder (short DB session)
         async with get_session_ctx() as db:
