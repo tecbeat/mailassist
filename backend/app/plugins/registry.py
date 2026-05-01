@@ -16,10 +16,10 @@ from app.plugins.base import AIFunctionPlugin
 logger = structlog.get_logger()
 
 # Decorator-based registration
-_registered_plugins: dict[str, type[AIFunctionPlugin]] = {}
+_registered_plugins: dict[str, type[AIFunctionPlugin[Any]]] = {}
 
 
-def register_plugin(cls: type[AIFunctionPlugin]) -> type[AIFunctionPlugin]:
+def register_plugin(cls: type[AIFunctionPlugin[Any]]) -> type[AIFunctionPlugin[Any]]:
     """Decorator to register an AI function plugin.
 
     Usage:
@@ -46,7 +46,7 @@ class PluginRegistry:
     """
 
     def __init__(self) -> None:
-        self._plugins: dict[str, AIFunctionPlugin] = {}
+        self._plugins: dict[str, AIFunctionPlugin[Any]] = {}
 
     def discover_plugins(self) -> None:
         """Import all modules in the plugins package to trigger registration."""
@@ -72,11 +72,11 @@ class PluginRegistry:
             plugins=list(self._plugins.keys()),
         )
 
-    def get_plugin(self, name: str) -> AIFunctionPlugin | None:
+    def get_plugin(self, name: str) -> AIFunctionPlugin[Any] | None:
         """Get a plugin by name."""
         return self._plugins.get(name)
 
-    def get_all_plugins(self) -> list[AIFunctionPlugin]:
+    def get_all_plugins(self) -> list[AIFunctionPlugin[Any]]:
         """Get all plugins sorted by execution_order."""
         return sorted(self._plugins.values(), key=lambda p: p.execution_order)
 

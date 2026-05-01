@@ -7,7 +7,7 @@ and pagination helpers via FastAPI's Depends() mechanism.
 from __future__ import annotations
 
 import math
-from typing import Annotated, Any, Sequence, TypeVar
+from typing import TYPE_CHECKING, Annotated, Any, TypeVar
 from uuid import UUID
 
 from fastapi import Depends, HTTPException
@@ -23,8 +23,12 @@ def get_cached_settings() -> Settings:
     return get_settings()
 
 
-from app.api.auth import get_current_user_id
+# Imported here to avoid circular imports at module level — auth depends on
+# deps indirectly, but get_current_user_id is a leaf dependency.
+from app.api.auth import get_current_user_id  # noqa: E402
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 # Type aliases for dependency injection
 SettingsDep = Annotated[Settings, Depends(get_cached_settings)]
@@ -39,7 +43,7 @@ CurrentUserId = Annotated[str, Depends(get_current_user_id)]
 T = TypeVar("T")
 
 
-async def get_or_404(
+async def get_or_404[T](
     db: AsyncSession,
     model: type[T],
     record_id: UUID,
@@ -75,7 +79,7 @@ async def get_or_404(
 class PaginatedResult:
     """Container for paginated query results."""
 
-    __slots__ = ("items", "total", "page", "per_page", "pages")
+    __slots__ = ("items", "page", "pages", "per_page", "total")
 
     def __init__(
         self,
@@ -144,7 +148,7 @@ async def paginate(
     )
 
 
-async def get_or_create(
+async def get_or_create[T](
     db: AsyncSession,
     model: type[T],
     user_id: UUID,

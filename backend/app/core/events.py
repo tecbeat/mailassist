@@ -188,7 +188,7 @@ class EventBus:
                     handler(event),
                     timeout=HANDLER_TIMEOUT_SECONDS,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error(
                     "event_handler_timeout",
                     event_type=event_type,

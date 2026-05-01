@@ -126,7 +126,9 @@ async def _propfind(
 
 
 async def _discover_dav_url(
-    client: httpx.AsyncClient, server_url: str, service: str,
+    client: httpx.AsyncClient,
+    server_url: str,
+    service: str,
 ) -> str:
     """Try well-known discovery, fall back to common Nextcloud paths.
 
@@ -143,7 +145,8 @@ async def _discover_dav_url(
     well_known = f"{base}/.well-known/{service}"
     try:
         resp = await client.request(
-            "PROPFIND", well_known,
+            "PROPFIND",
+            well_known,
             headers={"Depth": "0", "Content-Type": "application/xml"},
             content=_PROPFIND_PRINCIPAL,
         )
@@ -164,8 +167,8 @@ async def _discover_dav_url(
     # 2. Try common Nextcloud/Sabre paths
     for path in ["/remote.php/dav", "/dav"]:
         url = f"{base}{path}"
-        resp = await _propfind(client, url, _PROPFIND_PRINCIPAL)
-        if resp:
+        resp_check = await _propfind(client, url, _PROPFIND_PRINCIPAL)
+        if resp_check:
             return url
 
     # 3. Fall back to provided URL as-is
@@ -173,7 +176,8 @@ async def _discover_dav_url(
 
 
 async def _discover_principal(
-    client: httpx.AsyncClient, dav_url: str,
+    client: httpx.AsyncClient,
+    dav_url: str,
 ) -> str | None:
     """Discover the current-user-principal href."""
     resp = await _propfind(client, dav_url, _PROPFIND_PRINCIPAL)
@@ -191,7 +195,8 @@ async def _discover_principal(
 
 
 async def _discover_homesets(
-    client: httpx.AsyncClient, principal_url: str,
+    client: httpx.AsyncClient,
+    principal_url: str,
 ) -> tuple[str | None, str | None]:
     """Discover addressbook-home-set and calendar-home-set from the principal."""
     resp = await _propfind(client, principal_url, _PROPFIND_HOMESETS)
@@ -214,7 +219,8 @@ async def _discover_homesets(
 
 
 async def _discover_collections(
-    client: httpx.AsyncClient, home_url: str,
+    client: httpx.AsyncClient,
+    home_url: str,
 ) -> list[DavCollection]:
     """List collections (address books or calendars) under a home-set URL."""
     resp = await _propfind(client, home_url, _PROPFIND_COLLECTIONS, depth="1")
@@ -242,24 +248,29 @@ async def _discover_collections(
 
             # Skip the parent collection itself (compare full paths)
             from urllib.parse import urlparse
+
             home_path = urlparse(home_url).path.rstrip("/")
             if href.rstrip("/") == home_path:
                 continue
 
             if restype.find("card:addressbook", _NS) is not None:
-                collections.append(DavCollection(
-                    href=href,
-                    slug=slug,
-                    display_name=display_name,
-                    collection_type="addressbook",
-                ))
+                collections.append(
+                    DavCollection(
+                        href=href,
+                        slug=slug,
+                        display_name=display_name,
+                        collection_type="addressbook",
+                    )
+                )
             elif restype.find("cal:calendar", _NS) is not None:
-                collections.append(DavCollection(
-                    href=href,
-                    slug=slug,
-                    display_name=display_name,
-                    collection_type="calendar",
-                ))
+                collections.append(
+                    DavCollection(
+                        href=href,
+                        slug=slug,
+                        display_name=display_name,
+                        collection_type="calendar",
+                    )
+                )
     except Exception:
         logger.warning("collection_parse_failed", home_url=home_url)
 
@@ -289,7 +300,8 @@ async def discover_dav(
     """
     if not server_url.startswith("https://"):
         return DavDiscoveryResult(
-            success=False, message="Server URL must use HTTPS",
+            success=False,
+            message="Server URL must use HTTPS",
         )
 
     try:
@@ -346,9 +358,11 @@ async def discover_dav(
 
     except httpx.TimeoutException:
         return DavDiscoveryResult(
-            success=False, message="Connection timed out.",
+            success=False,
+            message="Connection timed out.",
         )
     except Exception as e:
         return DavDiscoveryResult(
-            success=False, message=f"Discovery failed: {e}",
+            success=False,
+            message=f"Discovery failed: {e}",
         )

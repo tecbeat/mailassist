@@ -7,10 +7,9 @@ supports it, including the id_token_hint from the encrypted session tokens.
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 from conftest import FakeEncryption, FakeValkey
 
 
@@ -21,21 +20,25 @@ def fake_session_client():
 
 def _store_session(client: FakeValkey, session_id: str, *, id_token: str | None = "test-id-token") -> None:
     """Store a session with encrypted tokens in FakeValkey."""
-    tokens = json.dumps({
-        "access_token": "access-tok",
-        "refresh_token": "refresh-tok",
-        "id_token": id_token,
-        "expires_at": 9999999999,
-    })
+    tokens = json.dumps(
+        {
+            "access_token": "access-tok",
+            "refresh_token": "refresh-tok",
+            "id_token": id_token,
+            "expires_at": 9999999999,
+        }
+    )
     # FakeEncryption.encrypt returns plaintext bytes
     encrypted = FakeEncryption().encrypt(tokens)
-    session_data = json.dumps({
-        "user_id": "user-123",
-        "email": "test@example.com",
-        "display_name": "Test User",
-        "encrypted_tokens": encrypted.decode(),
-        "created_at": "2026-01-01T00:00:00+00:00",
-    })
+    session_data = json.dumps(
+        {
+            "user_id": "user-123",
+            "email": "test@example.com",
+            "display_name": "Test User",
+            "encrypted_tokens": encrypted.decode(),
+            "created_at": "2026-01-01T00:00:00+00:00",
+        }
+    )
     client._store[f"session:{session_id}"] = session_data
 
 

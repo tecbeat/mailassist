@@ -7,22 +7,22 @@ Sessions stored in Valkey with TTL auto-expiry.
 import asyncio
 import base64
 import hashlib
-import secrets
 import json
+import secrets
 import time
 from datetime import UTC, datetime
+from typing import Any
 from urllib.parse import urlencode
 
 import httpx
 import structlog
 from fastapi import APIRouter, HTTPException, Request
-
-from app.core.middleware import get_client_ip
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.core.database import get_session_ctx
+from app.core.middleware import get_client_ip
 from app.core.redis import get_session_client
 from app.core.security import get_encryption
 from app.models import User
@@ -33,7 +33,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 # OIDC discovery cache (re-fetched every 60 minutes)
 _OIDC_CACHE_TTL_SECONDS = 3600
-_oidc_config: dict | None = None
+_oidc_config: dict[str, Any] | None = None
 _oidc_config_fetched_at: float = 0.0
 _oidc_lock = asyncio.Lock()  # prevents thundering herd on cache expiry
 
@@ -46,7 +46,7 @@ def _create_pkce_pair() -> tuple[str, str]:
     return code_verifier, code_challenge
 
 
-async def _get_oidc_config() -> dict:
+async def _get_oidc_config() -> dict[str, Any]:
     """Fetch and cache OIDC discovery document.
 
     The document is cached in memory and refreshed after
@@ -106,7 +106,7 @@ async def _exchange_code_for_token(
     token_endpoint: str,
     code: str,
     code_verifier: str,
-) -> dict:
+) -> dict[str, Any]:
     """Exchange an authorization code for tokens using PKCE."""
     settings = get_settings()
     if not all([settings.oidc_client_id, settings.oidc_client_secret, settings.oidc_redirect_uri]):
@@ -124,7 +124,7 @@ async def _exchange_code_for_token(
         if resp.status_code != 200:
             logger.error("oidc_token_exchange_failed", status=resp.status_code, body=resp.text)
             raise HTTPException(status_code=401, detail="Authentication failed")
-        return resp.json()
+        return resp.json()  # type: ignore[no-any-return]
 
 
 @router.get("/login")
@@ -145,7 +145,7 @@ async def login(request: Request) -> RedirectResponse:
     end
     return current
     """
-    current_count = await session_client.eval(lua_script, 1, rate_key, 60)
+    current_count = await session_client.eval(lua_script, 1, rate_key, str(60))  # type: ignore[misc]
     if current_count > settings.auth_rate_limit:
         raise HTTPException(status_code=429, detail="Too many login attempts. Try again later.")
 
@@ -182,6 +182,7 @@ async def callback(
             error_description=error_description,
         )
         from urllib.parse import quote
+
         error_msg = error_description or error
         return RedirectResponse(
             url=f"/login?error={quote(error_msg)}",
@@ -219,7 +220,7 @@ async def callback(
         raise
     except Exception as e:
         logger.error("oidc_token_exchange_failed", error=str(e))
-        raise HTTPException(status_code=401, detail="Authentication failed")
+        raise HTTPException(status_code=401, detail="Authentication failed") from None
 
     # Fetch user info
     userinfo_endpoint = oidc_config["userinfo_endpoint"]
@@ -270,27 +271,33 @@ async def callback(
             raise HTTPException(
                 status_code=500,
                 detail="Authentication failed due to a server error",
-            )
+            ) from None
 
         # Session fixation prevention: generate new session ID
         session_id = secrets.token_urlsafe(48)
 
         # Encrypt and store tokens in Valkey session
         encryption = get_encryption()
-        encrypted_tokens = encryption.encrypt(json.dumps({
-            "access_token": token.get("access_token"),
-            "refresh_token": token.get("refresh_token"),
-            "id_token": token.get("id_token"),
-            "expires_at": token.get("expires_at"),
-        }))
+        encrypted_tokens = encryption.encrypt(
+            json.dumps(
+                {
+                    "access_token": token.get("access_token"),
+                    "refresh_token": token.get("refresh_token"),
+                    "id_token": token.get("id_token"),
+                    "expires_at": token.get("expires_at"),
+                }
+            )
+        )
 
-        session_data = json.dumps({
-            "user_id": user_id,
-            "email": email,
-            "display_name": display_name,
-            "encrypted_tokens": encrypted_tokens.decode(),
-            "created_at": datetime.now(UTC).isoformat(),
-        })
+        session_data = json.dumps(
+            {
+                "user_id": user_id,
+                "email": email,
+                "display_name": display_name,
+                "encrypted_tokens": encrypted_tokens.decode(),
+                "created_at": datetime.now(UTC).isoformat(),
+            }
+        )
 
         await session_client.setex(
             f"session:{session_id}",
@@ -380,11 +387,13 @@ async def get_current_user(request: Request) -> JSONResponse:
 
     session = json.loads(session_data)
 
-    return JSONResponse(content={
-        "user_id": session["user_id"],
-        "email": session["email"],
-        "display_name": session["display_name"],
-    })
+    return JSONResponse(
+        content={
+            "user_id": session["user_id"],
+            "email": session["email"],
+            "display_name": session["display_name"],
+        }
+    )
 
 
 async def get_current_user_id(request: Request) -> str:
@@ -404,4 +413,4 @@ async def get_current_user_id(request: Request) -> str:
         raise HTTPException(status_code=401, detail="Session expired")
 
     session = json.loads(session_data)
-    return session["user_id"]
+    return session["user_id"]  # type: ignore[no-any-return]

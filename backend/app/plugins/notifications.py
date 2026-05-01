@@ -7,7 +7,7 @@ processing pipeline -- notifications are triggered by other subsystems.
 
 from pydantic import BaseModel
 
-from app.plugins.base import AIFunctionPlugin, ActionResult, MailContext
+from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
 
 

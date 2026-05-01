@@ -2,9 +2,11 @@
 
 import enum
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     Enum,
@@ -12,7 +14,6 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    JSON,
     LargeBinary,
     String,
     Text,
@@ -23,6 +24,12 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.contacts import Contact
+    from app.models.reprocessing import FolderChangeLog, LabelChangeLog
+    from app.models.rules import Approval, Rule
+    from app.models.user import User
 
 
 class UrgencyLevel(str, enum.Enum):
@@ -51,7 +58,6 @@ class CompletionReason(str, enum.Enum):
     ALL_PLUGINS_FAILED = "all_plugins_failed"
     PIPELINE_DID_NOT_RUN = "pipeline_did_not_run"
     SPAM_SHORT_CIRCUIT = "spam_short_circuit"
-
 
 
 class MailAccount(Base):
@@ -106,21 +112,39 @@ class MailAccount(Base):
     user: Mapped["User"] = relationship(back_populates="mail_accounts")
     approvals: Mapped[list["Approval"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
     rules: Mapped[list["Rule"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
-    extracted_coupons: Mapped[list["ExtractedCoupon"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
-    detected_newsletters: Mapped[list["DetectedNewsletter"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
-    ai_drafts: Mapped[list["AIDraft"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
-    email_summaries: Mapped[list["EmailSummary"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
-    label_change_logs: Mapped[list["LabelChangeLog"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
-    folder_change_logs: Mapped[list["FolderChangeLog"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
-    applied_labels: Mapped[list["AppliedLabel"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
-    assigned_folders: Mapped[list["AssignedFolder"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
-    calendar_events: Mapped[list["CalendarEvent"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
-    auto_reply_records: Mapped[list["AutoReplyRecord"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
-    contact_assignments: Mapped[list["ContactAssignment"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
-
-    __table_args__ = (
-        Index("ix_mail_accounts_user_id", "user_id"),
+    extracted_coupons: Mapped[list["ExtractedCoupon"]] = relationship(
+        back_populates="mail_account", cascade="all, delete-orphan"
     )
+    detected_newsletters: Mapped[list["DetectedNewsletter"]] = relationship(
+        back_populates="mail_account", cascade="all, delete-orphan"
+    )
+    ai_drafts: Mapped[list["AIDraft"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
+    email_summaries: Mapped[list["EmailSummary"]] = relationship(
+        back_populates="mail_account", cascade="all, delete-orphan"
+    )
+    label_change_logs: Mapped[list["LabelChangeLog"]] = relationship(
+        back_populates="mail_account", cascade="all, delete-orphan"
+    )
+    folder_change_logs: Mapped[list["FolderChangeLog"]] = relationship(
+        back_populates="mail_account", cascade="all, delete-orphan"
+    )
+    applied_labels: Mapped[list["AppliedLabel"]] = relationship(
+        back_populates="mail_account", cascade="all, delete-orphan"
+    )
+    assigned_folders: Mapped[list["AssignedFolder"]] = relationship(
+        back_populates="mail_account", cascade="all, delete-orphan"
+    )
+    calendar_events: Mapped[list["CalendarEvent"]] = relationship(
+        back_populates="mail_account", cascade="all, delete-orphan"
+    )
+    auto_reply_records: Mapped[list["AutoReplyRecord"]] = relationship(
+        back_populates="mail_account", cascade="all, delete-orphan"
+    )
+    contact_assignments: Mapped[list["ContactAssignment"]] = relationship(
+        back_populates="mail_account", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (Index("ix_mail_accounts_user_id", "user_id"),)
 
 
 class DraftStatus(str, enum.Enum):
@@ -398,7 +422,9 @@ class ContactAssignment(Base):
     mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
     mail_from: Mapped[str | None] = mapped_column(String(320), nullable=True)
-    contact_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True)
+    contact_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True
+    )
     contact_name: Mapped[str] = mapped_column(String(255), nullable=False)
     confidence: Mapped[float] = mapped_column(nullable=False)
     reasoning: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -499,7 +525,8 @@ class TrackedEmail(Base):
     mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[TrackedEmailStatus] = mapped_column(
         Enum(TrackedEmailStatus, values_callable=lambda x: [e.value for e in x]),
-        default=TrackedEmailStatus.QUEUED, nullable=False
+        default=TrackedEmailStatus.QUEUED,
+        nullable=False,
     )
     subject: Mapped[str | None] = mapped_column(Text, nullable=True)
     sender: Mapped[str | None] = mapped_column(String(320), nullable=True)

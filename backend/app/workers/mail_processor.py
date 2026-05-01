@@ -30,11 +30,11 @@ and providers.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from uuid import UUID
-
 import asyncio
 import time
+from datetime import UTC, datetime
+from typing import Any
+from uuid import UUID
 
 import structlog
 from sqlalchemy import select, update
@@ -65,6 +65,7 @@ logger = structlog.get_logger()
 # ---------------------------------------------------------------------------
 # Tracked-email status helpers (independent sessions, non-fatal)
 # ---------------------------------------------------------------------------
+
 
 async def _update_tracked_status(
     account_id: str,
@@ -199,8 +200,10 @@ async def _update_current_folder(
                 tracked.mail_uid = new_mail_uid
             await db.flush()
         log.info(
-            "current_folder_updated", folder=new_folder,
-            old_uid=mail_uid, new_uid=new_mail_uid,
+            "current_folder_updated",
+            folder=new_folder,
+            old_uid=mail_uid,
+            new_uid=new_mail_uid,
         )
     except Exception:
         log.warning("current_folder_update_failed", folder=new_folder, exc_info=True)
@@ -236,11 +239,11 @@ async def _fail_queued_mails_for_folder(
             )
             result = await db.execute(stmt)
             await db.flush()
-            if result.rowcount:
+            if result.rowcount:  # type: ignore[attr-defined]
                 log.info(
                     "bulk_failed_mails_for_missing_folder",
                     folder=folder,
-                    count=result.rowcount,
+                    count=result.rowcount,  # type: ignore[attr-defined]
                 )
     except Exception:
         log.warning("bulk_fail_for_folder_failed", folder=folder, exc_info=True)
@@ -249,6 +252,7 @@ async def _fail_queued_mails_for_folder(
 # ---------------------------------------------------------------------------
 # Pause helpers (independent sessions, non-fatal)
 # ---------------------------------------------------------------------------
+
 
 async def _pause_account(
     account_id: str,
@@ -315,8 +319,9 @@ async def _pause_provider(
 # ARQ task entry point
 # ---------------------------------------------------------------------------
 
+
 async def process_mail(
-    ctx: dict,
+    ctx: dict[str, Any],
     user_id: str,
     account_id: str,
     mail_uid: str,
@@ -343,8 +348,10 @@ async def process_mail(
     """
     correlation_id = f"process-{account_id}-{mail_uid}"
     log = logger.bind(
-        user_id=user_id, account_id=account_id,
-        mail_uid=mail_uid, current_folder=current_folder,
+        user_id=user_id,
+        account_id=account_id,
+        mail_uid=mail_uid,
+        current_folder=current_folder,
         correlation_id=correlation_id,
     )
 
@@ -368,7 +375,10 @@ async def process_mail(
         # Reset to QUEUED so the scheduler can retry without waiting
         # for the stale-processing watchdog.
         await _update_tracked_status(
-            account_id, mail_uid, TrackedEmailStatus.QUEUED, log,
+            account_id,
+            mail_uid,
+            TrackedEmailStatus.QUEUED,
+            log,
             current_folder=current_folder,
             error=f"timeout after {round(elapsed)}s",
             error_type=ErrorType.TIMEOUT,
@@ -394,11 +404,17 @@ async def _process_mail_inner(
 
     # --- Phase 2: IMAP fetch + parse ---
     await _set_pipeline_progress(
-        account_id, mail_uid, current_folder=current_folder, phase="imap_fetch",
+        account_id,
+        mail_uid,
+        current_folder=current_folder,
+        phase="imap_fetch",
     )
     try:
         raw_bytes, imap_folders, folder_sep = await fetch_raw_mail(
-            account, mail_uid, current_folder, log,
+            account,
+            mail_uid,
+            current_folder,
+            log,
         )
     except IMAPFolderError as e:
         # Folder was deleted or renamed on the server — this is permanent
@@ -406,7 +422,10 @@ async def _process_mail_inner(
         error_msg = str(e)
         log.warning("imap_folder_missing", error=error_msg, folder=current_folder)
         await _update_tracked_status(
-            account_id, mail_uid, TrackedEmailStatus.FAILED, log,
+            account_id,
+            mail_uid,
+            TrackedEmailStatus.FAILED,
+            log,
             current_folder=current_folder,
             error=error_msg,
             error_type=ErrorType.MAIL,
@@ -423,7 +442,10 @@ async def _process_mail_inner(
             # do NOT pause the account so other mails continue processing.
             log.warning("imap_fetch_no_body", error=error_msg)
             await _update_tracked_status(
-                account_id, mail_uid, TrackedEmailStatus.FAILED, log,
+                account_id,
+                mail_uid,
+                TrackedEmailStatus.FAILED,
+                log,
                 current_folder=current_folder,
                 error=error_msg,
                 error_type=ErrorType.MAIL,
@@ -433,7 +455,10 @@ async def _process_mail_inner(
             log.error("imap_fetch_error", error=error_msg)
             await _pause_account(account_id, f"imap_fetch_error: {e}", log)
             await _update_tracked_status(
-                account_id, mail_uid, TrackedEmailStatus.QUEUED, log,
+                account_id,
+                mail_uid,
+                TrackedEmailStatus.QUEUED,
+                log,
                 current_folder=current_folder,
                 error=error_msg,
                 error_type=ErrorType.PROVIDER_IMAP,
@@ -444,7 +469,10 @@ async def _process_mail_inner(
         log.warning("imap_connection_failed", error=str(e))
         await _pause_account(account_id, f"imap_connection_failed: {e}", log)
         await _update_tracked_status(
-            account_id, mail_uid, TrackedEmailStatus.QUEUED, log,
+            account_id,
+            mail_uid,
+            TrackedEmailStatus.QUEUED,
+            log,
             current_folder=current_folder,
             error=f"imap_connection_failed: {e}",
             error_type=ErrorType.PROVIDER_IMAP,
@@ -457,7 +485,10 @@ async def _process_mail_inner(
         # Permanent mail-specific error — no retry
         log.exception("email_parse_failed")
         await _update_tracked_status(
-            account_id, mail_uid, TrackedEmailStatus.FAILED, log,
+            account_id,
+            mail_uid,
+            TrackedEmailStatus.FAILED,
+            log,
             current_folder=current_folder,
             error=str(e),
             error_type=ErrorType.MAIL,
@@ -476,7 +507,9 @@ async def _process_mail_inner(
     # regardless of whether the mail was discovered by the poller (with
     # envelope) or the IDLE monitor (without).
     await _update_tracked_metadata(
-        account_id, mail_uid, current_folder,
+        account_id,
+        mail_uid,
+        current_folder,
         subject=parsed.subject,
         sender=parsed.sender,
         received_at=parsed.date,
@@ -514,7 +547,10 @@ async def _process_mail_inner(
                 log,
             )
         await _update_tracked_status(
-            account_id, mail_uid, TrackedEmailStatus.QUEUED, log,
+            account_id,
+            mail_uid,
+            TrackedEmailStatus.QUEUED,
+            log,
             current_folder=current_folder,
             error=pipeline_result.transient_reenqueue_reason or "provider_error",
             error_type=ErrorType.PROVIDER_AI,
@@ -524,7 +560,10 @@ async def _process_mail_inner(
     # --- Phase 4: IMAP actions ---
     if pipeline_result.auto_actions:
         await _set_pipeline_progress(
-            account_id, mail_uid, current_folder=current_folder, phase="imap_actions",
+            account_id,
+            mail_uid,
+            current_folder=current_folder,
+            phase="imap_actions",
         )
         try:
             new_folder, new_mail_uid = await execute_post_pipeline(
@@ -538,7 +577,11 @@ async def _process_mail_inner(
             )
             if new_folder != current_folder:
                 await _update_current_folder(
-                    account_id, mail_uid, current_folder, new_folder, log,
+                    account_id,
+                    mail_uid,
+                    current_folder,
+                    new_folder,
+                    log,
                     new_mail_uid=new_mail_uid,
                 )
                 # Track the new coordinates so the COMPLETED status update
@@ -557,7 +600,10 @@ async def _process_mail_inner(
             )
             await _pause_account(account_id, f"phase4_imap_error: {e}", log)
             await _update_tracked_status(
-                account_id, mail_uid, TrackedEmailStatus.QUEUED, log,
+                account_id,
+                mail_uid,
+                TrackedEmailStatus.QUEUED,
+                log,
                 current_folder=current_folder,
                 error=f"phase4_imap_error: {e}",
                 error_type=ErrorType.PROVIDER_IMAP,
@@ -587,7 +633,10 @@ async def _process_mail_inner(
 
     if pipeline_ran:
         await _update_tracked_status(
-            account_id, mail_uid, TrackedEmailStatus.COMPLETED, log,
+            account_id,
+            mail_uid,
+            TrackedEmailStatus.COMPLETED,
+            log,
             current_folder=current_folder,
             plugins_completed=pipeline_result.plugins_completed or None,
             plugins_failed=pipeline_result.plugins_failed or None,
@@ -600,7 +649,10 @@ async def _process_mail_inner(
         # PROCESSING and get reset to QUEUED by the stale-processing
         # watchdog — which would create an infinite loop.
         await _update_tracked_status(
-            account_id, mail_uid, TrackedEmailStatus.COMPLETED, log,
+            account_id,
+            mail_uid,
+            TrackedEmailStatus.COMPLETED,
+            log,
             current_folder=current_folder,
             completion_reason=CompletionReason.PIPELINE_DID_NOT_RUN,
         )
@@ -608,14 +660,16 @@ async def _process_mail_inner(
 
     # Emit completion event
     event_bus = get_event_bus()
-    await event_bus.emit(AIProcessingCompleteEvent(
-        user_id=UUID(user_id),
-        account_id=UUID(account_id),
-        mail_uid=mail_uid,
-        current_folder=current_folder,
-        plugins_executed=pipeline_result.plugins_executed,
-        approvals_created=pipeline_result.approvals_created,
-    ))
+    await event_bus.emit(
+        AIProcessingCompleteEvent(
+            user_id=UUID(user_id),
+            account_id=UUID(account_id),
+            mail_uid=mail_uid,
+            current_folder=current_folder,
+            plugins_executed=pipeline_result.plugins_executed,
+            approvals_created=pipeline_result.approvals_created,
+        )
+    )
 
     await _clear_pipeline_progress(account_id, mail_uid, current_folder)
 
@@ -632,8 +686,7 @@ def _mark_completed(result: PipelineResult, log: structlog.stdlib.BoundLogger) -
         return
 
     pipeline_ran = bool(
-        result.plugins_executed or result.approvals_created
-        or result.auto_actions or result.plugins_skipped,
+        result.plugins_executed or result.approvals_created or result.auto_actions or result.plugins_skipped,
     )
 
     if not pipeline_ran:

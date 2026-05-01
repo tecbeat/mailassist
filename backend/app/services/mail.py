@@ -15,6 +15,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 import structlog
@@ -24,7 +25,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.security import decrypt_credentials
-from app.core.types import ConnectionTestResult
 from app.models import MailAccount
 
 logger = structlog.get_logger()
@@ -73,7 +73,7 @@ async def safe_imap_logout(mailbox: object) -> None:
               for flexibility).
     """
     try:
-        await asyncio.to_thread(mailbox.logout)  # type: ignore[union-attr]
+        await asyncio.to_thread(mailbox.logout)  # type: ignore[attr-defined]
     except Exception:
         # Benign: connection may already be closed by server.
         logger.debug("imap_logout_failed", exc_info=True)
@@ -111,11 +111,13 @@ async def connect_imap(account: MailAccount) -> ImapConnection:
     # Detect folder separator from folder list
     separator = "/"
     try:
+
         def _detect_separator() -> str:
             folders = list(mailbox.folder.list())
             if folders:
                 return folders[0].delim
             return "/"
+
         separator = await asyncio.to_thread(_detect_separator)
     except Exception:
         logger.warning("separator_detection_failed", account_id=str(account.id), host=account.imap_host)
@@ -123,6 +125,7 @@ async def connect_imap(account: MailAccount) -> ImapConnection:
     # Detect capabilities via low-level imaplib client
     capabilities: list[str] = []
     try:
+
         def _detect_capabilities() -> list[str]:
             status, caps = mailbox.client.capability()
             if status == "OK" and caps:
@@ -130,6 +133,7 @@ async def connect_imap(account: MailAccount) -> ImapConnection:
                 text = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw)
                 return text.split()
             return []
+
         capabilities = await asyncio.to_thread(_detect_capabilities)
     except Exception:
         logger.warning("capability_detection_failed", account_id=str(account.id), host=account.imap_host)
@@ -177,12 +181,11 @@ async def list_folders(conn: ImapConnection) -> list[str]:
     Folders flagged ``\\Noselect`` (container-only) are excluded because
     they cannot be opened with SELECT/EXAMINE.
     """
+
     def _list() -> list[str]:
         folders = list(conn.mailbox.folder.list())
-        return [
-            f.name for f in folders
-            if "\\Noselect" not in f.flags
-        ]
+        return [f.name for f in folders if "\\Noselect" not in f.flags]
+
     return await asyncio.to_thread(_list)
 
 
@@ -202,7 +205,7 @@ async def get_cached_folders(account_id: UUID) -> list[str] | None:
     if raw is None:
         return None
     try:
-        return json.loads(raw)
+        return json.loads(raw)  # type: ignore[no-any-return]
     except (json.JSONDecodeError, TypeError):
         return None
 
@@ -257,6 +260,7 @@ async def get_permanent_flags(conn: ImapConnection, folder: str = "INBOX") -> li
     Reads PERMANENTFLAGS from the SELECT response that folder.set() issues
     internally, avoiding a second round-trip to the IMAP server.
     """
+
     def _get_flags() -> list[str]:
         try:
             conn.mailbox.folder.set(folder)
@@ -270,6 +274,7 @@ async def get_permanent_flags(conn: ImapConnection, folder: str = "INBOX") -> li
             if match:
                 flags = match.group(1).split()
         return flags
+
     return await asyncio.to_thread(_get_flags)
 
 
@@ -278,6 +283,7 @@ async def create_folder(conn: ImapConnection, folder_path: str) -> bool:
 
     Handles different folder separators per server.
     """
+
     def _create() -> bool:
         parts = folder_path.split(conn.separator)
         current_path = ""
@@ -379,6 +385,7 @@ async def store_flags(
     Use standard flags like \\Seen, \\Flagged, \\Deleted or custom
     IMAP keywords (labels) like 'newsletter', 'coupon'.
     """
+
     def _store() -> bool:
         conn.mailbox.folder.set(folder)
         conn.mailbox.flag(mail_uid, flags, True)
@@ -416,7 +423,7 @@ class MoveResult:
 _COPYUID_RE = re.compile(r"\[COPYUID\s+\d+\s+\d+\s+(\d+)\]", re.IGNORECASE)
 
 
-def _parse_copyuid(data: list) -> str | None:
+def _parse_copyuid(data: list[Any]) -> str | None:
     """Extract the destination UID from an IMAP COPYUID response code.
 
     Works with both imaplib response data (list of bytes) and string data.
@@ -443,13 +450,12 @@ async def move_message(
     Uses low-level imaplib client to capture the COPYUID response
     for tracking the new UID in the destination folder.
     """
+
     def _move() -> MoveResult:
         conn.mailbox.folder.set(source)
         client = conn.mailbox.client
 
-        supports_move = conn.capabilities and any(
-            cap.upper() == "MOVE" for cap in conn.capabilities
-        )
+        supports_move = conn.capabilities and any(cap.upper() == "MOVE" for cap in conn.capabilities)
 
         if supports_move:
             try:
@@ -457,8 +463,10 @@ async def move_message(
                 if status == "OK":
                     new_uid = _parse_copyuid(data)
                     logger.info(
-                        "message_moved", mail_uid=mail_uid,
-                        destination=destination, new_uid=new_uid,
+                        "message_moved",
+                        mail_uid=mail_uid,
+                        destination=destination,
+                        new_uid=new_uid,
                     )
                     return MoveResult(success=True, new_uid=new_uid)
             except Exception:
@@ -491,8 +499,11 @@ async def move_message(
 
         client.expunge()
         logger.info(
-            "message_moved", mail_uid=mail_uid,
-            destination=destination, method="copy+delete", new_uid=new_uid,
+            "message_moved",
+            mail_uid=mail_uid,
+            destination=destination,
+            method="copy+delete",
+            new_uid=new_uid,
         )
         return MoveResult(success=True, new_uid=new_uid)
 
@@ -504,9 +515,11 @@ async def move_all_to_inbox(conn: ImapConnection, folder_path: str) -> list[str]
 
     Returns the list of UIDs that were successfully moved.
     """
+
     def _get_uids() -> list[str]:
         conn.mailbox.folder.set(folder_path)
         return conn.mailbox.uids("ALL")
+
     try:
         uid_list = await asyncio.to_thread(_get_uids)
     except Exception:
@@ -529,9 +542,7 @@ async def move_all_to_inbox(conn: ImapConnection, folder_path: str) -> list[str]
         client = conn.mailbox.client
         uid_set = ",".join(uid_list)
 
-        supports_move = conn.capabilities and any(
-            cap.upper() == "MOVE" for cap in conn.capabilities
-        )
+        supports_move = conn.capabilities and any(cap.upper() == "MOVE" for cap in conn.capabilities)
 
         if supports_move:
             try:
@@ -609,21 +620,23 @@ async def rename_folder(conn: ImapConnection, old_name: str, new_name: str) -> b
         return False
 
 
-async def get_folder_status(conn: ImapConnection, folder: str) -> dict:
+async def get_folder_status(conn: ImapConnection, folder: str) -> dict[str, Any]:
     """Get message count for a folder via IMAP STATUS command."""
-    def _status() -> dict:
+
+    def _status() -> dict[str, Any]:
         stat = conn.mailbox.folder.status(folder)
         return {
             "messages": stat.get("MESSAGES", 0),
             "unseen": stat.get("UNSEEN", 0),
         }
+
     try:
         return await asyncio.to_thread(_status)
     except Exception:
         return {"messages": 0, "unseen": 0}
 
 
-async def list_folders_with_counts(conn: ImapConnection) -> list[dict]:
+async def list_folders_with_counts(conn: ImapConnection) -> list[dict[str, Any]]:
     """List all IMAP folders with message counts.
 
     Returns a list of dicts: [{"name": "INBOX", "messages": 42, "unseen": 5}, ...]
@@ -633,18 +646,22 @@ async def list_folders_with_counts(conn: ImapConnection) -> list[dict]:
     for folder in folders:
         try:
             status = await get_folder_status(conn, folder)
-            result.append({
-                "name": folder,
-                "messages": status["messages"],
-                "unseen": status["unseen"],
-            })
+            result.append(
+                {
+                    "name": folder,
+                    "messages": status["messages"],
+                    "unseen": status["unseen"],
+                }
+            )
         except Exception:
             # Some folders may not support STATUS (e.g. \Noselect)
-            result.append({
-                "name": folder,
-                "messages": 0,
-                "unseen": 0,
-            })
+            result.append(
+                {
+                    "name": folder,
+                    "messages": 0,
+                    "unseen": 0,
+                }
+            )
     return result
 
 
@@ -661,6 +678,7 @@ async def fetch_raw_message(
     Raises:
         ValueError: If the message body is not found in the response.
     """
+
     def _fetch() -> bytes:
         conn.mailbox.folder.set(folder)
         status, data = conn.mailbox.client.uid("FETCH", mail_uid, "(RFC822)")
@@ -669,7 +687,7 @@ async def fetch_raw_message(
         # imaplib response: [(b'UID FETCH ...', b'raw message bytes'), b')']
         for item in data:
             if isinstance(item, tuple) and len(item) == 2:
-                return item[1]
+                return item[1]  # type: ignore[no-any-return]
         raise ValueError("no_message_body_in_response")
 
     return await asyncio.to_thread(_fetch)
@@ -686,6 +704,7 @@ async def search_uids(
     Uses imap-tools' native UID search which returns real UIDs directly
     (no sequence-number-to-UID resolution needed).
     """
+
     def _search() -> list[str]:
         conn.mailbox.folder.set(folder)
         if criteria == "UNSEEN":
@@ -724,10 +743,11 @@ async def fetch_envelopes(
                         sender = f"{msg.from_values.name} <{msg.from_values.email}>"
                     else:
                         sender = msg.from_values.email
-                envelopes[msg.uid] = (msg.subject, sender, msg.date)
+                if msg.uid is not None:
+                    envelopes[msg.uid] = (msg.subject, sender, msg.date)
         except Exception:
             logger.exception("envelope_fetch_failed", uid_count=len(uids))
-            return {uid: (None, None, None) for uid in uids}
+            return dict.fromkeys(uids, (None, None, None))
 
         # Fill in any UIDs that weren't in the response
         for uid in uids:

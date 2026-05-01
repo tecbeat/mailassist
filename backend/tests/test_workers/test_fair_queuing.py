@@ -5,14 +5,11 @@ interval-based skip logic, and backoff skip logic.
 """
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 from uuid import uuid4
 
-import pytest
-
-from app.workers.utils import get_backoff_seconds
 from app.workers.mail_poller import POLLER_BACKOFF_SCHEDULE
-
+from app.workers.utils import get_backoff_seconds
 
 # ---------------------------------------------------------------------------
 # Test Area 13: Fair Queuing
@@ -47,8 +44,9 @@ class TestBackoffSchedule:
 class TestPollingFairness:
     """Fair queuing: accounts ordered by user_id, then oldest sync first."""
 
-    def _make_account(self, user_id, last_sync_at=None, polling_interval=5,
-                      consecutive_errors=0, last_error_at=None, is_paused=False):
+    def _make_account(
+        self, user_id, last_sync_at=None, polling_interval=5, consecutive_errors=0, last_error_at=None, is_paused=False
+    ):
         """Create a mock MailAccount."""
         a = MagicMock()
         a.id = uuid4()

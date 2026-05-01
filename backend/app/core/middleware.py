@@ -6,20 +6,22 @@ and 45 (correlation IDs) from Phase 7, plus CSRF protection via double-submit co
 
 from __future__ import annotations
 
-import hashlib
 import hmac
 import json
 import secrets
 import time
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import structlog
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from app.core.config import get_settings
 from app.core.redis import get_cache_client, get_session_client
+
+if TYPE_CHECKING:
+    from starlette.requests import Request
 
 logger = structlog.get_logger()
 
@@ -74,9 +76,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # HSTS (only when accessed via HTTPS in production)
         if request.url.scheme == "https":
-            response.headers["Strict-Transport-Security"] = (
-                "max-age=31536000; includeSubDomains"
-            )
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
         return response
 
@@ -211,7 +211,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             end
             return current
             """
-            current = await cache.eval(lua_script, 1, rate_key, 60)
+            current = await cache.eval(lua_script, 1, rate_key, str(60))  # type: ignore[misc]
 
             if current > limit:
                 logger.warning(
@@ -248,7 +248,7 @@ async def _extract_user_id(request: Request) -> str | None:
         if session_data is None:
             return None
         session = json.loads(session_data)
-        return session.get("user_id")
+        return session.get("user_id")  # type: ignore[no-any-return]
     except Exception:
         return None
 
@@ -274,10 +274,7 @@ def get_client_ip(request: Request) -> str:
     except ValueError:
         return direct_ip
 
-    is_trusted = any(
-        client_addr in ipaddress.ip_network(proxy, strict=False)
-        for proxy in settings.trusted_proxies
-    )
+    is_trusted = any(client_addr in ipaddress.ip_network(proxy, strict=False) for proxy in settings.trusted_proxies)
 
     if is_trusted:
         forwarded_for = request.headers.get("X-Forwarded-For")
@@ -335,7 +332,7 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
                 chunks.append(chunk)
 
             # Cache the consumed body so downstream handlers can read it.
-            request._body = b"".join(chunks)  # noqa: SLF001
+            request._body = b"".join(chunks)
 
         return await call_next(request)
 

@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.services.persistence import _persist, save_calendar_event
 
@@ -44,10 +44,12 @@ async def test_persist_own_session_closes_on_error():
     mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
     mock_ctx.__aexit__ = AsyncMock(return_value=False)
 
-    with patch("app.services.persistence.get_session_ctx", return_value=mock_ctx):
-        with pytest.raises(RuntimeError, match="test error"):
-            async with _persist(own_session=True, db=None) as session:
-                raise RuntimeError("test error")
+    with (
+        patch("app.services.persistence.get_session_ctx", return_value=mock_ctx),
+        pytest.raises(RuntimeError, match="test error"),
+    ):
+        async with _persist(own_session=True, db=None):
+            raise RuntimeError("test error")
 
     mock_ctx.__aexit__.assert_awaited_once()
 
@@ -121,9 +123,7 @@ async def test_save_calendar_event_flushes_and_expunges_before_caldav_sync():
         )
 
     # flush must precede expunge; both must precede the CalDAV sync
-    assert call_order == ["flush", "expunge", "sync"], (
-        f"Expected ['flush', 'expunge', 'sync'], got {call_order}"
-    )
+    assert call_order == ["flush", "expunge", "sync"], f"Expected ['flush', 'expunge', 'sync'], got {call_order}"
 
     # _sync_event_to_caldav receives the same record object that was expunged
     assert len(sync_calls) == 1

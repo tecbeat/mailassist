@@ -105,14 +105,18 @@ class Settings(BaseSettings):
 
     # Polling
     poll_concurrency: int = Field(default=5, description="Max concurrent IMAP connections during polling")
-    poll_initial_scan_batch: int = Field(default=200, description="Batch size for envelope fetching during initial IMAP scan")
+    poll_initial_scan_batch: int = Field(
+        default=200, description="Batch size for envelope fetching during initial IMAP scan"
+    )
 
     # Contact sync
     contact_cache_ttl_seconds: int = Field(default=3600, description="Contact match cache TTL in seconds")
 
     # IMAP folder cache
     imap_folder_cache_ttl_seconds: int = Field(default=120, description="IMAP folder list cache TTL in seconds")
-    contact_sync_max_errors: int = Field(default=10, description="Disable CardDAV config after this many consecutive failures")
+    contact_sync_max_errors: int = Field(
+        default=10, description="Disable CardDAV config after this many consecutive failures"
+    )
 
     # Database pool
     db_pool_size: int = Field(default=10, description="SQLAlchemy connection pool size")
@@ -139,7 +143,9 @@ class Settings(BaseSettings):
     # Health monitoring
     heartbeat_ttl_seconds: int = Field(default=600, description="Worker heartbeat Valkey key TTL in seconds")
     stale_job_threshold_seconds: int = Field(default=660, description="Reset jobs stuck longer than this (seconds)")
-    provider_recovery_cooldown_seconds: int = Field(default=600, description="Cooldown before auto-reactivating circuit-broken AI providers")
+    provider_recovery_cooldown_seconds: int = Field(
+        default=600, description="Cooldown before auto-reactivating circuit-broken AI providers"
+    )
     cron_last_run_ttl_seconds: int = Field(default=3600, description="Valkey TTL for cron:last_run keys in seconds")
     probe_timeout_seconds: int = Field(default=10, description="Timeout for IMAP/AI provider liveness probes")
 
@@ -170,7 +176,9 @@ class Settings(BaseSettings):
         description="Comma-separated IMAP Drafts folder names to try",
     )
     draft_lookback_days: int = Field(default=14, description="Days to look back in Sent for superseded drafts")
-    draft_max_sent_scan: int = Field(default=100, description="Max recent Sent messages to scan for In-Reply-To headers")
+    draft_max_sent_scan: int = Field(
+        default=100, description="Max recent Sent messages to scan for In-Reply-To headers"
+    )
 
     # Rate limiting
     rate_limit_fail_open: bool = Field(
@@ -201,4 +209,4 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """Return cached Settings singleton. Parses .env only on first call."""
-    return Settings()  # type: ignore[call-arg]
+    return Settings()

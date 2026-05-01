@@ -6,13 +6,12 @@ alongside transient Valkey data.
 """
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
 
 from app.models import TrackedEmailStatus
-
 
 # ---------------------------------------------------------------------------
 # _count_tracked helper
@@ -50,7 +49,10 @@ class TestCountTracked:
 
         since = datetime.now(UTC) - timedelta(hours=1)
         result = await _count_tracked(
-            mock_db, user_id, TrackedEmailStatus.COMPLETED, since=since,
+            mock_db,
+            user_id,
+            TrackedEmailStatus.COMPLETED,
+            since=since,
         )
         assert result == 10
 

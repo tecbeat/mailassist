@@ -4,21 +4,19 @@ Covers all state transitions: active -> superseded, active -> deleted,
 active -> expired, and error handling.
 """
 
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
-from contextlib import asynccontextmanager
 from uuid import uuid4
 
 import pytest
 
 from app.models import AIDraft, DraftStatus
 from app.services.draft_cleanup import (
-    cleanup_drafts_for_account,
-    _get_sent_message_ids,
-    _draft_exists_in_imap,
     _delete_draft_from_imap,
+    _draft_exists_in_imap,
+    cleanup_drafts_for_account,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -306,7 +304,6 @@ class TestDraftCleanupTransitions:
 
 
 class TestDraftExistsInImap:
-
     @pytest.mark.asyncio
     async def test_draft_exists(self):
         """Returns True when UID is found in Drafts folder."""
@@ -335,7 +332,6 @@ class TestDraftExistsInImap:
 
 
 class TestDeleteDraftFromImap:
-
     @pytest.mark.asyncio
     async def test_delete_success(self):
         """Draft is deleted via mailbox.delete()."""

@@ -4,6 +4,7 @@ Covers: template rendering with all variables, missing variables, malformed
 templates, and prompt injection attack patterns.
 """
 
+import jinja2
 import pytest
 
 from app.core.templating import TemplateEngine
@@ -79,7 +80,7 @@ class TestPromptRendering:
 
     def test_malformed_template_raises(self, engine):
         """Unclosed braces raise a template syntax error."""
-        with pytest.raises(Exception):
+        with pytest.raises(jinja2.TemplateSyntaxError):
             engine.render_string("{{ unclosed", {})
 
     def test_render_string_none_value(self, engine):
@@ -122,7 +123,7 @@ class TestPromptInjectionSanitization:
 
     def test_sandbox_blocks_file_access(self, engine):
         """Jinja2 SandboxedEnvironment blocks file system access."""
-        with pytest.raises(Exception):
+        with pytest.raises(jinja2.exceptions.SecurityError):
             engine.render_string(
                 "{{ ''.__class__.__mro__[1].__subclasses__() }}",
                 {},
@@ -130,5 +131,5 @@ class TestPromptInjectionSanitization:
 
     def test_sandbox_blocks_import(self, engine):
         """Template cannot import modules."""
-        with pytest.raises(Exception):
+        with pytest.raises(jinja2.TemplateSyntaxError):
             engine.render_string("{% import os %}", {})

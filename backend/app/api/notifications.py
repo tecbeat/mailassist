@@ -4,6 +4,7 @@ Provides management for Apprise notification URLs, templates, and event toggles.
 """
 
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 import structlog
@@ -33,24 +34,99 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 
 # Notification-specific template variables (in addition to the 28 base variables from prompts)
-_NOTIFICATION_VARIABLES: list[dict] = [
-    {"name": "action_taken", "var_type": "String", "description": "Action performed by the AI plugin", "example": "Moved to Work/Projects"},
-    {"name": "ai_summary", "var_type": "String", "description": "AI-generated summary of the email", "example": "Meeting confirmation for tomorrow at 2pm..."},
-    {"name": "coupon_codes", "var_type": "List", "description": "Extracted coupon/discount codes", "example": '["SAVE20", "FREESHIP"]'},
-    {"name": "calendar_event", "var_type": "Dict", "description": "Extracted calendar event details", "example": '{"title": "Team Meeting", "start": "2026-03-31T14:00:00Z"}'},
+_NOTIFICATION_VARIABLES: list[dict[str, Any]] = [
+    {
+        "name": "action_taken",
+        "var_type": "String",
+        "description": "Action performed by the AI plugin",
+        "example": "Moved to Work/Projects",
+    },
+    {
+        "name": "ai_summary",
+        "var_type": "String",
+        "description": "AI-generated summary of the email",
+        "example": "Meeting confirmation for tomorrow at 2pm...",
+    },
+    {
+        "name": "coupon_codes",
+        "var_type": "List",
+        "description": "Extracted coupon/discount codes",
+        "example": '["SAVE20", "FREESHIP"]',
+    },
+    {
+        "name": "calendar_event",
+        "var_type": "Dict",
+        "description": "Extracted calendar event details",
+        "example": '{"title": "Team Meeting", "start": "2026-03-31T14:00:00Z"}',
+    },
     {"name": "spam_score", "var_type": "Float", "description": "Spam detection confidence score", "example": "0.15"},
-    {"name": "labels_applied", "var_type": "List", "description": "Labels applied by the AI", "example": '["work", "meeting"]'},
-    {"name": "moved_to", "var_type": "String", "description": "Folder the email was moved to", "example": "Work/Projects"},
-    {"name": "rule_name", "var_type": "String", "description": "Name of the rule that triggered", "example": "Auto-label work emails"},
-    {"name": "summary", "var_type": "String", "description": "Short email summary text", "example": "Meeting confirmation for Q2 report discussion."},
-    {"name": "key_points", "var_type": "List", "description": "Key points extracted from the email", "example": '["Meeting at 2pm", "Bring Q2 report"]'},
+    {
+        "name": "labels_applied",
+        "var_type": "List",
+        "description": "Labels applied by the AI",
+        "example": '["work", "meeting"]',
+    },
+    {
+        "name": "moved_to",
+        "var_type": "String",
+        "description": "Folder the email was moved to",
+        "example": "Work/Projects",
+    },
+    {
+        "name": "rule_name",
+        "var_type": "String",
+        "description": "Name of the rule that triggered",
+        "example": "Auto-label work emails",
+    },
+    {
+        "name": "summary",
+        "var_type": "String",
+        "description": "Short email summary text",
+        "example": "Meeting confirmation for Q2 report discussion.",
+    },
+    {
+        "name": "key_points",
+        "var_type": "List",
+        "description": "Key points extracted from the email",
+        "example": '["Meeting at 2pm", "Bring Q2 report"]',
+    },
     {"name": "urgency", "var_type": "String", "description": "Urgency level of the email", "example": "medium"},
-    {"name": "action_required", "var_type": "Boolean", "description": "Whether user action is required", "example": "true"},
-    {"name": "action_description", "var_type": "String", "description": "Description of required action", "example": "Prepare Q2 report for meeting"},
-    {"name": "contact_name", "var_type": "String", "description": "Name of the assigned contact", "example": "Max Müller"},
-    {"name": "confidence", "var_type": "Float", "description": "Confidence score of the contact assignment", "example": "0.92"},
-    {"name": "is_new_contact_suggestion", "var_type": "Boolean", "description": "Whether this is a new contact suggestion", "example": "true"},
-    {"name": "reasoning", "var_type": "String", "description": "AI reasoning for the contact assignment", "example": "Email address matches known contact"},
+    {
+        "name": "action_required",
+        "var_type": "Boolean",
+        "description": "Whether user action is required",
+        "example": "true",
+    },
+    {
+        "name": "action_description",
+        "var_type": "String",
+        "description": "Description of required action",
+        "example": "Prepare Q2 report for meeting",
+    },
+    {
+        "name": "contact_name",
+        "var_type": "String",
+        "description": "Name of the assigned contact",
+        "example": "Max Müller",
+    },
+    {
+        "name": "confidence",
+        "var_type": "Float",
+        "description": "Confidence score of the contact assignment",
+        "example": "0.92",
+    },
+    {
+        "name": "is_new_contact_suggestion",
+        "var_type": "Boolean",
+        "description": "Whether this is a new contact suggestion",
+        "example": "true",
+    },
+    {
+        "name": "reasoning",
+        "var_type": "String",
+        "description": "AI reasoning for the contact assignment",
+        "example": "Email address matches known contact",
+    },
 ]
 
 
@@ -65,8 +141,12 @@ async def get_config(
     Apprise URLs are masked for security (they may contain tokens/passwords).
     """
     config = await get_or_create(
-        db, NotificationConfig, UUID(user_id),
-        apprise_urls=[], templates={}, notify_on={},
+        db,
+        NotificationConfig,
+        UUID(user_id),
+        apprise_urls=[],
+        templates={},
+        notify_on={},
     )
     response = NotificationConfigResponse.model_validate(config)
     response.apprise_urls = [mask_apprise_url(u) for u in (config.apprise_urls or [])]
@@ -85,8 +165,12 @@ async def update_config(
     """
     uid = UUID(user_id)
     config = await get_or_create(
-        db, NotificationConfig, uid,
-        apprise_urls=[], templates={}, notify_on={},
+        db,
+        NotificationConfig,
+        uid,
+        apprise_urls=[],
+        templates={},
+        notify_on={},
     )
 
     # Only update templates and notify_on; URLs managed separately
@@ -111,8 +195,12 @@ async def add_url(
     """Add a new Apprise URL to the notification configuration."""
     uid = UUID(user_id)
     config = await get_or_create(
-        db, NotificationConfig, uid,
-        apprise_urls=[], templates={}, notify_on={},
+        db,
+        NotificationConfig,
+        uid,
+        apprise_urls=[],
+        templates={},
+        notify_on={},
     )
 
     urls = list(config.apprise_urls or [])
@@ -137,8 +225,12 @@ async def remove_url(
     """Remove an Apprise URL by index."""
     uid = UUID(user_id)
     config = await get_or_create(
-        db, NotificationConfig, uid,
-        apprise_urls=[], templates={}, notify_on={},
+        db,
+        NotificationConfig,
+        uid,
+        apprise_urls=[],
+        templates={},
+        notify_on={},
     )
 
     urls = list(config.apprise_urls or [])
@@ -162,8 +254,12 @@ async def test_notification(
 ) -> NotificationTestResponse:
     """Send a test notification to all configured Apprise URLs."""
     config = await get_or_create(
-        db, NotificationConfig, UUID(user_id),
-        apprise_urls=[], templates={}, notify_on={},
+        db,
+        NotificationConfig,
+        UUID(user_id),
+        apprise_urls=[],
+        templates={},
+        notify_on={},
     )
 
     if not config.apprise_urls:

@@ -6,11 +6,8 @@ GET /api/summaries/missing endpoint logic.
 
 from uuid import uuid4
 
-import pytest
-
 from app.schemas.dashboard import DashboardStatsResponse
 from app.schemas.summary import MissingSummaryItem, MissingSummaryListResponse
-
 
 # ---------------------------------------------------------------------------
 # DashboardStatsResponse schema tests
@@ -91,7 +88,11 @@ class TestMissingSummaryListResponseSchema:
 
     def test_empty_list(self):
         resp = MissingSummaryListResponse(
-            items=[], total=0, page=1, per_page=20, pages=1,
+            items=[],
+            total=0,
+            page=1,
+            per_page=20,
+            pages=1,
         )
         assert resp.total == 0
         assert resp.items == []
@@ -105,7 +106,11 @@ class TestMissingSummaryListResponseSchema:
             updated_at="2026-01-15T10:05:00Z",
         )
         resp = MissingSummaryListResponse(
-            items=[item], total=1, page=1, per_page=20, pages=1,
+            items=[item],
+            total=1,
+            page=1,
+            per_page=20,
+            pages=1,
         )
         assert resp.total == 1
         assert len(resp.items) == 1

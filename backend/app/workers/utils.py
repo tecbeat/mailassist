@@ -5,15 +5,18 @@ Common helpers used across mail_poller, idle_monitor, and other worker modules.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.mail import check_circuit_breaker, update_account_sync_status
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Sequence
+    from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
 

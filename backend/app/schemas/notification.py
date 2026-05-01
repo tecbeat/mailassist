@@ -2,6 +2,7 @@
 
 import re
 from datetime import datetime
+from typing import Any
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -55,8 +56,8 @@ class NotificationConfigResponse(BaseModel):
 
     id: UUID
     apprise_urls: list[str]
-    templates: dict
-    notify_on: dict
+    templates: dict[str, Any]
+    notify_on: dict[str, Any]
     updated_at: datetime
 
     model_config = {"from_attributes": True}
@@ -66,7 +67,7 @@ class NotificationConfigUpdate(BaseModel):
     """Update schema for notification configuration."""
 
     apprise_urls: list[str] | None = Field(default=None, max_length=10)
-    templates: dict = Field(default_factory=dict)
+    templates: dict[str, Any] = Field(default_factory=dict)
     notify_on: NotifyOnConfig = Field(default_factory=NotifyOnConfig)
 
 

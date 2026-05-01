@@ -9,23 +9,26 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime
-from typing import Any
-from uuid import UUID
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.models import Rule
-from app.plugins.base import MailContext
 from app.schemas.rules import (
-    ActionType,
     ConditionGroup,
     ConditionRule,
     FieldOperator,
     RuleAction,
 )
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.plugins.base import MailContext
 
 logger = structlog.get_logger()
 
@@ -50,11 +53,7 @@ class RuleEvaluationResult:
         self.matched_rule_ids: list[UUID] = []
 
     def __repr__(self) -> str:
-        return (
-            f"RuleEvaluationResult("
-            f"actions={len(self.actions_taken)}, "
-            f"matched={len(self.matched_rule_ids)})"
-        )
+        return f"RuleEvaluationResult(actions={len(self.actions_taken)}, matched={len(self.matched_rule_ids)})"
 
 
 async def evaluate_rules(
@@ -280,7 +279,7 @@ def _match_regex(text: str, pattern: Any) -> bool:
     try:
         compiled = re.compile(pattern_str, re.IGNORECASE | re.DOTALL)
         # Limit search to configured max text length to prevent catastrophic backtracking
-        return compiled.search(text[:settings.rules_max_text_length]) is not None
+        return compiled.search(text[: settings.rules_max_text_length]) is not None
     except re.error:
         logger.warning("regex_compile_failed", pattern=pattern_str[:80])
         return False

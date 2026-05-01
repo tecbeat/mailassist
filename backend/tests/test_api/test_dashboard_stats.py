@@ -4,7 +4,6 @@ Verifies that the without_summary_stmt query compiles to valid SQL
 and that the stats endpoint handles query failures gracefully.
 """
 
-import pytest
 from sqlalchemy import func, select
 
 from app.models import EmailSummary, TrackedEmail, TrackedEmailStatus

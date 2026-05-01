@@ -12,7 +12,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUserId, DbSession
-from app.core.security import get_encryption
 from app.models import CalDAVConfig
 from app.schemas.calendar import (
     CalDAVConfigResponse,
@@ -71,7 +70,7 @@ async def update_config(
             encrypted = encrypt_caldav_credentials(data.username, data.password)
         except Exception as e:
             logger.error("caldav_credential_encryption_failed", error=str(e))
-            raise HTTPException(status_code=500, detail="Failed to encrypt CalDAV credentials")
+            raise HTTPException(status_code=500, detail="Failed to encrypt CalDAV credentials") from e
         config = CalDAVConfig(
             user_id=uid,
             caldav_url=data.caldav_url,
@@ -87,7 +86,7 @@ async def update_config(
                 encrypted = encrypt_caldav_credentials(data.username, data.password)
             except Exception as e:
                 logger.error("caldav_credential_encryption_failed", error=str(e))
-                raise HTTPException(status_code=500, detail="Failed to encrypt CalDAV credentials")
+                raise HTTPException(status_code=500, detail="Failed to encrypt CalDAV credentials") from e
             config.encrypted_credentials = encrypted
         # else: preserve existing encrypted_credentials
 
@@ -118,7 +117,9 @@ async def test_config(
     else:
         config = await _get_config(db, UUID(user_id))
         if config is None:
-            raise HTTPException(status_code=404, detail="CalDAV not configured. Provide credentials in the request body.")
+            raise HTTPException(
+                status_code=404, detail="CalDAV not configured. Provide credentials in the request body."
+            )
         caldav_url = config.caldav_url
         username, password = get_caldav_credentials(config.encrypted_credentials)
         default_calendar = (data.default_calendar if data else "") or config.default_calendar
@@ -132,7 +133,7 @@ async def test_config(
         )
     except Exception as e:
         logger.error("caldav_test_failed", error=str(e))
-        raise HTTPException(status_code=502, detail="CalDAV connection test failed")
+        raise HTTPException(status_code=502, detail="CalDAV connection test failed") from None
     return CalDAVTestResponse(
         success=result.success,
         message=result.message,

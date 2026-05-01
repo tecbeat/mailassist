@@ -7,13 +7,16 @@ and ``approval_executor`` (after user approval).
 
 from __future__ import annotations
 
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 import structlog
 
 from app.core.database import get_session_ctx
 from app.models import FolderChangeLog, LabelChangeLog
 from app.services.imap_actions import ActionKind, parse_action
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 logger = structlog.get_logger()
 
@@ -39,7 +42,7 @@ def extract_new_labels(actions: list[str]) -> list[str]:
     for action in actions:
         pa = parse_action(action)
         if pa.kind is ActionKind.LOG_NEW_LABELS and pa.value:
-            new_labels.extend(l.strip() for l in pa.value.split(",") if l.strip())
+            new_labels.extend(lbl.strip() for lbl in pa.value.split(",") if lbl.strip())
         elif pa.kind is ActionKind.CREATE_AND_APPLY_LABEL and pa.value:
             stripped = pa.value.strip()
             if stripped:
@@ -78,11 +81,13 @@ async def save_new_labels(
 
     async with get_session_ctx() as db:
         for label in labels:
-            db.add(LabelChangeLog(
-                user_id=user_id,
-                mail_account_id=account_id,
-                label=label,
-            ))
+            db.add(
+                LabelChangeLog(
+                    user_id=user_id,
+                    mail_account_id=account_id,
+                    label=label,
+                )
+            )
         try:
             await db.commit()
         except Exception:
@@ -117,11 +122,13 @@ async def save_new_folders(
 
     async with get_session_ctx() as db:
         for folder in folders:
-            db.add(FolderChangeLog(
-                user_id=user_id,
-                mail_account_id=account_id,
-                folder=folder,
-            ))
+            db.add(
+                FolderChangeLog(
+                    user_id=user_id,
+                    mail_account_id=account_id,
+                    folder=folder,
+                )
+            )
         try:
             await db.commit()
         except Exception:

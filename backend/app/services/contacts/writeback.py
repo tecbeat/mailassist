@@ -6,7 +6,7 @@ with optimistic locking (ETag-based).
 
 import httpx
 import structlog
-import vobject
+import vobject  # type: ignore[import-untyped]
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis import get_cache_client
@@ -183,10 +183,7 @@ async def remove_email_from_contact(
 
                 # Parse vCard and remove matching EMAIL properties
                 card = vobject.readOne(current_vcard_text)
-                email_children = [
-                    c for c in card.contents.get("email", [])
-                    if c.value.lower() == email_lower
-                ]
+                email_children = [c for c in card.contents.get("email", []) if c.value.lower() == email_lower]
                 if not email_children:
                     # Email not on vCard — nothing to remove
                     return True
@@ -210,10 +207,7 @@ async def remove_email_from_contact(
 
                 if put_response.status_code in (200, 201, 204):
                     # Update local model
-                    contact.emails = [
-                        e for e in (contact.emails or [])
-                        if e.lower() != email_lower
-                    ]
+                    contact.emails = [e for e in (contact.emails or []) if e.lower() != email_lower]
                     contact.etag = put_response.headers.get("ETag", "").strip('"') or current_etag
                     contact.raw_vcard = updated_vcard
                     await db.commit()
@@ -244,7 +238,7 @@ async def remove_email_from_contact(
     return False
 
 
-from uuid import UUID
+from uuid import UUID  # noqa: E402
 
 
 async def auto_add_sender_email(
@@ -281,6 +275,7 @@ async def auto_add_sender_email(
 
             # CardDAV write-back (if configured)
             from sqlalchemy import select as sa_select
+
             config_result = await db.execute(
                 sa_select(CardDAVConfig).where(
                     CardDAVConfig.user_id == user_id,

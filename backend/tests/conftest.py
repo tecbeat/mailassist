@@ -13,16 +13,12 @@ os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://test:test@localhost/
 os.environ.setdefault("APP_SECRET_KEY", "test-secret-key-minimum-32-characters-for-unit-tests")
 
 import asyncio
-import json
-from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
-
 
 # ---------------------------------------------------------------------------
 # Event loop

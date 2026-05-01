@@ -6,6 +6,7 @@ Implements error counting with backoff and circuit breaker on repeated failures.
 """
 
 from datetime import UTC, datetime
+from typing import Any
 
 import structlog
 from sqlalchemy import select
@@ -27,7 +28,7 @@ def _get_backoff_minutes(consecutive_errors: int) -> int:
     return _BACKOFF_MINUTES[index]
 
 
-async def sync_all_contacts(ctx: dict) -> None:
+async def sync_all_contacts(ctx: dict[str, Any]) -> None:
     """Sync contacts for all active CardDAV configurations.
 
     Checks each config's sync_interval against last_sync_at to avoid

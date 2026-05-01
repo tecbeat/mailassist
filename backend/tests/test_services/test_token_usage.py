@@ -6,7 +6,7 @@ and not reset on every subsequent increment.
 
 from __future__ import annotations
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -28,7 +28,7 @@ async def test_token_ttl_not_reset_on_second_increment(
     # First call should have set the TTL
     ttl_keys = getattr(fake_valkey, "_ttls", {})
     assert len(ttl_keys) == 1
-    key = list(ttl_keys.keys())[0]
+    key = next(iter(ttl_keys.keys()))
     first_ttl = ttl_keys[key]
     assert first_ttl == 30 * 86400
 

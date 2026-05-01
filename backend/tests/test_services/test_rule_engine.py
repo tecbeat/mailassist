@@ -5,9 +5,10 @@ regex timeout, boolean fields, list fields), and stop_processing.
 """
 
 import pytest
+from pydantic import ValidationError
 
 from app.plugins.base import MailContext
-from app.schemas.rules import ConditionGroup, ConditionRule, FieldOperator
+from app.schemas.rules import ConditionGroup
 from app.services.rules import evaluate_conditions
 
 
@@ -129,60 +130,99 @@ class TestNestedConditions:
 
     def test_simple_and(self):
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(_group("AND", [
-            _cond("from", "contains", "example.com"),
-            _cond("has_attachment", "equals", True),
-        ]))
+        cg = ConditionGroup.model_validate(
+            _group(
+                "AND",
+                [
+                    _cond("from", "contains", "example.com"),
+                    _cond("has_attachment", "equals", True),
+                ],
+            )
+        )
         assert evaluate_conditions(cg, ctx) is True
 
     def test_simple_or(self):
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(_group("OR", [
-            _cond("from", "equals", "nobody@nowhere.com"),
-            _cond("subject", "contains", "Newsletter"),
-        ]))
+        cg = ConditionGroup.model_validate(
+            _group(
+                "OR",
+                [
+                    _cond("from", "equals", "nobody@nowhere.com"),
+                    _cond("subject", "contains", "Newsletter"),
+                ],
+            )
+        )
         assert evaluate_conditions(cg, ctx) is True
 
     def test_and_fails_when_one_false(self):
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(_group("AND", [
-            _cond("from", "contains", "example.com"),
-            _cond("from", "contains", "nonexistent.org"),
-        ]))
+        cg = ConditionGroup.model_validate(
+            _group(
+                "AND",
+                [
+                    _cond("from", "contains", "example.com"),
+                    _cond("from", "contains", "nonexistent.org"),
+                ],
+            )
+        )
         assert evaluate_conditions(cg, ctx) is False
 
     def test_or_fails_when_all_false(self):
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(_group("OR", [
-            _cond("from", "equals", "nope@nope.com"),
-            _cond("subject", "equals", "Nonexistent Subject"),
-        ]))
+        cg = ConditionGroup.model_validate(
+            _group(
+                "OR",
+                [
+                    _cond("from", "equals", "nope@nope.com"),
+                    _cond("subject", "equals", "Nonexistent Subject"),
+                ],
+            )
+        )
         assert evaluate_conditions(cg, ctx) is False
 
     def test_nested_and_or(self):
         """AND with a nested OR group."""
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(_group("AND", [
-            _cond("from", "contains", "@example.com"),
-            _group("OR", [
-                _cond("has_attachment", "equals", True),
-                _cond("size", "greater_than", 1_000_000),
-            ]),
-        ]))
+        cg = ConditionGroup.model_validate(
+            _group(
+                "AND",
+                [
+                    _cond("from", "contains", "@example.com"),
+                    _group(
+                        "OR",
+                        [
+                            _cond("has_attachment", "equals", True),
+                            _cond("size", "greater_than", 1_000_000),
+                        ],
+                    ),
+                ],
+            )
+        )
         assert evaluate_conditions(cg, ctx) is True
 
     def test_deeply_nested(self):
         """3 levels of nesting."""
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(_group("AND", [
-            _group("OR", [
-                _group("AND", [
-                    _cond("from", "contains", "alice"),
-                    _cond("is_reply", "equals", True),
-                ]),
-                _cond("subject", "contains", "URGENT"),
-            ]),
-        ]))
+        cg = ConditionGroup.model_validate(
+            _group(
+                "AND",
+                [
+                    _group(
+                        "OR",
+                        [
+                            _group(
+                                "AND",
+                                [
+                                    _cond("from", "contains", "alice"),
+                                    _cond("is_reply", "equals", True),
+                                ],
+                            ),
+                            _cond("subject", "contains", "URGENT"),
+                        ],
+                    ),
+                ],
+            )
+        )
         assert evaluate_conditions(cg, ctx) is True
 
 
@@ -191,80 +231,58 @@ class TestSpecialFields:
 
     def test_header_field(self):
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(
-            _group("AND", [_cond("header:X-Custom-Header", "equals", "custom-value")])
-        )
+        cg = ConditionGroup.model_validate(_group("AND", [_cond("header:X-Custom-Header", "equals", "custom-value")]))
         assert evaluate_conditions(cg, ctx) is True
 
     def test_header_field_missing(self):
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(
-            _group("AND", [_cond("header:X-Nonexistent", "is_empty")])
-        )
+        cg = ConditionGroup.model_validate(_group("AND", [_cond("header:X-Nonexistent", "is_empty")]))
         assert evaluate_conditions(cg, ctx) is True
 
     def test_contact_name(self):
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(
-            _group("AND", [_cond("contact_name", "contains", "Alice")])
-        )
+        cg = ConditionGroup.model_validate(_group("AND", [_cond("contact_name", "contains", "Alice")]))
         assert evaluate_conditions(cg, ctx) is True
 
     def test_contact_org(self):
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(
-            _group("AND", [_cond("contact_org", "equals", "Acme Corp")])
-        )
+        cg = ConditionGroup.model_validate(_group("AND", [_cond("contact_org", "equals", "Acme Corp")]))
         assert evaluate_conditions(cg, ctx) is True
 
     def test_contact_name_when_no_contact(self):
         ctx = _make_context(contact=None)
-        cg = ConditionGroup.model_validate(
-            _group("AND", [_cond("contact_name", "is_empty")])
-        )
+        cg = ConditionGroup.model_validate(_group("AND", [_cond("contact_name", "is_empty")]))
         assert evaluate_conditions(cg, ctx) is True
 
     def test_cc_field(self):
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(
-            _group("AND", [_cond("cc", "contains", "bob@example.com")])
-        )
+        cg = ConditionGroup.model_validate(_group("AND", [_cond("cc", "contains", "bob@example.com")]))
         assert evaluate_conditions(cg, ctx) is True
 
     def test_attachment_name_list(self):
         """attachment_name matches against any item in the list."""
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(
-            _group("AND", [_cond("attachment_name", "ends_with", ".pdf")])
-        )
+        cg = ConditionGroup.model_validate(_group("AND", [_cond("attachment_name", "ends_with", ".pdf")]))
         assert evaluate_conditions(cg, ctx) is True
 
     def test_attachment_name_no_match(self):
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(
-            _group("AND", [_cond("attachment_name", "ends_with", ".zip")])
-        )
+        cg = ConditionGroup.model_validate(_group("AND", [_cond("attachment_name", "ends_with", ".zip")]))
         assert evaluate_conditions(cg, ctx) is False
 
     def test_boolean_has_attachment(self):
         ctx = _make_context(has_attachments=False)
-        cg = ConditionGroup.model_validate(
-            _group("AND", [_cond("has_attachment", "equals", False)])
-        )
+        cg = ConditionGroup.model_validate(_group("AND", [_cond("has_attachment", "equals", False)]))
         assert evaluate_conditions(cg, ctx) is True
 
     def test_is_reply_boolean(self):
         ctx = _make_context(is_reply=False)
-        cg = ConditionGroup.model_validate(
-            _group("AND", [_cond("is_reply", "equals", False)])
-        )
+        cg = ConditionGroup.model_validate(_group("AND", [_cond("is_reply", "equals", False)]))
         assert evaluate_conditions(cg, ctx) is True
 
     def test_is_forwarded_boolean(self):
         ctx = _make_context(is_forwarded=True)
-        cg = ConditionGroup.model_validate(
-            _group("AND", [_cond("is_forwarded", "equals", True)])
-        )
+        cg = ConditionGroup.model_validate(_group("AND", [_cond("is_forwarded", "equals", True)]))
         assert evaluate_conditions(cg, ctx) is True
 
 
@@ -274,25 +292,19 @@ class TestRegexSafety:
     def test_invalid_regex_returns_false(self):
         """Broken regex pattern fails gracefully (no exception)."""
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(
-            _group("AND", [_cond("subject", "matches_regex", "[invalid")])
-        )
+        cg = ConditionGroup.model_validate(_group("AND", [_cond("subject", "matches_regex", "[invalid")]))
         assert evaluate_conditions(cg, ctx) is False
 
     def test_long_regex_rejected(self):
         """Regex patterns over 500 chars are rejected."""
         ctx = _make_context()
         long_pattern = "a" * 501
-        cg = ConditionGroup.model_validate(
-            _group("AND", [_cond("subject", "matches_regex", long_pattern)])
-        )
+        cg = ConditionGroup.model_validate(_group("AND", [_cond("subject", "matches_regex", long_pattern)]))
         assert evaluate_conditions(cg, ctx) is False
 
     def test_empty_regex_returns_false(self):
         ctx = _make_context()
-        cg = ConditionGroup.model_validate(
-            _group("AND", [_cond("subject", "matches_regex", "")])
-        )
+        cg = ConditionGroup.model_validate(_group("AND", [_cond("subject", "matches_regex", "")]))
         assert evaluate_conditions(cg, ctx) is False
 
 
@@ -322,5 +334,5 @@ class TestNestingValidation:
         """More than 20 rules in a group raises validation error."""
         rules = [_cond("from", "equals", f"user{i}@test.com") for i in range(21)]
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             ConditionGroup.model_validate(_group("AND", rules))

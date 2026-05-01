@@ -1,7 +1,7 @@
 """Pydantic schemas for Mail Account API requests and responses."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
@@ -167,7 +167,7 @@ class ExcludedFoldersResponse(BaseModel):
 class PaginatedResponse(BaseModel):
     """Generic paginated response wrapper."""
 
-    items: list
+    items: list[Any]
     total: int
     page: int
     per_page: int

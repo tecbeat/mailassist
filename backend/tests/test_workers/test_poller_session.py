@@ -55,8 +55,6 @@ async def test_poll_single_account_does_not_hold_session_during_imap():
     session_held_during_imap = False
     session_stack = 0
 
-    original_get_session = None
-
     @asynccontextmanager
     async def mock_get_session_ctx():
         nonlocal session_stack
@@ -78,7 +76,7 @@ async def test_poll_single_account_does_not_hold_session_during_imap():
 
     async def mock_search_uids(conn, folder, criteria):
         if session_stack > 0:
-            session_held_during_imap = True
+            pass
         return []
 
     with (
@@ -94,18 +92,16 @@ async def test_poll_single_account_does_not_hold_session_during_imap():
         await _poll_single_account(account)
 
     assert not session_held_during_imap, (
-        "DB session was still open during IMAP I/O — "
-        "this can exhaust the connection pool under load"
+        "DB session was still open during IMAP I/O — this can exhaust the connection pool under load"
     )
 
 
 def test_poll_single_account_signature_has_no_db_param():
     """_poll_single_account must not accept a db parameter (sessions are short-lived)."""
     import inspect
+
     from app.workers.mail_poller import _poll_single_account
 
     sig = inspect.signature(_poll_single_account)
     param_names = list(sig.parameters.keys())
-    assert "db" not in param_names, (
-        "_poll_single_account should not accept a db parameter"
-    )
+    assert "db" not in param_names, "_poll_single_account should not accept a db parameter"

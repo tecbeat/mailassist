@@ -4,7 +4,7 @@ Wraps the Apprise library for sending notifications to configured channels.
 Renders Jinja2 notification templates before sending.
 """
 
-from typing import Any
+from typing import Any, cast
 
 import apprise
 import structlog
@@ -103,7 +103,7 @@ def _render_notification(
     """
     if custom_template:
         try:
-            return engine.render_string(custom_template, context)
+            return cast("str", engine.render_string(custom_template, context))
         except Exception:
             logger.warning(
                 "custom_template_render_failed",
@@ -114,7 +114,7 @@ def _render_notification(
     # Try event-specific default template
     template_name = _DEFAULT_TEMPLATES.get(event_type, _FALLBACK_TEMPLATE)
     try:
-        return engine.render(template_name, context)
+        return cast("str", engine.render(template_name, context))
     except Exception:
         logger.debug("default_template_not_found", template=template_name)
 
@@ -129,4 +129,5 @@ async def _send_async(ap: apprise.Apprise, body: str, title: str) -> bool:
 
     Apprise supports async sending natively via async_notify.
     """
-    return await ap.async_notify(body=body, title=title)
+    result = await ap.async_notify(body=body, title=title)
+    return bool(result)

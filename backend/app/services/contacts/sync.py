@@ -5,19 +5,20 @@ and email cache rebuilding after sync.
 """
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 import httpx
 import structlog
-from sqlalchemy import select, delete
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.redis import get_cache_client
 from app.core.security import decrypt_credentials
+from app.core.types import ConnectionTestResult
 from app.models import CardDAVConfig, Contact
 from app.services.contacts.vcard import parse_vcard
-from app.core.types import ConnectionTestResult
 
 logger = structlog.get_logger()
 
@@ -33,7 +34,10 @@ def _get_carddav_credentials(config: CardDAVConfig) -> dict[str, str]:
 
 
 async def test_carddav_connection(
-    carddav_url: str, username: str, password: str, address_book: str = "",
+    carddav_url: str,
+    username: str,
+    password: str,
+    address_book: str = "",
 ) -> ConnectionTestResult:
     """Test CardDAV connection with auto-discovery.
 
@@ -97,7 +101,7 @@ async def test_carddav_connection(
 async def sync_contacts(
     db: AsyncSession,
     config: CardDAVConfig,
-) -> dict:
+) -> dict[str, Any]:
     """Sync contacts from CardDAV using incremental sync.
 
     Uses sync-token for efficient change detection.
@@ -119,9 +123,7 @@ async def sync_contacts(
             credentials["password"],
         )
         if not discovery.success or not discovery.addressbook_home:
-            raise ConnectionError(
-                f"DAV discovery failed for {config.carddav_url}: {discovery.message}"
-            )
+            raise ConnectionError(f"DAV discovery failed for {config.carddav_url}: {discovery.message}")
 
         base_url = discovery.addressbook_home.rstrip("/")
         address_book = config.address_book.strip("/")
@@ -131,7 +133,6 @@ async def sync_contacts(
             auth=(credentials["username"], credentials["password"]),
             timeout=30,
         ) as client:
-
             # Build sync request
             if config.sync_token:
                 # Incremental sync using sync-token
@@ -171,6 +172,7 @@ async def sync_contacts(
 
             # Parse multistatus XML response
             from xml.etree import ElementTree as ET
+
             root = ET.fromstring(response.text)
 
             ns = {
@@ -291,7 +293,7 @@ async def _rebuild_email_cache(db: AsyncSession, user_id: UUID) -> None:
     contacts = result.scalars().all()
 
     for contact in contacts:
-        for email in (contact.emails or []):
+        for email in contact.emails or []:
             email_lower = email.lower()
             cache_key = f"contact_match:{user_id}:{email_lower}"
             await cache.setex(cache_key, ttl, str(contact.id))

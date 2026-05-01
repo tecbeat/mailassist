@@ -20,9 +20,9 @@ from __future__ import annotations
 
 import asyncio
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime, timedelta
-from typing import AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 import httpx
 import litellm
@@ -43,9 +43,10 @@ from app.models import TrackedEmail, TrackedEmailStatus
 from app.models.ai import AIProvider
 from app.models.mail import MailAccount
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 logger = structlog.get_logger()
-
-
 
 
 async def write_cron_last_run(cron_name: str) -> None:
@@ -57,9 +58,7 @@ async def write_cron_last_run(cron_name: str) -> None:
     try:
         cache = get_cache_client()
         key = f"cron:last_run:{cron_name}"
-        await cache.set(
-            key, datetime.now(UTC).isoformat(), ex=get_settings().cron_last_run_ttl_seconds
-        )
+        await cache.set(key, datetime.now(UTC).isoformat(), ex=get_settings().cron_last_run_ttl_seconds)
     except Exception:
         logger.warning("cron_last_run_write_failed", cron_name=cron_name)
 
@@ -218,9 +217,7 @@ async def recover_circuit_broken_providers() -> None:
                 provider_id=str(provider.id),
                 provider_name=provider.name,
                 user_id=str(provider.user_id),
-                last_error_at=provider.last_error_at.isoformat()
-                if provider.last_error_at
-                else None,
+                last_error_at=provider.last_error_at.isoformat() if provider.last_error_at else None,
                 cooldown_seconds=settings.provider_recovery_cooldown_seconds,
             )
 
@@ -265,17 +262,15 @@ async def probe_imap_account(account: MailAccount) -> bool:
                 timeout=probe_timeout,
             )
             mb.login(credentials["username"], credentials["password"], initial_folder=None)
-            try:
+            with suppress(Exception):
                 mb.logout()
-            except Exception:
-                pass  # logout failure is fine — we proved reachability
             return True
 
         return await asyncio.wait_for(
             asyncio.to_thread(_probe),
             timeout=probe_timeout + 5,  # extra margin for thread scheduling
         )
-    except (asyncio.TimeoutError, OSError, Exception):
+    except (TimeoutError, OSError, Exception):
         return False
 
 
@@ -299,7 +294,8 @@ async def probe_ai_provider(provider: AIProvider) -> bool:
             return await _probe_ollama(provider.base_url)
         else:
             return await _probe_openai_compatible(
-                provider.base_url, api_key,
+                provider.base_url,
+                api_key,
             )
     except Exception:
         return False
@@ -315,10 +311,11 @@ async def _probe_ollama(base_url: str) -> bool:
 
 
 async def _probe_openai_compatible(
-    base_url: str, api_key: str | None,
+    base_url: str,
+    api_key: str | None,
 ) -> bool:
     """Probe an OpenAI-compatible provider via the models endpoint."""
-    kwargs: dict = {}
+    kwargs: dict[str, Any] = {}
     if api_key:
         kwargs["api_key"] = api_key
     if base_url:
@@ -352,7 +349,8 @@ async def recover_paused_providers() -> None:
 
 
 async def _recover_paused_accounts(
-    now: datetime, cooldown_seconds: int,
+    now: datetime,
+    cooldown_seconds: int,
 ) -> None:
     """Check paused IMAP accounts and unpause those that pass the probe."""
     async with get_session_ctx() as db:
@@ -372,9 +370,7 @@ async def _recover_paused_accounts(
 
         for account in accounts:
             # Skip if cooldown has not elapsed
-            if account.paused_at and (
-                (now - account.paused_at).total_seconds() < cooldown_seconds
-            ):
+            if account.paused_at and ((now - account.paused_at).total_seconds() < cooldown_seconds):
                 continue
 
             if await probe_imap_account(account):
@@ -418,7 +414,8 @@ async def _recover_paused_accounts(
 
 
 async def _recover_paused_ai_providers(
-    now: datetime, cooldown_seconds: int,
+    now: datetime,
+    cooldown_seconds: int,
 ) -> None:
     """Check paused AI providers and unpause those that pass the probe."""
     async with get_session_ctx() as db:
@@ -437,9 +434,7 @@ async def _recover_paused_ai_providers(
         recovered: list[AIProvider] = []
 
         for provider in providers:
-            if provider.paused_at and (
-                (now - provider.paused_at).total_seconds() < cooldown_seconds
-            ):
+            if provider.paused_at and ((now - provider.paused_at).total_seconds() < cooldown_seconds):
                 continue
 
             if await probe_ai_provider(provider):

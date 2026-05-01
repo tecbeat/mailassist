@@ -15,6 +15,7 @@ logger = structlog.get_logger()
 # Base
 # ---------------------------------------------------------------------------
 
+
 class AppError(Exception):
     """Base exception for application-level errors.
 
@@ -42,14 +43,13 @@ class AppError(Exception):
         """Derive a machine-readable code from the class name."""
         # e.g. NotFoundError -> not_found
         name = type(self).__name__.removesuffix("Error")
-        return "".join(
-            f"_{c.lower()}" if c.isupper() else c for c in name
-        ).lstrip("_")
+        return "".join(f"_{c.lower()}" if c.isupper() else c for c in name).lstrip("_")
 
 
 # ---------------------------------------------------------------------------
 # 4xx Errors
 # ---------------------------------------------------------------------------
+
 
 class BadRequestError(AppError):
     """Malformed or invalid request (400)."""
@@ -98,7 +98,10 @@ class AppValidationError(AppError):
 
     def __init__(self, message: str):
         super().__init__(
-            message=message, status_code=422, detail=message, code="validation_error",
+            message=message,
+            status_code=422,
+            detail=message,
+            code="validation_error",
         )
 
 
@@ -112,6 +115,7 @@ class RateLimitError(AppError):
 # ---------------------------------------------------------------------------
 # 5xx Errors
 # ---------------------------------------------------------------------------
+
 
 class ExternalServiceError(AppError):
     """External service (IMAP, CardDAV, LLM, etc.) unavailable or errored (502)."""
@@ -129,13 +133,16 @@ class ServiceUnavailableError(AppError):
 
     def __init__(self, message: str = "Service temporarily unavailable"):
         super().__init__(
-            message=message, status_code=503, code="service_unavailable",
+            message=message,
+            status_code=503,
+            code="service_unavailable",
         )
 
 
 # ---------------------------------------------------------------------------
 # Exception Handlers
 # ---------------------------------------------------------------------------
+
 
 def register_exception_handlers(app: FastAPI) -> None:
     """Register custom exception handlers on the FastAPI app."""
@@ -169,7 +176,8 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(
-        _request: Request, exc: Exception,
+        _request: Request,
+        exc: Exception,
     ) -> JSONResponse:
         """Catch-all for unexpected exceptions.
 

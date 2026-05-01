@@ -8,10 +8,8 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock
 from uuid import uuid4
 
-import pytest
-
-from app.schemas.mail_account import MailAccountResponse, MailAccountStatus
 from app.schemas.ai_provider import AIProviderResponse
+from app.schemas.mail_account import MailAccountResponse, MailAccountStatus
 
 
 class TestMailAccountPauseDefaults:

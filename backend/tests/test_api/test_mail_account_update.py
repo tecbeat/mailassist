@@ -11,7 +11,6 @@ import pytest
 
 from app.api.mail_accounts import _UPDATABLE_FIELDS
 
-
 # Fields that must NEVER be writable through the update endpoint.
 _SENSITIVE_FIELDS = {
     "id",
@@ -51,7 +50,7 @@ class TestUpdatableFieldsWhitelist:
             "scan_existing_emails",
             "excluded_folders",
         }
-        assert _UPDATABLE_FIELDS == expected
+        assert expected == _UPDATABLE_FIELDS
 
     @pytest.mark.parametrize("field", sorted(_SENSITIVE_FIELDS))
     def test_each_sensitive_field_blocked(self, field: str) -> None:

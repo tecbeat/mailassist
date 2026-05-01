@@ -4,18 +4,18 @@ Provides CRUD for structured mail processing rules, bulk reorder,
 rule testing against sample mail, and natural-language-to-rule AI translation.
 """
 
+from typing import Any, cast
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from app.api.deps import CurrentUserId, DbSession, get_or_404
 from app.core.security import get_encryption
-from app.models import AIProvider, Rule, UserSettings
+from app.models import Rule, UserSettings
 from app.plugins.base import MailContext
-from app.services.provider_resolver import get_default_provider
 from app.schemas.rules import (
     ConditionGroup,
     NLRuleRequest,
@@ -28,6 +28,7 @@ from app.schemas.rules import (
     TestMailInput,
     TestRuleResult,
 )
+from app.services.provider_resolver import get_default_provider
 from app.services.rules import evaluate_conditions
 
 logger = structlog.get_logger()
@@ -76,8 +77,8 @@ class _NLRuleAIResponse(BaseModel):
 
     name: str
     description: str | None = None
-    conditions: dict
-    actions: list[dict]
+    conditions: dict[str, Any]
+    actions: list[dict[str, Any]]
     stop_processing: bool = False
     reasoning: str | None = None
 
@@ -112,6 +113,7 @@ async def nl_to_rule(
     user_prompt = f"Create a mail processing rule from this description:\n\n{data.description}"
 
     from app.services.ai import call_llm
+
     user_settings = (await db.execute(select(UserSettings).where(UserSettings.user_id == uid))).scalar_one_or_none()
 
     try:
@@ -130,18 +132,19 @@ async def nl_to_rule(
         )
     except ValueError as e:
         logger.warning("nl_to_rule_validation_failed", error=str(e), user_id=user_id)
-        raise HTTPException(status_code=422, detail="AI could not generate a valid rule")
+        raise HTTPException(status_code=422, detail="AI could not generate a valid rule") from None
     except Exception as e:
         logger.error("nl_to_rule_llm_failed", error=str(e), user_id=user_id)
-        raise HTTPException(status_code=502, detail="AI provider error")
+        raise HTTPException(status_code=502, detail="AI provider error") from None
 
+    nl_response = cast("_NLRuleAIResponse", ai_response)
     return NLRuleResponse(
-        name=ai_response.name,
-        description=ai_response.description,
-        conditions=ai_response.conditions,
-        actions=ai_response.actions,
-        stop_processing=ai_response.stop_processing,
-        ai_reasoning=ai_response.reasoning,
+        name=nl_response.name,
+        description=nl_response.description,
+        conditions=nl_response.conditions,
+        actions=nl_response.actions,
+        stop_processing=nl_response.stop_processing,
+        ai_reasoning=nl_response.reasoning,
     )
 
 
@@ -162,9 +165,7 @@ async def list_rules(
     stmt = select(Rule).where(Rule.user_id == uid)
 
     if mail_account_id is not None:
-        stmt = stmt.where(
-            (Rule.mail_account_id == mail_account_id) | (Rule.mail_account_id.is_(None))
-        )
+        stmt = stmt.where((Rule.mail_account_id == mail_account_id) | (Rule.mail_account_id.is_(None)))
     if is_active is not None:
         stmt = stmt.where(Rule.is_active == is_active)
 
@@ -280,7 +281,7 @@ async def test_rule(
         conditions = ConditionGroup.model_validate(rule.conditions)
     except Exception as e:
         logger.error("invalid_rule_conditions", rule_id=str(rule_id), error=str(e))
-        raise HTTPException(status_code=422, detail="Invalid rule conditions")
+        raise HTTPException(status_code=422, detail="Invalid rule conditions") from e
 
     matched = evaluate_conditions(conditions, context)
 
@@ -330,6 +331,7 @@ def _build_test_context(data: TestMailInput) -> MailContext:
         is_reply=data.is_reply,
         is_forwarded=data.is_forwarded,
         contact=contact,
+        excluded_folders=[],
     )
 
 

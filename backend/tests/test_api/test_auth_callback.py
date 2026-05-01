@@ -8,12 +8,10 @@ from __future__ import annotations
 
 import json
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-
 from conftest import FakeValkey
 from fastapi import HTTPException
 
@@ -69,11 +67,9 @@ def _make_mock_db_session(*, commit_side_effect=None):
 
 
 @pytest.mark.asyncio
-async def test_callback_creates_session_after_commit(
-    fake_session_client, fake_userinfo, fake_token
-):
+async def test_callback_creates_session_after_commit(fake_session_client, fake_userinfo, fake_token):
     """Valkey session is created only after a successful DB commit."""
-    fake_get_session, db, mock_user = _make_mock_db_session()
+    fake_get_session, db, _mock_user = _make_mock_db_session()
 
     oidc_config = {
         "token_endpoint": "https://idp.example.com/token",
@@ -134,11 +130,9 @@ async def test_callback_creates_session_after_commit(
 
 
 @pytest.mark.asyncio
-async def test_callback_no_session_on_commit_failure(
-    fake_session_client, fake_userinfo, fake_token
-):
+async def test_callback_no_session_on_commit_failure(fake_session_client, fake_userinfo, fake_token):
     """No Valkey session is created when DB commit fails."""
-    fake_get_session, db, mock_user = _make_mock_db_session(
+    fake_get_session, db, _mock_user = _make_mock_db_session(
         commit_side_effect=Exception("DB commit failed"),
     )
 

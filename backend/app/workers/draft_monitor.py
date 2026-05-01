@@ -5,6 +5,8 @@ Runs every 5 minutes (offset from other cron tasks).
 Tracks per-account errors and applies circuit breaker on repeated failures.
 """
 
+from typing import Any
+
 import structlog
 from sqlalchemy import select
 
@@ -17,7 +19,7 @@ from app.workers.utils import worker_error_handler
 logger = structlog.get_logger()
 
 
-async def cleanup_all_drafts(ctx: dict) -> None:
+async def cleanup_all_drafts(ctx: dict[str, Any]) -> None:
     """Clean up stale AI drafts across all mail accounts.
 
     Checks each account that has active AI drafts.
@@ -30,11 +32,7 @@ async def cleanup_all_drafts(ctx: dict) -> None:
 
     async with get_session_ctx() as db:
         # Find accounts with active drafts
-        stmt = (
-            select(AIDraft.mail_account_id)
-            .where(AIDraft.status == DraftStatus.ACTIVE)
-            .distinct()
-        )
+        stmt = select(AIDraft.mail_account_id).where(AIDraft.status == DraftStatus.ACTIVE).distinct()
         result = await db.execute(stmt)
         account_ids = [row[0] for row in result.all()]
 

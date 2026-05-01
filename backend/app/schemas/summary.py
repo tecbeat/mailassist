@@ -1,6 +1,7 @@
 """Pydantic schemas for email summary API requests and responses."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -80,7 +81,7 @@ class SummaryFilterConfigResponse(BaseModel):
 
     id: UUID
     is_enabled: bool
-    filter_rules: dict
+    filter_rules: dict[str, Any]
     updated_at: datetime
 
     model_config = {"from_attributes": True}

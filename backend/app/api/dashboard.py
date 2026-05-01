@@ -8,11 +8,13 @@ import io
 import math
 import pickle as _pickle
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, literal_column, select, union_all
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUserId, DbSession, paginate
 from app.core.config import get_settings
@@ -56,33 +58,33 @@ class _RestrictedUnpickler(_pickle.Unpickler):
     Prevents arbitrary code execution if Valkey data is tampered with.
     """
 
-    _SAFE_BUILTINS = frozenset({
-        "builtins.dict",
-        "builtins.list",
-        "builtins.tuple",
-        "builtins.set",
-        "builtins.frozenset",
-        "builtins.str",
-        "builtins.bytes",
-        "builtins.int",
-        "builtins.float",
-        "builtins.bool",
-        "builtins.complex",
-        "builtins.type",
-        "datetime.datetime",
-        "datetime.timedelta",
-        "datetime.date",
-        "datetime.time",
-        "uuid.UUID",
-    })
+    _SAFE_BUILTINS = frozenset(
+        {
+            "builtins.dict",
+            "builtins.list",
+            "builtins.tuple",
+            "builtins.set",
+            "builtins.frozenset",
+            "builtins.str",
+            "builtins.bytes",
+            "builtins.int",
+            "builtins.float",
+            "builtins.bool",
+            "builtins.complex",
+            "builtins.type",
+            "datetime.datetime",
+            "datetime.timedelta",
+            "datetime.date",
+            "datetime.time",
+            "uuid.UUID",
+        }
+    )
 
     def find_class(self, module: str, name: str) -> type:
         fqn = f"{module}.{name}"
         if fqn in self._SAFE_BUILTINS:
-            return super().find_class(module, name)
-        raise _pickle.UnpicklingError(
-            f"Restricted unpickler: {fqn!r} is not allowed"
-        )
+            return super().find_class(module, name)  # type: ignore[no-any-return]
+        raise _pickle.UnpicklingError(f"Restricted unpickler: {fqn!r} is not allowed")
 
 
 router = APIRouter(tags=["dashboard"])
@@ -116,15 +118,11 @@ async def get_dashboard_stats(
 
     total_ai_providers = len(providers)
     paused_ai_providers = sum(1 for p in providers if p.is_paused)
-    unhealthy_ai_providers = sum(
-        1 for p in providers if not p.is_paused and p.consecutive_errors >= 3
-    )
+    unhealthy_ai_providers = sum(1 for p in providers if not p.is_paused and p.consecutive_errors >= 3)
 
     # -- Pending approvals --
     pending_stmt = select(func.count()).select_from(
-        select(Approval)
-        .where(Approval.user_id == uid, Approval.status == ApprovalStatus.PENDING)
-        .subquery()
+        select(Approval).where(Approval.user_id == uid, Approval.status == ApprovalStatus.PENDING).subquery()
     )
     pending_approvals = (await db.execute(pending_stmt)).scalar_one()
 
@@ -168,7 +166,9 @@ async def get_dashboard_stats(
             .where(
                 TrackedEmail.user_id == uid,
                 TrackedEmail.status == TrackedEmailStatus.COMPLETED,
-                TrackedEmail.completion_reason.in_([CompletionReason.PARTIAL_WITH_ERRORS, CompletionReason.ALL_PLUGINS_FAILED]),
+                TrackedEmail.completion_reason.in_(
+                    [CompletionReason.PARTIAL_WITH_ERRORS, CompletionReason.ALL_PLUGINS_FAILED]
+                ),
             )
             .subquery()
         )
@@ -239,26 +239,20 @@ async def get_recent_actions(
     """
     uid = UUID(user_id)
 
-    label_q = (
-        select(
-            LabelChangeLog.id,
-            literal_column("'label_change'").label("type"),
-            LabelChangeLog.mail_account_id,
-            LabelChangeLog.label.label("detail"),
-            LabelChangeLog.created_at,
-        )
-        .where(LabelChangeLog.user_id == uid)
-    )
-    folder_q = (
-        select(
-            FolderChangeLog.id,
-            literal_column("'folder_change'").label("type"),
-            FolderChangeLog.mail_account_id,
-            FolderChangeLog.folder.label("detail"),
-            FolderChangeLog.created_at,
-        )
-        .where(FolderChangeLog.user_id == uid)
-    )
+    label_q: Any = select(
+        LabelChangeLog.id,
+        literal_column("'label_change'").label("type"),
+        LabelChangeLog.mail_account_id,
+        LabelChangeLog.label.label("detail"),
+        LabelChangeLog.created_at,
+    ).where(LabelChangeLog.user_id == uid)
+    folder_q: Any = select(
+        FolderChangeLog.id,
+        literal_column("'folder_change'").label("type"),
+        FolderChangeLog.mail_account_id,
+        FolderChangeLog.folder.label("detail"),
+        FolderChangeLog.created_at,
+    ).where(FolderChangeLog.user_id == uid)
 
     combined = union_all(label_q, folder_q).subquery()
 
@@ -297,11 +291,7 @@ async def get_dashboard_errors(
 
     base_filter = [MailAccount.user_id == uid, MailAccount.last_error.is_not(None)]
 
-    base_stmt = (
-        select(MailAccount)
-        .where(*base_filter)
-        .order_by(MailAccount.last_error_at.desc())
-    )
+    base_stmt = select(MailAccount).where(*base_filter).order_by(MailAccount.last_error_at.desc())
     result = await paginate(db, base_stmt, page, per_page)
 
     items = [
@@ -349,10 +339,16 @@ async def get_job_queue_status(
     queued_in_db = await _count_tracked(db, uid, TrackedEmailStatus.QUEUED)
     completed_total = await _count_tracked(db, uid, TrackedEmailStatus.COMPLETED)
     completed_today = await _count_tracked(
-        db, uid, TrackedEmailStatus.COMPLETED, since=now - timedelta(hours=24),
+        db,
+        uid,
+        TrackedEmailStatus.COMPLETED,
+        since=now - timedelta(hours=24),
     )
     completed_last_hour = await _count_tracked(
-        db, uid, TrackedEmailStatus.COMPLETED, since=now - timedelta(hours=1),
+        db,
+        uid,
+        TrackedEmailStatus.COMPLETED,
+        since=now - timedelta(hours=1),
     )
     failed_total = await _count_tracked(db, uid, TrackedEmailStatus.FAILED)
 
@@ -391,9 +387,7 @@ async def get_job_queue_status(
         # Paginated queued jobs from the arq:queue sorted set.
         # Exclude jobs that are already in-progress so they don't
         # appear in both lists on the dashboard.
-        in_progress_ids = {
-            k.removeprefix("arq:in-progress:") for k in in_progress_keys
-        } if in_progress_keys else set()
+        in_progress_ids = {k.removeprefix("arq:in-progress:") for k in in_progress_keys} if in_progress_keys else set()
 
         # Count only process_mail jobs in the queue (exclude cron/system).
         # We scan the full queue to get an accurate count and filter in
@@ -401,11 +395,12 @@ async def get_job_queue_status(
         queued_mail_ids: list[str] = []
         if queued_total > 0:
             all_job_ids: list[str] = await task_client.zrange(
-                "arq:queue", 0, -1,
+                "arq:queue",
+                0,
+                -1,
             )
             queued_mail_ids = [
-                jid for jid in all_job_ids
-                if jid not in in_progress_ids and jid.startswith("process_mail:")
+                jid for jid in all_job_ids if jid not in in_progress_ids and jid.startswith("process_mail:")
             ]
 
         queued_mail_count = len(queued_mail_ids)
@@ -413,7 +408,7 @@ async def get_job_queue_status(
         queue_pages = max(1, math.ceil(queued_mail_count / queue_per_page))
         if queued_mail_ids:
             offset = (queue_page - 1) * queue_per_page
-            page_ids = queued_mail_ids[offset:offset + queue_per_page]
+            page_ids = queued_mail_ids[offset : offset + queue_per_page]
             if page_ids:
                 await _collect_queued_jobs(page_ids, queued_jobs)
 
@@ -489,12 +484,14 @@ async def _collect_in_progress_jobs(
         raw = await raw_client.get(f"arq:job:{job_id}".encode())
         if not raw:
             fn, mail_uid, account_id = _parse_job_id(job_id)
-            out.append(InProgressJob(
-                job_id=job_id,
-                function=fn,
-                mail_uid=mail_uid,
-                account_id=account_id,
-            ))
+            out.append(
+                InProgressJob(
+                    job_id=job_id,
+                    function=fn,
+                    mail_uid=mail_uid,
+                    account_id=account_id,
+                )
+            )
             continue
         try:
             data = _RestrictedUnpickler(io.BytesIO(raw)).load()
@@ -510,12 +507,14 @@ async def _collect_in_progress_jobs(
         except Exception:
             # Deserialization failed — fall back to job ID parsing
             fn, mail_uid, account_id = _parse_job_id(job_id)
-            out.append(InProgressJob(
-                job_id=job_id,
-                function=fn,
-                mail_uid=mail_uid,
-                account_id=account_id,
-            ))
+            out.append(
+                InProgressJob(
+                    job_id=job_id,
+                    function=fn,
+                    mail_uid=mail_uid,
+                    account_id=account_id,
+                )
+            )
 
 
 async def _enrich_with_pipeline_progress(jobs: list[InProgressJob]) -> None:
@@ -539,6 +538,7 @@ async def _enrich_with_pipeline_progress(jobs: list[InProgressJob]) -> None:
                 continue
             try:
                 import json
+
                 data = json.loads(raw)
                 job.phase = data.get("phase")
                 job.current_plugin = data.get("current_plugin")
@@ -569,12 +569,14 @@ async def _collect_queued_jobs(
         raw = await raw_client.get(f"arq:job:{job_id}".encode())
         if not raw:
             fn, mail_uid, account_id = _parse_job_id(job_id)
-            out.append(QueuedJob(
-                job_id=job_id,
-                function=fn,
-                mail_uid=mail_uid,
-                account_id=account_id,
-            ))
+            out.append(
+                QueuedJob(
+                    job_id=job_id,
+                    function=fn,
+                    mail_uid=mail_uid,
+                    account_id=account_id,
+                )
+            )
             continue
         try:
             data = _RestrictedUnpickler(io.BytesIO(raw)).load()
@@ -590,15 +592,17 @@ async def _collect_queued_jobs(
         except Exception:
             # Deserialization failed — fall back to job ID parsing
             fn, mail_uid, account_id = _parse_job_id(job_id)
-            out.append(QueuedJob(
-                job_id=job_id,
-                function=fn,
-                mail_uid=mail_uid,
-                account_id=account_id,
-            ))
+            out.append(
+                QueuedJob(
+                    job_id=job_id,
+                    function=fn,
+                    mail_uid=mail_uid,
+                    account_id=account_id,
+                )
+            )
 
 
-async def _count_actions_since(db, user_id: UUID, since: datetime) -> int:
+async def _count_actions_since(db: AsyncSession, user_id: UUID, since: datetime) -> int:
     """Count label + folder changes since a timestamp."""
     label_count_stmt = select(func.count()).select_from(
         select(LabelChangeLog.id)
@@ -611,12 +615,12 @@ async def _count_actions_since(db, user_id: UUID, since: datetime) -> int:
         .subquery()
     )
 
-    labels = (await db.execute(label_count_stmt)).scalar_one()
-    folders = (await db.execute(folder_count_stmt)).scalar_one()
+    labels: int = (await db.execute(label_count_stmt)).scalar_one()
+    folders: int = (await db.execute(folder_count_stmt)).scalar_one()
     return labels + folders
 
 
-async def _count_processed_since(db, user_id: UUID, since: datetime) -> int:
+async def _count_processed_since(db: AsyncSession, user_id: UUID, since: datetime) -> int:
     """Count mails completed since a timestamp via tracked_emails."""
     stmt = select(func.count()).select_from(
         select(TrackedEmail.id)
@@ -627,11 +631,12 @@ async def _count_processed_since(db, user_id: UUID, since: datetime) -> int:
         )
         .subquery()
     )
-    return (await db.execute(stmt)).scalar_one()
+    result: int = (await db.execute(stmt)).scalar_one()
+    return result
 
 
 async def _count_tracked(
-    db,
+    db: AsyncSession,
     user_id: UUID,
     status: TrackedEmailStatus,
     *,
@@ -644,10 +649,9 @@ async def _count_tracked(
     ]
     if since is not None:
         filters.append(TrackedEmail.updated_at >= since)
-    stmt = select(func.count()).select_from(
-        select(TrackedEmail.id).where(*filters).subquery()
-    )
-    return (await db.execute(stmt)).scalar_one()
+    stmt = select(func.count()).select_from(select(TrackedEmail.id).where(*filters).subquery())
+    result: int = (await db.execute(stmt)).scalar_one()
+    return result
 
 
 async def _get_token_usage(user_id: str, days: int) -> int:
@@ -656,8 +660,7 @@ async def _get_token_usage(user_id: str, days: int) -> int:
         cache = get_cache_client()
         now = datetime.now(UTC)
         keys = [
-            f"token_usage:{user_id}:{(now - timedelta(days=offset)).strftime('%Y-%m-%d')}"
-            for offset in range(days)
+            f"token_usage:{user_id}:{(now - timedelta(days=offset)).strftime('%Y-%m-%d')}" for offset in range(days)
         ]
         values = await cache.mget(*keys)
         return sum(int(v) for v in values if v is not None)
@@ -669,6 +672,7 @@ async def _get_token_usage(user_id: str, days: int) -> int:
 # ---------------------------------------------------------------------------
 # Cron job metadata
 # ---------------------------------------------------------------------------
+
 
 def _cron_schedule_label() -> str:
     """Return a human-readable schedule label from the configured interval."""
@@ -705,9 +709,7 @@ _CRON_JOBS: list[dict[str, str]] = [
 ]
 
 # Map cron names to the actual worker task function names for enqueuing
-_CRON_FUNCTION_MAP: dict[str, str] = {
-    job["name"]: job["name"] for job in _CRON_JOBS
-}
+_CRON_FUNCTION_MAP: dict[str, str] = {job["name"]: job["name"] for job in _CRON_JOBS}
 
 
 @router.get("/dashboard/crons")
@@ -799,11 +801,7 @@ async def get_failed_mails(
         TrackedEmail.status == TrackedEmailStatus.FAILED,
     ]
 
-    base_stmt = (
-        select(TrackedEmail)
-        .where(*base_filters)
-        .order_by(TrackedEmail.updated_at.desc())
-    )
+    base_stmt = select(TrackedEmail).where(*base_filters).order_by(TrackedEmail.updated_at.desc())
     result = await paginate(db, base_stmt, page, per_page)
 
     items = [
@@ -847,7 +845,7 @@ async def retry_failed_mail(
     try:
         email_uuid = UUID(tracked_email_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid tracked_email_id: must be a valid UUID")
+        raise HTTPException(status_code=422, detail="Invalid tracked_email_id: must be a valid UUID") from None
     stmt = select(TrackedEmail).where(
         TrackedEmail.id == email_uuid,
         TrackedEmail.user_id == uid,
@@ -880,7 +878,7 @@ async def resolve_failed_mail(
     try:
         email_uuid = UUID(tracked_email_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid tracked_email_id: must be a valid UUID")
+        raise HTTPException(status_code=422, detail="Invalid tracked_email_id: must be a valid UUID") from None
     stmt = select(TrackedEmail).where(
         TrackedEmail.id == email_uuid,
         TrackedEmail.user_id == uid,

@@ -6,14 +6,18 @@ Content-Length is present and when the body is chunked (no Content-Length).
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 from starlette.applications import Starlette
-from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from app.core.middleware import RequestSizeLimitMiddleware, _MAX_REQUEST_BODY_BYTES
+from app.core.middleware import _MAX_REQUEST_BODY_BYTES, RequestSizeLimitMiddleware
+
+if TYPE_CHECKING:
+    from starlette.requests import Request
 
 
 async def _echo_handler(request: Request) -> JSONResponse:

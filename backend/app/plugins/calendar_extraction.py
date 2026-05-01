@@ -10,7 +10,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.plugins.base import AIFunctionPlugin, ActionResult, MailContext
+from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
 
 

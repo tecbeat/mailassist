@@ -2,17 +2,17 @@
 
 import enum
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     Enum,
     ForeignKey,
     Index,
     Integer,
-    JSON,
     String,
     Text,
     UniqueConstraint,
@@ -21,6 +21,10 @@ from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.mail import MailAccount
+    from app.models.user import User
 
 
 class ApprovalStatus(str, enum.Enum):
@@ -58,7 +62,9 @@ class Approval(Base):
     mail_account: Mapped["MailAccount"] = relationship(back_populates="approvals")
 
     __table_args__ = (
-        UniqueConstraint("user_id", "mail_account_id", "mail_uid", "function_type", name="uq_approval_user_account_mail_fn"),
+        UniqueConstraint(
+            "user_id", "mail_account_id", "mail_uid", "function_type", name="uq_approval_user_account_mail_fn"
+        ),
         Index("ix_approvals_user_id", "user_id"),
         Index("ix_approvals_status", "status"),
         Index("ix_approvals_mail_account_id", "mail_account_id"),

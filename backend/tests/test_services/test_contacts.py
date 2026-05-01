@@ -12,10 +12,9 @@ import pytest
 
 from app.services.contacts import (
     match_sender_to_contact,
-    write_back_email_to_contact,
     parse_vcard,
+    write_back_email_to_contact,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -243,14 +242,17 @@ END:VCARD"""
         mock_client.__aexit__ = AsyncMock()
 
         from app.services.dav_discovery import DavDiscoveryResult
+
         mock_discovery = DavDiscoveryResult(
             success=True,
             message="OK",
             addressbook_home=config.carddav_url + "/addressbooks/users/user",
         )
 
-        with patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client), \
-             patch("app.services.dav_discovery.discover_dav", return_value=mock_discovery):
+        with (
+            patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
+            patch("app.services.dav_discovery.discover_dav", return_value=mock_discovery),
+        ):
             result = await write_back_email_to_contact(db, config, contact, "new@example.com")
 
         assert result is True
@@ -302,14 +304,17 @@ END:VCARD"""
         mock_client.__aexit__ = AsyncMock()
 
         from app.services.dav_discovery import DavDiscoveryResult
+
         mock_discovery = DavDiscoveryResult(
             success=True,
             message="OK",
             addressbook_home=config.carddav_url + "/addressbooks/users/user",
         )
 
-        with patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client), \
-             patch("app.services.dav_discovery.discover_dav", return_value=mock_discovery):
+        with (
+            patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
+            patch("app.services.dav_discovery.discover_dav", return_value=mock_discovery),
+        ):
             result = await write_back_email_to_contact(db, config, contact, "retry@example.com")
 
         assert result is True
@@ -331,14 +336,17 @@ END:VCARD"""
         mock_client.__aexit__ = AsyncMock()
 
         from app.services.dav_discovery import DavDiscoveryResult
+
         mock_discovery = DavDiscoveryResult(
             success=True,
             message="OK",
             addressbook_home=config.carddav_url + "/addressbooks/users/user",
         )
 
-        with patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client), \
-             patch("app.services.dav_discovery.discover_dav", return_value=mock_discovery):
+        with (
+            patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
+            patch("app.services.dav_discovery.discover_dav", return_value=mock_discovery),
+        ):
             result = await write_back_email_to_contact(db, config, contact, "new@example.com")
 
         assert result is False
@@ -356,10 +364,32 @@ class TestContactScoring:
     """
 
     # Replicate the scoring constants and stopwords from pipeline_orchestrator
-    _NAME_STOPWORDS = {
-        "dr", "mr", "mrs", "ms", "prof", "ing", "mag", "von", "van",
-        "de", "del", "der", "die", "das", "the", "and", "und", "jr",
-        "sr", "ii", "iii", "msc", "bsc", "phd", "mba",
+    _NAME_STOPWORDS = {  # noqa: RUF012
+        "dr",
+        "mr",
+        "mrs",
+        "ms",
+        "prof",
+        "ing",
+        "mag",
+        "von",
+        "van",
+        "de",
+        "del",
+        "der",
+        "die",
+        "das",
+        "the",
+        "and",
+        "und",
+        "jr",
+        "sr",
+        "ii",
+        "iii",
+        "msc",
+        "bsc",
+        "phd",
+        "mba",
     }
 
     def _score_contact(self, sender_email: str, sender_name: str, contact) -> float:
@@ -367,10 +397,9 @@ class TestContactScoring:
         sender_email = sender_email.lower()
         sender_domain = sender_email.split("@")[-1] if "@" in sender_email else ""
         sender_name = sender_name.lower().strip()
-        sender_name_parts = {
-            t for t in sender_name.split()
-            if len(t) >= 3 and t not in self._NAME_STOPWORDS
-        } if sender_name else set()
+        sender_name_parts = (
+            {t for t in sender_name.split() if len(t) >= 3 and t not in self._NAME_STOPWORDS} if sender_name else set()
+        )
 
         score = 0.0
         c_emails = [e.lower() for e in (contact.emails or [])]
@@ -383,8 +412,7 @@ class TestContactScoring:
                 score += 10.0
 
         c_name_parts = {
-            t for t in (contact.display_name or "").lower().split()
-            if len(t) >= 3 and t not in self._NAME_STOPWORDS
+            t for t in (contact.display_name or "").lower().split() if len(t) >= 3 and t not in self._NAME_STOPWORDS
         }
         if contact.first_name and len(contact.first_name) >= 3:
             c_name_parts.add(contact.first_name.lower())
@@ -400,8 +428,7 @@ class TestContactScoring:
 
         return score
 
-    def _make_scored_contact(self, emails=None, display_name="", first_name=None,
-                             last_name=None, organization=None):
+    def _make_scored_contact(self, emails=None, display_name="", first_name=None, last_name=None, organization=None):
         c = MagicMock()
         c.emails = emails or []
         c.display_name = display_name
@@ -436,7 +463,8 @@ class TestContactScoring:
         """'Mr', 'von', 'der' and friends should not contribute to name matching."""
         c = self._make_scored_contact(
             display_name="Mr Alexander von der Schmidt",
-            first_name="Alexander", last_name="Schmidt",
+            first_name="Alexander",
+            last_name="Schmidt",
         )
         # Sender uses only stopwords from the contact: "Mr von der" — none
         # of those should match because they are all in ``_NAME_STOPWORDS``.
@@ -455,14 +483,16 @@ class TestContactScoring:
     def test_name_overlap_scores(self):
         c = self._make_scored_contact(
             display_name="Alexander Schmidt",
-            first_name="Alexander", last_name="Schmidt",
+            first_name="Alexander",
+            last_name="Schmidt",
         )
         score = self._score_contact("sender@other.com", "Alexander Schmidt", c)
         assert score == 10.0  # 2 tokens * 5.0
 
     def test_org_exact_domain_matches(self):
         c = self._make_scored_contact(
-            emails=["user@other.com"], organization="Acme",
+            emails=["user@other.com"],
+            organization="Acme",
         )
         score = self._score_contact("sender@acme.com", "", c)
         assert score == 8.0
@@ -470,7 +500,8 @@ class TestContactScoring:
     def test_org_substring_does_not_match(self):
         """Org 'IT' should NOT match domain 'twitter.com' (was a substring bug)."""
         c = self._make_scored_contact(
-            emails=["user@other.com"], organization="IT Solutions",
+            emails=["user@other.com"],
+            organization="IT Solutions",
         )
         score = self._score_contact("sender@twitter.com", "", c)
         assert score == 0.0
@@ -505,7 +536,7 @@ class TestContactsPluginExecute:
         plugin reports a benign no-op via the ``no_contact_match`` label
         so the dashboard can distinguish "no action" from "skipped".
         """
-        from app.plugins.contacts import ContactsPlugin, ContactAssignmentResponse
+        from app.plugins.contacts import ContactAssignmentResponse, ContactsPlugin
 
         plugin = ContactsPlugin()
         context = MagicMock()
@@ -526,7 +557,7 @@ class TestContactsPluginExecute:
     @pytest.mark.asyncio
     async def test_high_confidence_match_no_approval(self):
         """High confidence existing contact match does not require approval."""
-        from app.plugins.contacts import ContactsPlugin, ContactAssignmentResponse
+        from app.plugins.contacts import ContactAssignmentResponse, ContactsPlugin
 
         plugin = ContactsPlugin()
         context = MagicMock()
@@ -548,7 +579,7 @@ class TestContactsPluginExecute:
     @pytest.mark.asyncio
     async def test_low_confidence_requires_approval(self):
         """Below threshold requires approval."""
-        from app.plugins.contacts import ContactsPlugin, ContactAssignmentResponse
+        from app.plugins.contacts import ContactAssignmentResponse, ContactsPlugin
 
         plugin = ContactsPlugin()
         context = MagicMock()
@@ -567,7 +598,7 @@ class TestContactsPluginExecute:
     @pytest.mark.asyncio
     async def test_new_contact_suggestion_requires_approval(self):
         """New contact suggestions always require approval."""
-        from app.plugins.contacts import ContactsPlugin, ContactAssignmentResponse
+        from app.plugins.contacts import ContactAssignmentResponse, ContactsPlugin
 
         plugin = ContactsPlugin()
         context = MagicMock()
@@ -586,7 +617,7 @@ class TestContactsPluginExecute:
     @pytest.mark.asyncio
     async def test_deterministic_match_confirmed(self):
         """When pre-match and AI agree, confirm without approval."""
-        from app.plugins.contacts import ContactsPlugin, ContactAssignmentResponse
+        from app.plugins.contacts import ContactAssignmentResponse, ContactsPlugin
 
         plugin = ContactsPlugin()
         cid = str(uuid4())

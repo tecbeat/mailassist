@@ -8,7 +8,7 @@ a draft in the IMAP Drafts folder.
 
 from pydantic import BaseModel, Field
 
-from app.plugins.base import AIFunctionPlugin, ActionResult, MailContext
+from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
 
 

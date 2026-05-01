@@ -8,6 +8,7 @@ Also persists email summaries, detected newsletters, and extracted
 coupons to the database when their respective approvals are executed.
 """
 
+from typing import Any
 from uuid import UUID
 
 import structlog
@@ -37,7 +38,7 @@ from app.services.persistence import (
 logger = structlog.get_logger()
 
 
-def _rebuild_actions(function_type: str, source: dict) -> list[str]:
+def _rebuild_actions(function_type: str, source: dict[str, Any]) -> list[str]:
     """Rebuild IMAP action strings from structured approval data.
 
     When plugins run in approval mode they return ``requires_approval=True``
@@ -73,7 +74,7 @@ def _rebuild_actions(function_type: str, source: dict) -> list[str]:
     return actions
 
 
-async def execute_approved_actions(ctx: dict, approval_id: str) -> None:
+async def execute_approved_actions(ctx: dict[str, Any], approval_id: str) -> None:
     """Execute IMAP actions stored in an approved approval record.
 
     Raises on IMAP failure so ARQ retries the job (max_tries=3).
@@ -150,7 +151,9 @@ async def execute_approved_actions(ctx: dict, approval_id: str) -> None:
 
         # Raise on IMAP failure so ARQ retries the job automatically
         move_outcome = await execute_imap_actions(
-            account, approval.mail_uid, actions,
+            account,
+            approval.mail_uid,
+            actions,
             source_folder=current_folder,
             propagate_connect_errors=True,
         )
@@ -170,7 +173,8 @@ async def execute_approved_actions(ctx: dict, approval_id: str) -> None:
                     tracked.mail_uid = move_outcome.new_uid
                 await db.flush()
                 log.info(
-                    "current_folder_updated", folder=move_outcome.folder,
+                    "current_folder_updated",
+                    folder=move_outcome.folder,
                     new_uid=move_outcome.new_uid,
                 )
 
@@ -180,7 +184,7 @@ async def execute_approved_actions(ctx: dict, approval_id: str) -> None:
         log.info("approved_actions_complete", mail_uid=approval.mail_uid)
 
 
-async def handle_spam_rejection(ctx: dict, user_id: str, account_id: str, mail_uid: str) -> None:
+async def handle_spam_rejection(ctx: dict[str, Any], user_id: str, account_id: str, mail_uid: str) -> None:
     """Re-process an email through the AI pipeline, skipping spam detection.
 
     Called when a spam approval is rejected (user says it is NOT spam).
@@ -203,7 +207,10 @@ async def handle_spam_rejection(ctx: dict, user_id: str, account_id: str, mail_u
             current_folder = folder
 
     await process_mail(
-        ctx, user_id, account_id, mail_uid,
+        ctx,
+        user_id,
+        account_id,
+        mail_uid,
         current_folder=current_folder,
         skip_plugins=["spam_detection"],
     )

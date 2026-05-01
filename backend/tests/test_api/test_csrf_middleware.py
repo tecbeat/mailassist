@@ -7,14 +7,18 @@ listed paths.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 from starlette.applications import Starlette
-from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from app.core.middleware import CSRFMiddleware
+
+if TYPE_CHECKING:
+    from starlette.requests import Request
 
 
 def _ok_handler(request: Request) -> JSONResponse:

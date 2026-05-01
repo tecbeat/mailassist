@@ -11,12 +11,23 @@ from __future__ import annotations
 
 import enum
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import structlog
 
-from app.models import MailAccount
-from app.services.mail import MoveResult, connect_imap, create_folder, invalidate_folder_cache, move_message, resolve_folder, safe_imap_logout, store_flags
+from app.services.mail import (
+    connect_imap,
+    create_folder,
+    invalidate_folder_cache,
+    move_message,
+    resolve_folder,
+    safe_imap_logout,
+    store_flags,
+)
+
+if TYPE_CHECKING:
+    from app.models import MailAccount
 
 logger = structlog.get_logger()
 
@@ -125,14 +136,16 @@ class ParsedAction:
         return self.kind in _IMAP_KINDS
 
 
-_IMAP_KINDS = frozenset({
-    ActionKind.APPLY_LABEL,
-    ActionKind.CREATE_AND_APPLY_LABEL,
-    ActionKind.MOVE_TO,
-    ActionKind.MOVE_TO_SPAM,
-    ActionKind.CREATE_FOLDER,
-    ActionKind.MARK_AS_READ,
-})
+_IMAP_KINDS = frozenset(
+    {
+        ActionKind.APPLY_LABEL,
+        ActionKind.CREATE_AND_APPLY_LABEL,
+        ActionKind.MOVE_TO,
+        ActionKind.MOVE_TO_SPAM,
+        ActionKind.CREATE_FOLDER,
+        ActionKind.MARK_AS_READ,
+    }
+)
 
 
 def parse_action(raw: str) -> ParsedAction:
@@ -157,7 +170,7 @@ def parse_action(raw: str) -> ParsedAction:
     # Check prefixed actions (includes "create_draft_reply" as a special case)
     for prefix, kind in _PREFIX_MAP:
         if normalised.startswith(prefix):
-            return ParsedAction(kind=kind, value=normalised[len(prefix):], raw=raw)
+            return ParsedAction(kind=kind, value=normalised[len(prefix) :], raw=raw)
 
     # "create_draft_reply" may include annotations → bare match after strip
     if normalised.startswith("create_draft_reply"):
@@ -260,12 +273,14 @@ async def execute_imap_actions(
         for pa in parsed:
             try:
                 if pa.kind in (ActionKind.CREATE_AND_APPLY_LABEL, ActionKind.APPLY_LABEL):
+                    assert pa.value is not None
                     await store_flags(conn, mail_uid, [pa.value], folder=folder_to_select)
 
                 elif pa.kind is ActionKind.MARK_AS_READ:
                     await store_flags(conn, mail_uid, ["\\Seen"], folder=folder_to_select)
 
                 elif pa.kind is ActionKind.CREATE_FOLDER:
+                    assert pa.value is not None
                     await create_folder(conn, pa.value)
                     await invalidate_folder_cache(account.id)
 
@@ -280,8 +295,11 @@ async def execute_imap_actions(
             try:
                 if pa.kind is ActionKind.MOVE_TO_SPAM:
                     dest = await resolve_folder(
-                        conn, SPAM_FOLDERS, create_if_missing=True,
+                        conn,
+                        SPAM_FOLDERS,
+                        create_if_missing=True,
                     )
+                    assert dest is not None
                     result = await move_message(conn, mail_uid, dest, source=folder_to_select)
                     if result.success:
                         moved_to = dest
@@ -292,6 +310,7 @@ async def execute_imap_actions(
                     if pa.value and pa.value.upper() == folder_to_select.upper():
                         log.debug("move_skipped_same_folder", folder=pa.value)
                     else:
+                        assert pa.value is not None
                         result = await move_message(conn, mail_uid, pa.value, source=folder_to_select)
                         if result.success:
                             moved_to = pa.value

@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel, Field
 
-from app.services.ai import call_llm, _build_model_string, _track_tokens
+from app.services.ai import _build_model_string, _track_tokens, call_llm
 
 
 class SampleSchema(BaseModel):
@@ -62,18 +62,20 @@ class TestCallLLMParsing:
         valid = json.dumps({"label": "work", "confidence": 0.9})
         mock_response = _make_litellm_response(valid, total_tokens=42)
 
-        with patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_response):
-            with patch("app.services.ai._track_tokens", new_callable=AsyncMock):
-                result, tokens = await call_llm(
-                    provider_type="openai",
-                    base_url="http://localhost",
-                    model_name="gpt-4o",
-                    api_key="test-key",
-                    system_prompt="Classify.",
-                    user_prompt="Test email body.",
-                    response_schema=SampleSchema,
-                    user_id="user-123",
-                )
+        with (
+            patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_response),
+            patch("app.services.ai._track_tokens", new_callable=AsyncMock),
+        ):
+            result, tokens = await call_llm(
+                provider_type="openai",
+                base_url="http://localhost",
+                model_name="gpt-4o",
+                api_key="test-key",
+                system_prompt="Classify.",
+                user_prompt="Test email body.",
+                response_schema=SampleSchema,
+                user_id="user-123",
+            )
 
         assert isinstance(result, SampleSchema)
         assert result.label == "work"
@@ -98,17 +100,19 @@ class TestCallLLMParsing:
             call_count += 1
             return responses[idx]
 
-        with patch("app.services.ai.litellm.acompletion", side_effect=mock_acompletion):
-            with patch("app.services.ai._track_tokens", new_callable=AsyncMock):
-                result, tokens = await call_llm(
-                    provider_type="openai",
-                    base_url="http://localhost",
-                    model_name="gpt-4o",
-                    api_key=None,
-                    system_prompt="Classify.",
-                    user_prompt="Body.",
-                    response_schema=SampleSchema,
-                )
+        with (
+            patch("app.services.ai.litellm.acompletion", side_effect=mock_acompletion),
+            patch("app.services.ai._track_tokens", new_callable=AsyncMock),
+        ):
+            result, tokens = await call_llm(
+                provider_type="openai",
+                base_url="http://localhost",
+                model_name="gpt-4o",
+                api_key=None,
+                system_prompt="Classify.",
+                user_prompt="Body.",
+                response_schema=SampleSchema,
+            )
 
         assert result.label == "spam"
         # Both attempts' tokens are summed
@@ -121,17 +125,19 @@ class TestCallLLMParsing:
         invalid = "still not JSON"
         mock_resp = _make_litellm_response(invalid, total_tokens=5)
 
-        with patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_resp):
-            with pytest.raises(ValueError, match="invalid output after retry"):
-                await call_llm(
-                    provider_type="openai",
-                    base_url="",
-                    model_name="gpt-4o",
-                    api_key=None,
-                    system_prompt="X",
-                    user_prompt="Y",
-                    response_schema=SampleSchema,
-                )
+        with (
+            patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_resp),
+            pytest.raises(ValueError, match="invalid output after retry"),
+        ):
+            await call_llm(
+                provider_type="openai",
+                base_url="",
+                model_name="gpt-4o",
+                api_key=None,
+                system_prompt="X",
+                user_prompt="Y",
+                response_schema=SampleSchema,
+            )
 
     @pytest.mark.asyncio
     async def test_partial_json_missing_field_retries(self):
@@ -151,17 +157,19 @@ class TestCallLLMParsing:
             call_count += 1
             return responses[idx]
 
-        with patch("app.services.ai.litellm.acompletion", side_effect=mock_acompletion):
-            with patch("app.services.ai._track_tokens", new_callable=AsyncMock):
-                result, tokens = await call_llm(
-                    provider_type="openai",
-                    base_url="",
-                    model_name="gpt-4o",
-                    api_key=None,
-                    system_prompt="X",
-                    user_prompt="Y",
-                    response_schema=SampleSchema,
-                )
+        with (
+            patch("app.services.ai.litellm.acompletion", side_effect=mock_acompletion),
+            patch("app.services.ai._track_tokens", new_callable=AsyncMock),
+        ):
+            result, tokens = await call_llm(
+                provider_type="openai",
+                base_url="",
+                model_name="gpt-4o",
+                api_key=None,
+                system_prompt="X",
+                user_prompt="Y",
+                response_schema=SampleSchema,
+            )
 
         assert result.label == "ok"
         assert tokens == 20
@@ -171,17 +179,19 @@ class TestCallLLMParsing:
         """Empty string response from LLM raises ValueError after retry."""
         mock_resp = _make_litellm_response("", total_tokens=1)
 
-        with patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_resp):
-            with pytest.raises(ValueError):
-                await call_llm(
-                    provider_type="openai",
-                    base_url="",
-                    model_name="gpt-4o",
-                    api_key=None,
-                    system_prompt="X",
-                    user_prompt="Y",
-                    response_schema=SampleSchema,
-                )
+        with (
+            patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_resp),
+            pytest.raises(ValueError),
+        ):
+            await call_llm(
+                provider_type="openai",
+                base_url="",
+                model_name="gpt-4o",
+                api_key=None,
+                system_prompt="X",
+                user_prompt="Y",
+                response_schema=SampleSchema,
+            )
 
     @pytest.mark.asyncio
     async def test_validation_error_confidence_out_of_range(self):
@@ -201,17 +211,19 @@ class TestCallLLMParsing:
             call_count += 1
             return responses[idx]
 
-        with patch("app.services.ai.litellm.acompletion", side_effect=mock_acompletion):
-            with patch("app.services.ai._track_tokens", new_callable=AsyncMock):
-                result, _ = await call_llm(
-                    provider_type="openai",
-                    base_url="",
-                    model_name="gpt-4o",
-                    api_key=None,
-                    system_prompt="X",
-                    user_prompt="Y",
-                    response_schema=SampleSchema,
-                )
+        with (
+            patch("app.services.ai.litellm.acompletion", side_effect=mock_acompletion),
+            patch("app.services.ai._track_tokens", new_callable=AsyncMock),
+        ):
+            result, _ = await call_llm(
+                provider_type="openai",
+                base_url="",
+                model_name="gpt-4o",
+                api_key=None,
+                system_prompt="X",
+                user_prompt="Y",
+                response_schema=SampleSchema,
+            )
 
         assert result.confidence == 0.7
 
@@ -221,17 +233,19 @@ class TestCallLLMParsing:
         valid = json.dumps({"label": "test", "confidence": 0.5})
         mock_resp = _make_litellm_response(valid)
 
-        with patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_resp) as mock_call:
-            with patch("app.services.ai._track_tokens", new_callable=AsyncMock):
-                await call_llm(
-                    provider_type="ollama",
-                    base_url="http://localhost:11434",
-                    model_name="llama3.1",
-                    api_key=None,
-                    system_prompt="X",
-                    user_prompt="Y",
-                    response_schema=SampleSchema,
-                )
+        with (
+            patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_resp) as mock_call,
+            patch("app.services.ai._track_tokens", new_callable=AsyncMock),
+        ):
+            await call_llm(
+                provider_type="ollama",
+                base_url="http://localhost:11434",
+                model_name="llama3.1",
+                api_key=None,
+                system_prompt="X",
+                user_prompt="Y",
+                response_schema=SampleSchema,
+            )
 
         _, kwargs = mock_call.call_args
         assert "api_key" not in kwargs

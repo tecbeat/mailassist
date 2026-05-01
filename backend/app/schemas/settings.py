@@ -66,11 +66,15 @@ class SettingsUpdate(BaseModel):
     default_polling_interval_minutes: int | None = Field(None, ge=1, le=60)
     draft_expiry_hours: int | None = Field(None, ge=1, le=720)
     max_concurrent_processing: int | None = Field(
-        None, ge=1, le=20,
+        None,
+        ge=1,
+        le=20,
         description="Max mails in PROCESSING status simultaneously (1-20)",
     )
     ai_timeout_seconds: int | None = Field(
-        None, ge=10, le=600,
+        None,
+        ge=10,
+        le=600,
         description="Global LLM timeout in seconds (10-600). Per-provider overrides take precedence.",
     )
     approval_modes: ApprovalModesUpdate | None = None

@@ -3,11 +3,9 @@
 Covers: encrypt -> decrypt roundtrip, key rotation, invalid key handling.
 """
 
-from unittest.mock import patch
-
 import pytest
 
-from app.core.security import EnvelopeEncryption, MalformedEnvelopeError, init_encryption, get_encryption
+from app.core.security import EnvelopeEncryption, MalformedEnvelopeError
 
 
 class TestEnvelopeEncryption:
@@ -42,7 +40,7 @@ class TestEnvelopeEncryption:
         enc2 = EnvelopeEncryption(secret_key="z" * 32)
 
         ciphertext = enc1.encrypt("secret")
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             enc2.decrypt(ciphertext)
 
     def test_key_rotation(self):
@@ -82,7 +80,7 @@ class TestEnvelopeEncryption:
     def test_invalid_ciphertext_raises(self):
         """Garbled ciphertext raises an error on decrypt."""
         enc = EnvelopeEncryption(secret_key="f" * 32)
-        with pytest.raises(Exception):
+        with pytest.raises((ValueError, MalformedEnvelopeError)):
             enc.decrypt(b"not-valid-ciphertext-at-all")
 
     def test_decrypt_missing_encrypted_dek_raises(self):
@@ -103,7 +101,7 @@ class TestEnvelopeEncryption:
         """Envelope that is a JSON array raises MalformedEnvelopeError."""
         enc = EnvelopeEncryption(secret_key="g" * 32)
         with pytest.raises(MalformedEnvelopeError, match="JSON object"):
-            enc.decrypt(b'[1, 2, 3]')
+            enc.decrypt(b"[1, 2, 3]")
 
     def test_decrypt_non_string_key_raises(self):
         """Envelope with non-string encrypted_dek raises MalformedEnvelopeError."""

@@ -5,16 +5,16 @@ missing name attribute, get_plugin, get_all_plugins sorted by order,
 plugin info serialization, and __contains__/__len__.
 """
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import BaseModel
 
-from app.plugins.base import AIFunctionPlugin, ActionResult, MailContext
+from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import (
     PluginRegistry,
-    register_plugin,
     _registered_plugins,
+    register_plugin,
 )
 
 
@@ -189,9 +189,11 @@ class TestPluginRegistry:
             mi.name = mi._mock_name
 
         reg = PluginRegistry()
-        with patch("app.plugins.registry.pkgutil.iter_modules", return_value=module_infos):
-            with patch("app.plugins.registry.importlib.import_module") as mock_import:
-                reg.discover_plugins()
+        with (
+            patch("app.plugins.registry.pkgutil.iter_modules", return_value=module_infos),
+            patch("app.plugins.registry.importlib.import_module") as mock_import,
+        ):
+            reg.discover_plugins()
 
         # None of the skipped modules should be imported
         mock_import.assert_not_called()
@@ -229,6 +231,6 @@ class TestDefaultConfigIsolation:
 
         class PluginWithConfig(_BaseDummyPlugin):
             name = "config_explicit"
-            default_config = {"threshold": 0.8}
+            default_config = {"threshold": 0.8}  # noqa: RUF012
 
         assert PluginWithConfig.default_config == {"threshold": 0.8}

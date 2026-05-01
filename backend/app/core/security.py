@@ -10,6 +10,7 @@ Implements the key hierarchy described in Section 13.2 of the requirements:
 import base64
 import json
 from datetime import UTC, datetime
+from typing import Any
 
 import structlog
 from cryptography.fernet import Fernet, InvalidToken
@@ -25,26 +26,20 @@ class MalformedEnvelopeError(ValueError):
     """Raised when an envelope blob is missing required keys or has invalid structure."""
 
 
-def _validate_envelope(envelope: object) -> dict:
+def _validate_envelope(envelope: object) -> dict[str, Any]:
     """Validate that the parsed envelope has the required structure.
 
     Raises MalformedEnvelopeError if the envelope is not a dict or is missing
     required keys.
     """
     if not isinstance(envelope, dict):
-        raise MalformedEnvelopeError(
-            f"Envelope must be a JSON object, got {type(envelope).__name__}"
-        )
+        raise MalformedEnvelopeError(f"Envelope must be a JSON object, got {type(envelope).__name__}")
     missing = _REQUIRED_ENVELOPE_KEYS - envelope.keys()
     if missing:
-        raise MalformedEnvelopeError(
-            f"Envelope missing required keys: {', '.join(sorted(missing))}"
-        )
+        raise MalformedEnvelopeError(f"Envelope missing required keys: {', '.join(sorted(missing))}")
     for key in ("encrypted_dek", "encrypted_data"):
         if not isinstance(envelope[key], str):
-            raise MalformedEnvelopeError(
-                f"Envelope key '{key}' must be a string, got {type(envelope[key]).__name__}"
-            )
+            raise MalformedEnvelopeError(f"Envelope key '{key}' must be a string, got {type(envelope[key]).__name__}")
     return envelope
 
 
@@ -113,9 +108,7 @@ class EnvelopeEncryption:
         """
         envelope = _validate_envelope(json.loads(ciphertext))
         if envelope.get("version") != 1:
-            raise MalformedEnvelopeError(
-                f"Unsupported envelope version: {envelope.get('version')}"
-            )
+            raise MalformedEnvelopeError(f"Unsupported envelope version: {envelope.get('version')}")
 
         encrypted_dek = base64.b64decode(envelope["encrypted_dek"])
         encrypted_data = base64.b64decode(envelope["encrypted_data"])
@@ -146,7 +139,7 @@ class EnvelopeEncryption:
                     return self._old_kek_fernet.decrypt(encrypted_dek), True
                 except InvalidToken:
                     pass
-            raise ValueError("Cannot decrypt credential: invalid key")
+            raise ValueError("Cannot decrypt credential: invalid key") from None
 
     def rotate_envelope(self, ciphertext: bytes) -> bytes:
         """Re-encrypt the DEK wrapper with the current KEK.
@@ -205,4 +198,5 @@ def decrypt_credentials(encrypted: bytes) -> dict[str, str]:
     Returns:
         Dict with at least ``username`` and ``password`` keys.
     """
-    return json.loads(get_encryption().decrypt(encrypted))
+    result: dict[str, str] = json.loads(get_encryption().decrypt(encrypted))
+    return result

@@ -36,11 +36,7 @@ async def list_providers(
     user_id: CurrentUserId,
 ) -> list[AIProviderResponse]:
     """List all AI providers for the current user."""
-    stmt = (
-        select(AIProvider)
-        .where(AIProvider.user_id == UUID(user_id))
-        .order_by(AIProvider.created_at)
-    )
+    stmt = select(AIProvider).where(AIProvider.user_id == UUID(user_id)).order_by(AIProvider.created_at)
     result = await db.execute(stmt)
     providers = result.scalars().all()
     return [AIProviderResponse.model_validate(p) for p in providers]
@@ -85,9 +81,7 @@ async def create_provider(
     # Auto-assign all plugins to the first provider
     if existing_count == 0:
         settings = await get_or_create(db, UserSettings, uid)
-        settings.plugin_provider_map = {
-            name: str(provider.id) for name in PIPELINE_PLUGIN_NAMES
-        }
+        settings.plugin_provider_map = {name: str(provider.id) for name in PIPELINE_PLUGIN_NAMES}
         logger.info(
             "auto_assigned_plugins_to_first_provider",
             provider_id=str(provider.id),
@@ -151,9 +145,7 @@ async def update_provider(
     # all other providers for this user first.
     if update_data.get("is_default") is True:
         await db.execute(
-            update(AIProvider)
-            .where(AIProvider.user_id == uid, AIProvider.id != provider_id)
-            .values(is_default=False)
+            update(AIProvider).where(AIProvider.user_id == uid, AIProvider.id != provider_id).values(is_default=False)
         )
 
     for field, value in update_data.items():

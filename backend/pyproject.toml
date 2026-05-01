@@ -63,7 +63,7 @@ select = [
     "TCH", # flake8-type-checking
     "RUF", # ruff-specific rules
 ]
-ignore = ["E501"]
+ignore = ["E501", "B008", "UP042"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

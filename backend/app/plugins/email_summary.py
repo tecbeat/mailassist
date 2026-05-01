@@ -10,7 +10,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field, StringConstraints
 
-from app.plugins.base import AIFunctionPlugin, ActionResult, MailContext
+from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
 
 
@@ -18,9 +18,7 @@ class EmailSummaryResponse(BaseModel):
     """Validated LLM response for email summary."""
 
     summary: str = Field(max_length=500)
-    key_points: list[Annotated[str, StringConstraints(max_length=500)]] = Field(
-        default_factory=list, max_length=10
-    )
+    key_points: list[Annotated[str, StringConstraints(max_length=500)]] = Field(default_factory=list, max_length=10)
     urgency: str = Field(pattern=r"^(low|medium|high|critical)$")
     action_required: bool
     action_description: str | None = Field(default=None, max_length=200)

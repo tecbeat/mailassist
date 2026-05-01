@@ -10,7 +10,7 @@ def test_user_settings_approval_mode_notifications_default_is_auto() -> None:
     'approval' mode is invalid for this column. The default must be
     AUTO to avoid a broken UI state on first login.
     """
-    settings = UserSettings.__new__(UserSettings)
+    UserSettings.__new__(UserSettings)
     col = UserSettings.__table__.c["approval_mode_notifications"]
     default = col.default.arg
     assert default == ApprovalMode.AUTO, (

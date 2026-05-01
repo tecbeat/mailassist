@@ -9,7 +9,7 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 
 import structlog
-from imap_tools import AND, MailBox
+from imap_tools import AND
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -57,22 +57,16 @@ async def cleanup_drafts_for_account(
     try:
         async with imap_connection(account) as conn:
             # Resolve Sent/Drafts folders using the shared helper
-            sent_candidates = [
-                f.strip()
-                for f in settings.draft_sent_folder_names.split(",")
-                if f.strip()
-            ]
-            draft_candidates = [
-                f.strip()
-                for f in settings.draft_folder_names.split(",")
-                if f.strip()
-            ]
+            sent_candidates = [f.strip() for f in settings.draft_sent_folder_names.split(",") if f.strip()]
+            draft_candidates = [f.strip() for f in settings.draft_folder_names.split(",") if f.strip()]
             sent_folder = await resolve_folder(conn, sent_candidates)
             drafts_folder = await resolve_folder(conn, draft_candidates)
 
             # Collect Message-IDs from Sent folder for matching
             sent_message_ids = await _get_sent_message_ids(
-                conn, sent_folder, settings,
+                conn,
+                sent_folder,
+                settings,
             )
 
             # Check each active draft
@@ -93,7 +87,9 @@ async def cleanup_drafts_for_account(
 
                     # Check if draft still exists in IMAP
                     draft_exists = await _draft_exists_in_imap(
-                        conn, draft.draft_uid, drafts_folder,
+                        conn,
+                        draft.draft_uid,
+                        drafts_folder,
                     )
                     if not draft_exists:
                         draft.status = DraftStatus.DELETED
@@ -149,14 +145,16 @@ async def _get_sent_message_ids(
 
             # Fetch recent messages with In-Reply-To header
             criteria = AND(date_gte=since_date.date())
-            messages = list(conn.mailbox.fetch(
-                criteria,
-                headers_only=True,
-                mark_seen=False,
-                limit=settings.draft_max_sent_scan,
-            ))
+            messages = list(
+                conn.mailbox.fetch(
+                    criteria,
+                    headers_only=True,
+                    mark_seen=False,
+                    limit=settings.draft_max_sent_scan,
+                )
+            )
             for msg in messages:
-                in_reply_to = msg.headers.get("in-reply-to", [""])
+                in_reply_to = msg.headers.get("in-reply-to", [""])  # type: ignore[no-untyped-call]
                 # headers returns list of values
                 for val in in_reply_to:
                     msg_id = val.strip().strip("<>")
@@ -182,6 +180,7 @@ async def _draft_exists_in_imap(
         return False
 
     try:
+
         def _check() -> bool:
             conn.mailbox.folder.set(drafts_folder)
             return draft_uid in conn.mailbox.uids()
@@ -202,6 +201,7 @@ async def _delete_draft_from_imap(
         return
 
     try:
+
         def _delete() -> None:
             conn.mailbox.folder.set(drafts_folder)
             conn.mailbox.delete(draft_uid)
