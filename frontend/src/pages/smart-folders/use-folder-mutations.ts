@@ -59,16 +59,43 @@ export function useDeleteImapFolder(accountId: string) {
 
 export function useRenameImapFolder(accountId: string) {
   const queryClient = useQueryClient();
+  const queryKey = getListFoldersApiMailAccountsAccountIdFoldersGetQueryKey(accountId, { counts: true });
   return useMutation({
     mutationFn: ({ oldName, newName }: { oldName: string; newName: string }) =>
       renameImapFolderApiMailAccountsAccountIdFoldersRenamePost(
         accountId,
         { old_name: oldName, new_name: newName },
       ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: getListFoldersApiMailAccountsAccountIdFoldersGetQueryKey(accountId, { counts: true }),
-      });
+    onMutate: async ({ oldName, newName }: { oldName: string; newName: string }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<{ data: ImapFolderListResponse }>(queryKey);
+      if (previous?.data) {
+        const sep = previous.data.separator;
+        queryClient.setQueryData(queryKey, {
+          ...previous,
+          data: {
+            ...previous.data,
+            folders: (previous.data.folders as FolderInfo[]).map((f) => {
+              if (f.name === oldName) {
+                return { ...f, name: newName };
+              }
+              if (f.name.startsWith(oldName + sep)) {
+                return { ...f, name: newName + sep + f.name.slice(oldName.length + sep.length) };
+              }
+              return f;
+            }),
+          },
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKey, context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
     },
   });
 }
