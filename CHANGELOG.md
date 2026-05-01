@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### 🐛 Bug Fixes
 
 - *(backend)* Remove redundant IMAP SELECT in get_permanent_flags (#34) - ([83eeaa9](https://git.teccave.de/tecbeat/mailassist/commit/83eeaa9b68ce7fad336d49df91dd3c92bf7d04fc))
+- Flush and expunge CalendarEvent before CalDAV sync to prevent DetachedInstanceError - ([4bbc3d7](https://git.teccave.de/tecbeat/mailassist/commit/4bbc3d77a4bf58592a272f64dd41b555f4e5aac8))
 
 ## [0.7.4-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.4-beta) - 2026-04-30
 
