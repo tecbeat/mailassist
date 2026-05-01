@@ -654,7 +654,7 @@ async def _count_tracked(
     return result
 
 
-async def _get_token_usage(user_id: str, days: int) -> int:
+async def _get_token_usage(user_id: UUID, days: int) -> int:
     """Aggregate token usage from Valkey daily counters using a single MGET."""
     try:
         cache = get_cache_client()

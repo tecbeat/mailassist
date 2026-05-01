@@ -6,6 +6,7 @@ Includes preview rendering with sample data and reset-to-default.
 
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, HTTPException
@@ -152,7 +153,7 @@ _SAMPLE_CONTEXT: dict[str, Any] = {
 }
 
 
-async def _build_preview_context(db: AsyncSession, user_id: str) -> dict[str, Any]:
+async def _build_preview_context(db: AsyncSession, user_id: UUID) -> dict[str, Any]:
     """Build a preview template context enriched with real user settings.
 
     Starts from the static ``_SAMPLE_CONTEXT`` and overrides ``language``,

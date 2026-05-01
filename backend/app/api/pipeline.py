@@ -92,7 +92,7 @@ async def test_pipeline(
             # Build test mail context
             test_date = data.date or datetime.now(UTC).isoformat()
             context = MailContext(
-                user_id=user_id,
+                user_id=str(user_id),
                 account_id=str(uuid4()),
                 mail_uid="TEST-" + str(uuid4())[:8],
                 sender=data.sender,
@@ -258,7 +258,7 @@ async def test_pipeline(
                         response_schema=plugin.get_response_schema(),
                         max_tokens=provider.max_tokens,
                         temperature=provider.temperature,
-                        user_id=user_id,
+                        user_id=str(user_id),
                         timeout=provider.timeout_seconds
                         or (user_settings.ai_timeout_seconds if user_settings else None),
                     )

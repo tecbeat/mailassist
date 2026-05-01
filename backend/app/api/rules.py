@@ -127,7 +127,7 @@ async def nl_to_rule(
             response_schema=_NLRuleAIResponse,
             max_tokens=provider.max_tokens,
             temperature=0.3,
-            user_id=user_id,
+            user_id=str(user_id),
             timeout=provider.timeout_seconds or (user_settings.ai_timeout_seconds if user_settings else None),
         )
     except ValueError as e:
