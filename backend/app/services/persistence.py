@@ -453,6 +453,10 @@ async def save_calendar_event(
 
     async with _persist(own_session, db) as session:
         session.add(record)
+        await session.flush()  # write to DB before detaching
+        # Expunge before the session commits so the commit cannot expire record's
+        # attributes — preventing DetachedInstanceError in _sync_event_to_caldav.
+        session.expunge(record)
 
     logger.info("calendar_event_saved", mail_uid=mail_uid, title=title)
 
