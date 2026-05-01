@@ -66,4 +66,4 @@ async def get_changelog() -> dict[str, object]:
     content = _CHANGELOG_PATH.read_text(encoding="utf-8")
     entries = _parse_changelog(content)
 
-    return {"version": settings.app_version, "entries": entries}
+    return {"version": settings.version, "entries": entries}

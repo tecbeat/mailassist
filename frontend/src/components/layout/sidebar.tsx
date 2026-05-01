@@ -23,6 +23,7 @@ import {
   X,
   Globe,
   Languages,
+  Info,
   type LucideIcon,
 } from "lucide-react";
 import { cn, unwrapResponse } from "@/lib/utils";
@@ -42,6 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
+import { useVersion } from "@/hooks/use-version";
 import {
   useGetSettingsApiSettingsGet,
   useUpdateSettingsApiSettingsPut,
@@ -222,6 +224,7 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { version, releaseUrl } = useVersion();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -440,6 +443,28 @@ export function Sidebar() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Version */}
+            {version && (
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Info className="h-4 w-4" />
+                  Version
+                </label>
+                {releaseUrl ? (
+                  <a
+                    href={releaseUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary underline hover:opacity-80"
+                  >
+                    v{version}
+                  </a>
+                ) : (
+                  <p className="text-sm text-muted-foreground">v{version}</p>
+                )}
+              </div>
+            )}
 
             <Separator />
 
