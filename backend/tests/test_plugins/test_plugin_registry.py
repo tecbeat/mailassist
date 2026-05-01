@@ -195,3 +195,40 @@ class TestPluginRegistry:
 
         # None of the skipped modules should be imported
         mock_import.assert_not_called()
+
+
+class TestDefaultConfigIsolation:
+    """Regression tests for mutable default_config sharing across plugins (#25)."""
+
+    def test_sibling_plugins_do_not_share_default_config(self):
+        """Two plugins that inherit default_config must not share the same dict instance."""
+
+        class PluginAlpha(_BaseDummyPlugin):
+            name = "config_alpha"
+
+        class PluginBeta(_BaseDummyPlugin):
+            name = "config_beta"
+
+        assert PluginAlpha.default_config is not PluginBeta.default_config
+
+    def test_mutation_in_one_plugin_does_not_affect_sibling(self):
+        """Mutating one plugin's default_config must not change another's."""
+
+        class PluginGamma(_BaseDummyPlugin):
+            name = "config_gamma"
+
+        class PluginDelta(_BaseDummyPlugin):
+            name = "config_delta"
+
+        PluginGamma.default_config["injected"] = "value"
+
+        assert "injected" not in PluginDelta.default_config
+
+    def test_explicit_override_is_preserved(self):
+        """A subclass that explicitly sets default_config keeps its own values."""
+
+        class PluginWithConfig(_BaseDummyPlugin):
+            name = "config_explicit"
+            default_config = {"threshold": 0.8}
+
+        assert PluginWithConfig.default_config == {"threshold": 0.8}

@@ -233,7 +233,12 @@ class AIFunctionPlugin(ABC, Generic[ResponseT]):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Validate required class attributes and resolve the response type."""
         super().__init_subclass__(**kwargs)
-        # Skip validation on intermediate abstract classes
+        # Give every subclass its own default_config dict so that runtime
+        # mutations (e.g. tests patching config values) in one plugin do not
+        # bleed into sibling plugins that share the inherited empty dict.
+        if "default_config" not in cls.__dict__:
+            cls.default_config = dict(cls.default_config)
+        # Skip further validation on intermediate abstract classes
         if ABC in cls.__bases__:
             return
         required = ["name", "display_name", "description", "execution_order"]
