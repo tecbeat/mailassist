@@ -10,7 +10,7 @@ import json
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import structlog
 from fastapi import APIRouter, Request
@@ -67,25 +67,23 @@ async def test_pipeline(
 
         try:
             # Fetch user settings
-            settings_stmt = select(UserSettings).where(UserSettings.user_id == UUID(user_id))
+            settings_stmt = select(UserSettings).where(UserSettings.user_id == user_id)
             settings_result = await db.execute(settings_stmt)
             user_settings = settings_result.scalar_one_or_none()
 
             # Fetch existing labels for context
-            existing_labels_stmt = (
-                select(LabelChangeLog.label).where(LabelChangeLog.user_id == UUID(user_id)).distinct()
-            )
+            existing_labels_stmt = select(LabelChangeLog.label).where(LabelChangeLog.user_id == user_id).distinct()
             existing_labels_result = await db.execute(existing_labels_stmt)
             existing_labels = [row[0] for row in existing_labels_result.all()]
 
             # Resolve providers
-            default_provider = await get_default_provider(db, UUID(user_id))
+            default_provider = await get_default_provider(db, user_id)
             if not default_provider:
                 yield _sse("error", {"error": "No AI provider configured. Please add an AI provider first."})
                 return
 
             plugin_provider_map = (user_settings.plugin_provider_map or {}) if user_settings else {}
-            all_providers_stmt = select(AIProvider).where(AIProvider.user_id == UUID(user_id))
+            all_providers_stmt = select(AIProvider).where(AIProvider.user_id == user_id)
             all_providers_result = await db.execute(all_providers_stmt)
             providers_by_id = {str(p.id): p for p in all_providers_result.scalars().all()}
 
@@ -211,7 +209,7 @@ async def test_pipeline(
                     # Resolve prompts
                     system_prompt, user_prompt = await resolve_prompts(
                         db,
-                        UUID(user_id),
+                        user_id,
                         plugin,
                         engine,
                         context,

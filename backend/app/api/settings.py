@@ -4,8 +4,6 @@ Provides user-level application settings management including
 approval modes per function, draft expiry, polling defaults, and timezone.
 """
 
-from uuid import UUID
-
 import structlog
 from fastapi import APIRouter
 
@@ -75,7 +73,7 @@ async def get_settings(
 
     Returns default settings if none exist yet (auto-provisioned).
     """
-    settings = await get_or_create(db, UserSettings, UUID(user_id))
+    settings = await get_or_create(db, UserSettings, user_id)
     return _to_response(settings)
 
 
@@ -86,7 +84,7 @@ async def update_settings(
     user_id: CurrentUserId,
 ) -> SettingsResponse:
     """Update user settings (partial update -- only provided fields are changed)."""
-    uid = UUID(user_id)
+    uid = user_id
     settings = await get_or_create(db, UserSettings, uid)
 
     if data.timezone is not None:

@@ -37,7 +37,7 @@ async def list_coupons(
     sort: Literal["newest", "oldest", "store", "expiry"] = Query(default="newest", description="Sort order"),
 ) -> ExtractedCouponListResponse:
     """List extracted coupons with pagination and optional filters."""
-    uid = UUID(user_id)
+    uid = user_id
 
     base_stmt = select(ExtractedCoupon).where(ExtractedCoupon.user_id == uid)
 

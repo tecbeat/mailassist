@@ -37,7 +37,7 @@ async def list_calendar_events(
     sort: Literal["newest", "oldest", "title"] = Query(default="newest", description="Sort order"),
 ) -> CalendarEventListResponse:
     """List calendar events with pagination and optional search filter."""
-    uid = UUID(user_id)
+    uid = user_id
 
     base_stmt = select(CalendarEvent).where(CalendarEvent.user_id == uid)
 
@@ -127,7 +127,7 @@ async def delete_calendar_event(
 
     # If the event was synced to CalDAV, try to delete it there too
     if event.caldav_synced and event.caldav_uid:
-        uid = UUID(user_id)
+        uid = user_id
         config_stmt = select(CalDAVConfig).where(
             CalDAVConfig.user_id == uid,
             CalDAVConfig.is_active.is_(True),

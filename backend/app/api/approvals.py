@@ -44,7 +44,7 @@ async def list_approvals(
     per_page: int = Query(default=50, ge=1, le=200),
 ) -> ApprovalListResponse:
     """List approval queue entries for the current user."""
-    uid = UUID(user_id)
+    uid = user_id
     base_stmt = select(Approval).where(Approval.user_id == uid)
 
     if status:

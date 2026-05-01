@@ -6,7 +6,6 @@ Includes preview rendering with sample data and reset-to-default.
 
 from pathlib import Path
 from typing import Any
-from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, HTTPException
@@ -161,7 +160,7 @@ async def _build_preview_context(db: AsyncSession, user_id: str) -> dict[str, An
     """
     context = {**_SAMPLE_CONTEXT}
 
-    stmt = select(UserSettings).where(UserSettings.user_id == UUID(user_id))
+    stmt = select(UserSettings).where(UserSettings.user_id == user_id)
     result = await db.execute(stmt)
     settings = result.scalar_one_or_none()
 
@@ -184,7 +183,7 @@ async def list_prompts(
     Returns user-customized prompts where they exist, and default
     prompts from the template files for the rest.
     """
-    uid = UUID(user_id)
+    uid = user_id
     registry = get_plugin_registry()
     get_template_engine()
 
@@ -228,7 +227,7 @@ async def get_prompt(
 
     Returns the user-customized version if it exists, otherwise the default.
     """
-    uid = UUID(user_id)
+    uid = user_id
     _validate_function_type(function_type)
 
     stmt = select(Prompt).where(Prompt.user_id == uid, Prompt.function_type == function_type)
@@ -259,7 +258,7 @@ async def update_prompt(
     user_id: CurrentUserId,
 ) -> PromptResponse:
     """Create or update a custom prompt for an AI function."""
-    uid = UUID(user_id)
+    uid = user_id
     _validate_function_type(function_type)
 
     # Validate template syntax
@@ -304,7 +303,7 @@ async def reset_prompt(
     user_id: CurrentUserId,
 ) -> PromptResponse:
     """Reset a prompt to its default template by deleting the custom version."""
-    uid = UUID(user_id)
+    uid = user_id
     _validate_function_type(function_type)
 
     stmt = select(Prompt).where(Prompt.user_id == uid, Prompt.function_type == function_type)

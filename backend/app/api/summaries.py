@@ -35,7 +35,7 @@ async def list_summaries(
     sort: Literal["newest", "oldest"] = Query(default="newest", description="Sort order"),
 ) -> EmailSummaryListResponse:
     """List email summaries with pagination and optional filters."""
-    uid = UUID(user_id)
+    uid = user_id
 
     # Base query
     base_stmt = select(EmailSummary).where(EmailSummary.user_id == uid)

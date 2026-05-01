@@ -5,7 +5,6 @@ Provides management for Apprise notification URLs, templates, and event toggles.
 
 from pathlib import Path
 from typing import Any
-from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, HTTPException
@@ -143,7 +142,7 @@ async def get_config(
     config = await get_or_create(
         db,
         NotificationConfig,
-        UUID(user_id),
+        user_id,
         apprise_urls=[],
         templates={},
         notify_on={},
@@ -163,7 +162,7 @@ async def update_config(
 
     Apprise URLs are managed via dedicated add/remove endpoints.
     """
-    uid = UUID(user_id)
+    uid = user_id
     config = await get_or_create(
         db,
         NotificationConfig,
@@ -193,7 +192,7 @@ async def add_url(
     user_id: CurrentUserId,
 ) -> NotificationConfigResponse:
     """Add a new Apprise URL to the notification configuration."""
-    uid = UUID(user_id)
+    uid = user_id
     config = await get_or_create(
         db,
         NotificationConfig,
@@ -223,7 +222,7 @@ async def remove_url(
     user_id: CurrentUserId,
 ) -> NotificationConfigResponse:
     """Remove an Apprise URL by index."""
-    uid = UUID(user_id)
+    uid = user_id
     config = await get_or_create(
         db,
         NotificationConfig,
@@ -256,7 +255,7 @@ async def test_notification(
     config = await get_or_create(
         db,
         NotificationConfig,
-        UUID(user_id),
+        user_id,
         apprise_urls=[],
         templates={},
         notify_on={},

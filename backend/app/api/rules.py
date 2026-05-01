@@ -49,7 +49,7 @@ async def reorder_rules(
     user_id: CurrentUserId,
 ) -> RuleListResponse:
     """Bulk update rule priorities for drag-drop reordering."""
-    uid = UUID(user_id)
+    uid = user_id
 
     # Fetch all referenced rules in one query
     rule_ids = [item.id for item in data.rules]
@@ -94,7 +94,7 @@ async def nl_to_rule(
     Uses the user's default AI provider to generate the rule structure.
     The result is NOT auto-saved -- the user must confirm and create via POST.
     """
-    uid = UUID(user_id)
+    uid = user_id
 
     # Resolve default provider
     provider = await get_default_provider(db, uid)
@@ -161,7 +161,7 @@ async def list_rules(
     is_active: bool | None = Query(default=None, description="Filter by active status"),
 ) -> RuleListResponse:
     """List all rules for the current user, ordered by priority."""
-    uid = UUID(user_id)
+    uid = user_id
     stmt = select(Rule).where(Rule.user_id == uid)
 
     if mail_account_id is not None:
@@ -189,7 +189,7 @@ async def create_rule(
     user_id: CurrentUserId,
 ) -> RuleResponse:
     """Create a new processing rule."""
-    uid = UUID(user_id)
+    uid = user_id
 
     rule = Rule(
         user_id=uid,

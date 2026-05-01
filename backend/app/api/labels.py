@@ -38,7 +38,7 @@ async def list_applied_labels(
     sort: Literal["newest", "oldest", "label"] = Query(default="newest", description="Sort order"),
 ) -> AppliedLabelListResponse:
     """List applied labels with pagination and optional label filter."""
-    uid = UUID(user_id)
+    uid = user_id
 
     base_stmt = select(AppliedLabel).where(AppliedLabel.user_id == uid)
 
@@ -65,7 +65,7 @@ async def get_label_summary(
     user_id: CurrentUserId,
 ) -> LabelSummaryListResponse:
     """Get a summary of unique labels with usage counts."""
-    uid = UUID(user_id)
+    uid = user_id
 
     stmt = (
         select(AppliedLabel.label, func.count().label("count"))

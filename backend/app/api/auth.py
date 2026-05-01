@@ -13,6 +13,7 @@ import time
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlencode
+from uuid import UUID
 
 import httpx
 import structlog
@@ -396,7 +397,7 @@ async def get_current_user(request: Request) -> JSONResponse:
     )
 
 
-async def get_current_user_id(request: Request) -> str:
+async def get_current_user_id(request: Request) -> UUID:
     """FastAPI dependency: extract and validate user_id from session.
 
     Use via Depends(get_current_user_id) on protected endpoints.
@@ -413,4 +414,4 @@ async def get_current_user_id(request: Request) -> str:
         raise HTTPException(status_code=401, detail="Session expired")
 
     session = json.loads(session_data)
-    return session["user_id"]  # type: ignore[no-any-return]
+    return UUID(session["user_id"])  # type: ignore[no-any-return]

@@ -45,7 +45,7 @@ async def list_assigned_folders(
     sort: Literal["newest", "oldest", "folder"] = Query(default="newest", description="Sort order"),
 ) -> AssignedFolderListResponse:
     """List assigned folders with pagination and optional folder filter."""
-    uid = UUID(user_id)
+    uid = user_id
 
     base_stmt = select(AssignedFolder).where(AssignedFolder.user_id == uid)
 
@@ -72,7 +72,7 @@ async def get_folder_summary(
     user_id: CurrentUserId,
 ) -> FolderSummaryListResponse:
     """Get a summary of unique folders with usage counts."""
-    uid = UUID(user_id)
+    uid = user_id
 
     stmt = (
         select(AssignedFolder.folder, func.count().label("count"))
@@ -105,7 +105,7 @@ async def reset_smart_folder(
 
     Returns a summary of what happened per account.
     """
-    uid = UUID(user_id)
+    uid = user_id
 
     # Gather affected mail UIDs *before* deleting the assigned_folders rows
     af_stmt = select(AssignedFolder.mail_account_id, AssignedFolder.mail_uid).where(
@@ -301,7 +301,7 @@ async def reprocess_smart_folder(
     user wants to re-evaluate existing folder assignments without losing the
     current folder structure.
     """
-    uid = UUID(user_id)
+    uid = user_id
 
     # Try smart folder lookup first (via AssignedFolder records)
     af_stmt = select(AssignedFolder.mail_account_id, AssignedFolder.mail_uid).where(

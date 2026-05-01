@@ -44,7 +44,7 @@ async def report_spam(
     """
     result = await report_as_spam(
         db,
-        user_id=UUID(user_id),
+        user_id=user_id,
         mail_account_id=data.mail_account_id,
         mail_uid=data.mail_id,
         sender_email=data.sender_email,
@@ -66,7 +66,7 @@ async def report_contact_spam(
     """
     result = await report_contact_as_spam(
         db,
-        user_id=UUID(user_id),
+        user_id=user_id,
         contact_id=data.contact_id,
     )
     return SpamReportResult(**result)
@@ -85,7 +85,7 @@ async def list_blocklist(
     per_page: int = Query(default=20, ge=1, le=100),
 ) -> BlocklistListResponse:
     """List blocklist entries with optional filtering and pagination."""
-    uid = UUID(user_id)
+    uid = user_id
     base_stmt = select(SpamBlocklistEntry).where(SpamBlocklistEntry.user_id == uid)
 
     if search:
@@ -108,7 +108,7 @@ async def create_blocklist_entry(
     user_id: CurrentUserId,
 ) -> BlocklistEntryResponse:
     """Manually add a blocklist entry."""
-    uid = UUID(user_id)
+    uid = user_id
     et = BlocklistEntryType(data.entry_type)
 
     # Check for duplicates

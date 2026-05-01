@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 # Type aliases for dependency injection
 SettingsDep = Annotated[Settings, Depends(get_cached_settings)]
 DbSession = Annotated[AsyncSession, Depends(get_session)]
-CurrentUserId = Annotated[str, Depends(get_current_user_id)]
+CurrentUserId = Annotated[UUID, Depends(get_current_user_id)]
 
 
 # ---------------------------------------------------------------------------
@@ -47,7 +47,7 @@ async def get_or_404[T](
     db: AsyncSession,
     model: type[T],
     record_id: UUID,
-    user_id: str,
+    user_id: UUID,
     detail: str = "Not found",
 ) -> T:
     """Fetch a single record by ID scoped to a user, or raise 404.
@@ -56,7 +56,7 @@ async def get_or_404[T](
         db: Async database session.
         model: SQLAlchemy model class (must have ``id`` and ``user_id`` columns).
         record_id: Primary key value.
-        user_id: Current user ID (string, converted to UUID internally).
+        user_id: Current user UUID.
         detail: Error message for the 404 response.
 
     Returns:
@@ -67,7 +67,7 @@ async def get_or_404[T](
     """
     stmt = select(model).where(
         model.id == record_id,  # type: ignore[attr-defined]
-        model.user_id == UUID(user_id),  # type: ignore[attr-defined]
+        model.user_id == user_id,  # type: ignore[attr-defined]
     )
     result = await db.execute(stmt)
     instance = result.scalar_one_or_none()

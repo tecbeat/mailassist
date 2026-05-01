@@ -36,7 +36,7 @@ async def get_config(
     This is intentional: ``null`` tells the frontend "not configured yet"
     and renders the setup form, whereas a 404 would trigger an error state.
     """
-    config = await _get_config(db, UUID(user_id))
+    config = await _get_config(db, user_id)
     if config is None:
         return None
     return CalDAVConfigResponse.model_validate(config)
@@ -52,7 +52,7 @@ async def update_config(
 
     Credentials are encrypted before storage.
     """
-    uid = UUID(user_id)
+    uid = user_id
 
     from app.services.calendar import encrypt_caldav_credentials
 
@@ -115,7 +115,7 @@ async def test_config(
         password = data.password
         default_calendar = data.default_calendar
     else:
-        config = await _get_config(db, UUID(user_id))
+        config = await _get_config(db, user_id)
         if config is None:
             raise HTTPException(
                 status_code=404, detail="CalDAV not configured. Provide credentials in the request body."

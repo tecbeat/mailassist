@@ -61,7 +61,7 @@ async def list_mail_accounts(
     user_id: CurrentUserId,
 ) -> list[MailAccountResponse]:
     """List all mail accounts for the current user."""
-    stmt = select(MailAccount).where(MailAccount.user_id == UUID(user_id)).order_by(MailAccount.created_at)
+    stmt = select(MailAccount).where(MailAccount.user_id == user_id).order_by(MailAccount.created_at)
     result = await db.execute(stmt)
     accounts = result.scalars().all()
     return [MailAccountResponse.model_validate(a) for a in accounts]
@@ -79,7 +79,7 @@ async def create_mail_account(
     global ``default_polling_interval_minutes`` from user settings is
     used instead of the hard-coded schema default.
     """
-    uid = UUID(user_id)
+    uid = user_id
     encryption = get_encryption()
 
     # Use user's global default when no explicit interval was provided.
