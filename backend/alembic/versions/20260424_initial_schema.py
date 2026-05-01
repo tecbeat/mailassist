@@ -11,7 +11,6 @@ via ``alembic revision --autogenerate``.
 """
 
 from alembic import op
-
 from app.models import Base
 
 revision = "20260424_initial_schema"
