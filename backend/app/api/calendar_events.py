@@ -14,7 +14,7 @@ from sqlalchemy import select
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import UnaryExpression
 
-from app.api.deps import CurrentUserId, DbSession, get_or_404, paginate, sanitize_like
+from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
 from app.models import CalendarEvent
 from app.schemas.calendar_event import (
     CalendarEventListResponse,
@@ -55,13 +55,7 @@ async def list_calendar_events(
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)
 
-    return CalendarEventListResponse(
-        items=[CalendarEventResponse.model_validate(r) for r in result.items],
-        total=result.total,
-        page=result.page,
-        per_page=result.per_page,
-        pages=result.pages,
-    )
+    return build_paginated_response(result, CalendarEventResponse, CalendarEventListResponse)
 
 
 @router.get("/{event_id}")

@@ -1,16 +1,18 @@
 """Shared FastAPI dependencies and utility helpers.
 
 Provides database session, current user, generic get-or-404,
-and pagination helpers via FastAPI's Depends() mechanism.
+pagination helpers, and the paginated-response builder via FastAPI's
+Depends() mechanism.
 """
 
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Annotated, Any, TypeVar
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
 
 from fastapi import Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,8 +41,6 @@ CurrentUserId = Annotated[str, Depends(get_current_user_id)]
 # ---------------------------------------------------------------------------
 # Generic helpers
 # ---------------------------------------------------------------------------
-
-T = TypeVar("T")
 
 
 async def get_or_404[T](
@@ -145,6 +145,41 @@ async def paginate(
         page=page,
         per_page=per_page,
         pages=pages,
+    )
+
+
+def build_paginated_response[Item: BaseModel, List](
+    result: PaginatedResult,
+    item_schema: type[Item],
+    list_schema: type[List],
+) -> List:
+    """Convert a :class:`PaginatedResult` into a typed list-response schema.
+
+    Eliminates the boilerplate ``XListResponse(items=[X.model_validate(r) for r
+    in result.items], total=..., page=..., per_page=..., pages=...)`` that
+    appears across all list endpoints.
+
+    Args:
+        result: Paginated query result returned by :func:`paginate`.
+        item_schema: Pydantic schema class used to validate each ORM row.
+        list_schema: List-response schema class whose constructor accepts
+            ``items``, ``total``, ``page``, ``per_page``, and ``pages``.
+
+    Returns:
+        An instance of ``list_schema`` populated with validated items and
+        pagination metadata.
+
+    Example::
+
+        result = await paginate(db, stmt, page, per_page)
+        return build_paginated_response(result, MyResponse, MyListResponse)
+    """
+    return list_schema(  # type: ignore[call-arg]
+        items=[item_schema.model_validate(r) for r in result.items],
+        total=result.total,
+        page=result.page,
+        per_page=result.per_page,
+        pages=result.pages,
     )
 
 

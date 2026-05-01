@@ -10,7 +10,7 @@ import structlog
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import select
 
-from app.api.deps import CurrentUserId, DbSession, get_or_404, paginate, sanitize_like
+from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
 from app.models import SpamBlocklistEntry
 from app.models.spam import BlocklistEntryType, BlocklistSource
 from app.schemas.spam import (
@@ -98,13 +98,7 @@ async def list_blocklist(
     base_stmt = base_stmt.order_by(SpamBlocklistEntry.created_at.desc())
     result = await paginate(db, base_stmt, page, per_page)
 
-    return BlocklistListResponse(
-        items=[BlocklistEntryResponse.model_validate(e) for e in result.items],
-        total=result.total,
-        page=result.page,
-        per_page=result.per_page,
-        pages=result.pages,
-    )
+    return build_paginated_response(result, BlocklistEntryResponse, BlocklistListResponse)
 
 
 @router.post("/blocklist", status_code=201)

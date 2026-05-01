@@ -117,20 +117,33 @@ export function buildFolderTree(
   }
 
   function sortChildren(nodes: FolderNode[]): FolderNode[] {
-    return nodes
-      .map((n) => ({ ...n, children: sortChildren(n.children) }))
-      .sort((a, b) => {
-        const aSystem = a.isSystemFolder;
-        const bSystem = b.isSystemFolder;
-        if (aSystem && !bSystem) return -1;
-        if (!aSystem && bSystem) return 1;
-        if (aSystem && bSystem) {
-          const aOrder = SYSTEM_FOLDER_ORDER[a.fullPath.toLowerCase()] ?? 99;
-          const bOrder = SYSTEM_FOLDER_ORDER[b.fullPath.toLowerCase()] ?? 99;
-          return aOrder - bOrder;
-        }
-        return a.name.localeCompare(b.name);
-      });
+    // Recurse first. Only create a new object when a node's children changed.
+    let anyChildChanged = false;
+    const processed = nodes.map((n) => {
+      const newChildren = sortChildren(n.children);
+      if (newChildren === n.children) return n;
+      anyChildChanged = true;
+      return { ...n, children: newChildren };
+    });
+
+    const sorted = [...processed].sort((a, b) => {
+      const aSystem = a.isSystemFolder;
+      const bSystem = b.isSystemFolder;
+      if (aSystem && !bSystem) return -1;
+      if (!aSystem && bSystem) return 1;
+      if (aSystem && bSystem) {
+        const aOrder = SYSTEM_FOLDER_ORDER[a.fullPath.toLowerCase()] ?? 99;
+        const bOrder = SYSTEM_FOLDER_ORDER[b.fullPath.toLowerCase()] ?? 99;
+        return aOrder - bOrder;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    // Preserve array identity when order and node references are unchanged.
+    if (!anyChildChanged && sorted.every((n, i) => n === nodes[i])) {
+      return nodes;
+    }
+    return sorted;
   }
 
   for (const child of root.children) {

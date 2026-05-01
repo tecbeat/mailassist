@@ -17,7 +17,7 @@ from sqlalchemy import update as sa_update
 if TYPE_CHECKING:
     from sqlalchemy.sql.elements import UnaryExpression
 
-from app.api.deps import CurrentUserId, DbSession, get_or_404, paginate, sanitize_like
+from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
 from app.models import AssignedFolder, FolderChangeLog, MailAccount, TrackedEmail, TrackedEmailStatus
 from app.schemas.assigned_folder import (
     AssignedFolderListResponse,
@@ -63,13 +63,7 @@ async def list_assigned_folders(
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)
 
-    return AssignedFolderListResponse(
-        items=[AssignedFolderResponse.model_validate(r) for r in result.items],
-        total=result.total,
-        page=result.page,
-        per_page=result.per_page,
-        pages=result.pages,
-    )
+    return build_paginated_response(result, AssignedFolderResponse, AssignedFolderListResponse)
 
 
 @router.get("/summary")
