@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v1.0.0-beta) - 2026-05-01
+
+### ⛰️  Features
+
+- Change stage from prepare to lint - ([6756be7](https://git.teccave.de/tecbeat/mailassist/commit/6756be7986b0c67bb75ea7fa9a36a522e7b369da))
+
+### 🐛 Bug Fixes
+
+- Sort imports in alembic files - ([f2cc9bc](https://git.teccave.de/tecbeat/mailassist/commit/f2cc9bc6373663e55f97be3e664b9c9483f713b5))
+- Resolve all ruff lint and mypy type-check errors - ([615b9a4](https://git.teccave.de/tecbeat/mailassist/commit/615b9a48807bdc033fbc5884a223a82135ebcff4))
+- Add db.flush() after rule deletion (#27) - ([300f975](https://git.teccave.de/tecbeat/mailassist/commit/300f9756f860a0bdd6fd08360cd5d79817f6d3a5))
+- Give each plugin subclass its own default_config dict (#25) - ([6248920](https://git.teccave.de/tecbeat/mailassist/commit/6248920eb71f2d65f4b726e3402ffd46f6630248))
+- Preserve duplicate email headers by concatenating values (#24) - ([4c14d30](https://git.teccave.de/tecbeat/mailassist/commit/4c14d30f053923f0e0a766593c2464462f1892b9))
+- Remove redundant db.commit() in run_ai_pipeline (#23) - ([1adcd60](https://git.teccave.de/tecbeat/mailassist/commit/1adcd609419376ee574d3080d69e16756d987b91))
+
+### 🚜 Refactor
+
+- *(frontend)* Split notifications and calendar pages into sub-components (#73, #74) - ([3b91cfb](https://git.teccave.de/tecbeat/mailassist/commit/3b91cfbccc0a5d6f242e6811795a98565203f88a))
+- *(frontend)* Extract shared SortFilterContent component (#72) - ([665997e](https://git.teccave.de/tecbeat/mailassist/commit/665997eaace2e11b86d6e7150049ca8ae64718b8))
+
+### ⚙️ Miscellaneous Tasks
+
+- Add ruff lint and mypy type check jobs to pipeline (#80, #81) - ([21d2c85](https://git.teccave.de/tecbeat/mailassist/commit/21d2c85853adc6a4e53d4ab78319d99622b8cc09))
+
+## [0.7.6-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.6-beta) - 2026-05-01
+
 ## [0.7.5-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.5-beta) - 2026-05-01
 
 ### 🐛 Bug Fixes
