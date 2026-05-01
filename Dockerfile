@@ -23,7 +23,7 @@ RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser -m appuser
 WORKDIR /app
 
 # Version injected by CI versioner via --opt build-arg:VERSION; falls back to "0.0.0-dev" for local builds
-ARG VERSION=0.0.0-dev
+ARG VERSION=v0.0.0-dev
 ENV VERSION=${VERSION}
 
 # Ensure venv binaries (uvicorn, alembic, arq) are on PATH
