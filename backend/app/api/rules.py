@@ -254,6 +254,7 @@ async def delete_rule(
     """Delete a rule."""
     rule = await get_or_404(db, Rule, rule_id, user_id, "Rule not found")
     await db.delete(rule)
+    await db.flush()
     logger.info("rule_deleted", rule_id=str(rule_id), user_id=user_id)
 
 
