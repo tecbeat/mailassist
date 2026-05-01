@@ -12,6 +12,7 @@ from app.core.config import get_settings
 
 router = APIRouter(prefix="/api", tags=["changelog"])
 
+
 def _find_changelog() -> Path:
     """Locate CHANGELOG.md by walking up from the module file."""
     current = Path(__file__).resolve().parent
