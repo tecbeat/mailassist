@@ -6,10 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### ⛰️  Features
 
+- Add 'What's New' changelog dialog (#109) - ([76c5687](https://git.teccave.de/tecbeat/mailassist/commit/76c56877809ef309b0fb8719da71f610b5922213))
 - Change stage from prepare to lint - ([6756be7](https://git.teccave.de/tecbeat/mailassist/commit/6756be7986b0c67bb75ea7fa9a36a522e7b369da))
 
 ### 🐛 Bug Fixes
 
+- Use async tests for changelog endpoint - ([728c49d](https://git.teccave.de/tecbeat/mailassist/commit/728c49d046976a5e90339d36586b258381506dc6))
 - Sort imports in alembic files - ([f2cc9bc](https://git.teccave.de/tecbeat/mailassist/commit/f2cc9bc6373663e55f97be3e664b9c9483f713b5))
 - Resolve all ruff lint and mypy type-check errors - ([615b9a4](https://git.teccave.de/tecbeat/mailassist/commit/615b9a48807bdc033fbc5884a223a82135ebcff4))
 - Add db.flush() after rule deletion (#27) - ([300f975](https://git.teccave.de/tecbeat/mailassist/commit/300f9756f860a0bdd6fd08360cd5d79817f6d3a5))
@@ -22,9 +24,17 @@ All notable changes to this project will be documented in this file.
 - *(frontend)* Split notifications and calendar pages into sub-components (#73, #74) - ([3b91cfb](https://git.teccave.de/tecbeat/mailassist/commit/3b91cfbccc0a5d6f242e6811795a98565203f88a))
 - *(frontend)* Extract shared SortFilterContent component (#72) - ([665997e](https://git.teccave.de/tecbeat/mailassist/commit/665997eaace2e11b86d6e7150049ca8ae64718b8))
 
+### 📚 Documentation
+
+- Add MR link to changelog entry - ([b7e226a](https://git.teccave.de/tecbeat/mailassist/commit/b7e226a0dcdbafcbae33cb66ffb834d40f17b10a))
+
 ### ⚙️ Miscellaneous Tasks
 
 - Add ruff lint and mypy type check jobs to pipeline (#80, #81) - ([21d2c85](https://git.teccave.de/tecbeat/mailassist/commit/21d2c85853adc6a4e53d4ab78319d99622b8cc09))
+
+### ◀️ Revert
+
+- Changelogs - ([5d7e086](https://git.teccave.de/tecbeat/mailassist/commit/5d7e086b27516f47a81214089e5d10b3277708c1))
 
 ## [0.7.6-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v0.7.6-beta) - 2026-05-01
 
