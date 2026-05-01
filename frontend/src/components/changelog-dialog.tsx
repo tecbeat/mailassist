@@ -129,7 +129,7 @@ export function ChangelogDialog() {
             What&apos;s New
           </DialogTitle>
           <DialogDescription id="changelog-description">
-            mailassist v{data.version}
+            mailassist {data.version.startsWith("v") ? data.version : `v${data.version}`}
           </DialogDescription>
         </DialogHeader>
 
