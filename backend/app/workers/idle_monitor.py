@@ -402,11 +402,19 @@ async def _insert_tracked_uids(
         for uid in uids
     ]
 
-    stmt = pg_insert(TrackedEmail).values(rows).on_conflict_do_nothing(constraint="uq_tracked_email_account_uid")
-    result = await db.execute(stmt)
+    # 8 columns per row; 32_767 // 8 = 4095, use 2000 for safety margin
+    max_rows_per_insert = 2000
+    total_inserted = 0
+
+    for i in range(0, len(rows), max_rows_per_insert):
+        batch = rows[i : i + max_rows_per_insert]
+        stmt = pg_insert(TrackedEmail).values(batch).on_conflict_do_nothing(constraint="uq_tracked_email_account_uid")
+        result = await db.execute(stmt)
+        total_inserted += result.rowcount  # type: ignore[attr-defined]
+
     await db.flush()
 
-    inserted: int = result.rowcount  # type: ignore[attr-defined]
+    inserted: int = total_inserted
     if inserted > 0:
         logger.info(
             "idle_tracked_emails_inserted",
