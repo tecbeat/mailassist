@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.0.1-beta) - 2026-05-01
+
+### 🐛 Bug Fixes
+
+- Resolve mypy errors from UUID migration - ([5d1fb89](https://git.teccave.de/tecbeat/mailassist/commit/5d1fb8980ecb94a4cea525c32d29f4d434a64bdf))
+- CurrentUserId dependency returns UUID directly - ([a68bac0](https://git.teccave.de/tecbeat/mailassist/commit/a68bac09d8b517703106b4346c77abd905c6eb33))
+
 ## [2.0.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.0.0-beta) - 2026-05-01
 
 ### 🐛 Bug Fixes
