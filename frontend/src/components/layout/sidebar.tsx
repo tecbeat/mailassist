@@ -23,7 +23,6 @@ import {
   X,
   Globe,
   Languages,
-  Info,
   type LucideIcon,
 } from "lucide-react";
 import { cn, unwrapResponse } from "@/lib/utils";
@@ -32,9 +31,12 @@ import { useToast } from "@/components/ui/toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
-  PluginSettingsDialog,
-} from "@/components/plugin-settings-dialog";
-import { Button } from "@/components/ui/button";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -389,95 +391,96 @@ export function Sidebar() {
           </div>
         </button>
 
-        <PluginSettingsDialog
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          title="User Settings"
-          description={user?.email ?? undefined}
-        >
-          <div className="space-y-4 py-2">
-            {/* Timezone selector */}
-            <div className="space-y-1.5">
-              <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Globe className="h-4 w-4" />
-                Timezone
-              </label>
-              <Select
-                value={currentTimezone}
-                onValueChange={handleTimezoneChange}
-                disabled={updateMutation.isPending}
-              >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {COMMON_TIMEZONES.map((tz) => (
-                    <SelectItem key={tz} value={tz} className="text-sm">
-                      {tz}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>User Settings</DialogTitle>
+              {user?.email && (
+                <DialogDescription>{user.email}</DialogDescription>
+              )}
+            </DialogHeader>
 
-            {/* Language selector */}
-            <div className="space-y-1.5">
-              <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Languages className="h-4 w-4" />
-                Language
-              </label>
-              <Select
-                value={currentLanguage}
-                onValueChange={handleLanguageChange}
-                disabled={updateMutation.isPending}
-              >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LANGUAGES.map((lang) => (
-                    <SelectItem key={lang.code} value={lang.code} className="text-sm">
-                      {lang.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Version */}
-            {version && (
+            <div className="space-y-4">
+              {/* Timezone selector */}
               <div className="space-y-1.5">
                 <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <Info className="h-4 w-4" />
-                  Version
+                  <Globe className="h-4 w-4" />
+                  Timezone
                 </label>
-                {releaseUrl ? (
-                  <a
-                    href={releaseUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary underline hover:opacity-80"
-                  >
-                    v{version}
-                  </a>
-                ) : (
-                  <p className="text-sm text-muted-foreground">v{version}</p>
-                )}
+                <Select
+                  value={currentTimezone}
+                  onValueChange={handleTimezoneChange}
+                  disabled={updateMutation.isPending}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COMMON_TIMEZONES.map((tz) => (
+                      <SelectItem key={tz} value={tz} className="text-sm">
+                        {tz}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
 
-            <Separator />
+              {/* Language selector */}
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Languages className="h-4 w-4" />
+                  Language
+                </label>
+                <Select
+                  value={currentLanguage}
+                  onValueChange={handleLanguageChange}
+                  disabled={updateMutation.isPending}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LANGUAGES.map((lang) => (
+                      <SelectItem key={lang.code} value={lang.code} className="text-sm">
+                        {lang.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <Button
-              variant="destructive"
-              className="w-full"
-              onClick={logout}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Log out
-            </Button>
-          </div>
-        </PluginSettingsDialog>
+              <Separator />
+
+              {version && (
+                <p className="text-center text-xs text-muted-foreground">
+                  {releaseUrl ? (
+                    <a
+                      href={releaseUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="transition-colors hover:text-foreground"
+                    >
+                      v{version}
+                    </a>
+                  ) : (
+                    <>v{version}</>
+                  )}
+                </p>
+              )}
+
+              <AppButton
+                icon={<LogOut />}
+                label="Log out"
+                variant="outline"
+                color="destructive"
+                className="w-full"
+                onClick={logout}
+              >
+                Log out
+              </AppButton>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
