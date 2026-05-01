@@ -66,9 +66,6 @@ def _make_mock_mailbox(
     if capabilities is None:
         capabilities = [b"IMAP4rev1 IDLE UIDPLUS"]
     mb.client.capability.return_value = ("OK", capabilities)
-
-    # client.select() for get_permanent_flags
-    mb.client.select.return_value = ("OK", [b"5"])
     mb.client.untagged_responses = {}
 
     mb.logout = MagicMock()
@@ -307,10 +304,9 @@ class TestImapLabels:
 
     @pytest.mark.asyncio
     async def test_permanent_flags_extracted(self):
-        """PERMANENTFLAGS are parsed from SELECT response."""
+        """PERMANENTFLAGS are parsed from the SELECT response issued by folder.set()."""
         mb = MagicMock()
         mb.folder.set = MagicMock()
-        mb.client.select.return_value = ("OK", [b"5"])
         mb.client.untagged_responses = {
             "PERMANENTFLAGS": [b"(\\Seen \\Answered \\Flagged \\Deleted \\Draft \\*)"],
         }
@@ -325,7 +321,6 @@ class TestImapLabels:
         """Server without \\* does not support custom keywords."""
         mb = MagicMock()
         mb.folder.set = MagicMock()
-        mb.client.select.return_value = ("OK", [b"5"])
         mb.client.untagged_responses = {
             "PERMANENTFLAGS": [b"(\\Seen \\Answered \\Flagged \\Deleted \\Draft)"],
         }
@@ -340,7 +335,6 @@ class TestImapLabels:
         """No PERMANENTFLAGS line returns empty list."""
         mb = MagicMock()
         mb.folder.set = MagicMock()
-        mb.client.select.return_value = ("OK", [b"0"])
         mb.client.untagged_responses = {}
         conn = ImapConnection(mailbox=mb, account_id=uuid4(), host="test")
 
@@ -349,11 +343,9 @@ class TestImapLabels:
 
     @pytest.mark.asyncio
     async def test_permanent_flags_select_fails(self):
-        """Failed SELECT returns empty flags list."""
+        """Failed SELECT (folder.set raises) returns empty flags list."""
         mb = MagicMock()
-        mb.folder.set = MagicMock()
-        mb.client.select.return_value = ("NO", [b"Folder not found"])
-        mb.client.untagged_responses = {}
+        mb.folder.set.side_effect = Exception("Folder not found")
         conn = ImapConnection(mailbox=mb, account_id=uuid4(), host="test")
 
         flags = await get_permanent_flags(conn, "NonExistent")

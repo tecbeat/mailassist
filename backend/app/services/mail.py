@@ -252,20 +252,23 @@ async def resolve_folder(
 
 
 async def get_permanent_flags(conn: ImapConnection, folder: str = "INBOX") -> list[str]:
-    """Get PERMANENTFLAGS for a folder to check custom keyword support."""
+    """Get PERMANENTFLAGS for a folder to check custom keyword support.
+
+    Reads PERMANENTFLAGS from the SELECT response that folder.set() issues
+    internally, avoiding a second round-trip to the IMAP server.
+    """
     def _get_flags() -> list[str]:
-        conn.mailbox.folder.set(folder)
-        # Access the raw SELECT response via the low-level client
-        status, data = conn.mailbox.client.select(folder)
+        try:
+            conn.mailbox.folder.set(folder)
+        except Exception:
+            return []
         flags: list[str] = []
-        if status == "OK":
-            # The PERMANENTFLAGS are in the untagged responses
-            for resp in conn.mailbox.client.untagged_responses.get("PERMANENTFLAGS", []):
-                text = resp.decode("utf-8", errors="replace") if isinstance(resp, bytes) else str(resp)
-                # Extract flags between parentheses
-                match = re.search(r"\(([^)]*)\)", text)
-                if match:
-                    flags = match.group(1).split()
+        for resp in conn.mailbox.client.untagged_responses.get("PERMANENTFLAGS", []):
+            text = resp.decode("utf-8", errors="replace") if isinstance(resp, bytes) else str(resp)
+            # Extract flags between parentheses
+            match = re.search(r"\(([^)]*)\)", text)
+            if match:
+                flags = match.group(1).split()
         return flags
     return await asyncio.to_thread(_get_flags)
 
