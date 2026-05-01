@@ -182,8 +182,15 @@ def parse_email(raw_bytes: bytes, uid: str, max_body_size: int = DEFAULT_MAX_BOD
     # Extract attachments
     has_attachments, attachment_names = _extract_attachments(msg)
 
-    # Extract all headers as dict
-    headers = {k: _decode_header(str(v)) for k, v in msg.items()}
+    # Extract all headers, preserving duplicate header names (valid per RFC 2822,
+    # e.g. multiple Received headers) by joining repeated values with a newline.
+    headers: dict[str, str] = {}
+    for k, v in msg.items():
+        decoded = _decode_header(str(v))
+        if k in headers:
+            headers[k] = f"{headers[k]}\n{decoded}"
+        else:
+            headers[k] = decoded
 
     # Calculate size
     size = len(raw_bytes)
