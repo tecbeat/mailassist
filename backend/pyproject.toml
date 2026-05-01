@@ -1,6 +1,6 @@
 [project]
 name = "mailassist"
-version = "0.1.0"
+version = "0.0.0-dev"
 description = "Self-hosted, AI-powered email management with IMAP, CardDAV and CalDAV"
 requires-python = ">=3.13"
 readme = "README.md"

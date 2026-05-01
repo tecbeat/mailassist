@@ -60,7 +60,7 @@ async def health_check() -> JSONResponse:
         status_code=200 if all_healthy else 503,
         content={
             "status": "healthy" if all_healthy else "degraded",
-            "version": get_settings().app_version,
+            "version": get_settings().version,
             "services": status,
         },
     )

@@ -31,9 +31,12 @@ import { useToast } from "@/components/ui/toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
-  PluginSettingsDialog,
-} from "@/components/plugin-settings-dialog";
-import { Button } from "@/components/ui/button";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -42,6 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
+import { useVersion } from "@/hooks/use-version";
 import {
   useGetSettingsApiSettingsGet,
   useUpdateSettingsApiSettingsPut,
@@ -222,6 +226,7 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { version, releaseUrl } = useVersion();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -386,73 +391,92 @@ export function Sidebar() {
           </div>
         </button>
 
-        <PluginSettingsDialog
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          title="User Settings"
-          description={user?.email ?? undefined}
-        >
-          <div className="space-y-4 py-2">
-            {/* Timezone selector */}
-            <div className="space-y-1.5">
-              <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Globe className="h-4 w-4" />
-                Timezone
-              </label>
-              <Select
-                value={currentTimezone}
-                onValueChange={handleTimezoneChange}
-                disabled={updateMutation.isPending}
+        <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <DialogContent className="sm:max-w-lg min-h-[360px]">
+            <DialogHeader>
+              <DialogTitle>User Settings</DialogTitle>
+              {user?.email && (
+                <DialogDescription>{user.email}</DialogDescription>
+              )}
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {/* Timezone selector */}
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Globe className="h-4 w-4" />
+                  Timezone
+                </label>
+                <Select
+                  value={currentTimezone}
+                  onValueChange={handleTimezoneChange}
+                  disabled={updateMutation.isPending}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COMMON_TIMEZONES.map((tz) => (
+                      <SelectItem key={tz} value={tz} className="text-sm">
+                        {tz}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Language selector */}
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Languages className="h-4 w-4" />
+                  Language
+                </label>
+                <Select
+                  value={currentLanguage}
+                  onValueChange={handleLanguageChange}
+                  disabled={updateMutation.isPending}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LANGUAGES.map((lang) => (
+                      <SelectItem key={lang.code} value={lang.code} className="text-sm">
+                        {lang.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Separator />
+
+              <AppButton
+                icon={<LogOut />}
+                label="Log out"
+                variant="outline"
+                color="destructive"
+                className="w-full"
+                onClick={logout}
               >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {COMMON_TIMEZONES.map((tz) => (
-                    <SelectItem key={tz} value={tz} className="text-sm">
-                      {tz}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                Log out
+              </AppButton>
+
+              {version && releaseUrl && (
+                <p className="text-center text-xs text-muted-foreground">
+                  <a
+                    href={releaseUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="transition-colors hover:text-foreground"
+                  >
+                    v{version}
+                  </a>
+                </p>
+              )}
             </div>
-
-            {/* Language selector */}
-            <div className="space-y-1.5">
-              <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Languages className="h-4 w-4" />
-                Language
-              </label>
-              <Select
-                value={currentLanguage}
-                onValueChange={handleLanguageChange}
-                disabled={updateMutation.isPending}
-              >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LANGUAGES.map((lang) => (
-                    <SelectItem key={lang.code} value={lang.code} className="text-sm">
-                      {lang.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Separator />
-
-            <Button
-              variant="destructive"
-              className="w-full"
-              onClick={logout}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Log out
-            </Button>
-          </div>
-        </PluginSettingsDialog>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

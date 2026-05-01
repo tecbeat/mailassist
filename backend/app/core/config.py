@@ -34,7 +34,9 @@ class Settings(BaseSettings):
 
     # Application
     app_name: str = "mailassist"
-    app_version: str = Field(default="", description="App version. Falls back to pyproject.toml if empty.")
+    version: str = Field(
+        default="", description="App version (VERSION env var). Falls back to pyproject.toml if empty."
+    )
     debug: bool = False
     enable_changelog: bool = Field(default=True, description="Show 'What's New' changelog dialog after updates")
 
@@ -221,10 +223,10 @@ class Settings(BaseSettings):
         return v
 
     @model_validator(mode="after")
-    def resolve_app_version(self) -> "Settings":
-        """Fall back to pyproject.toml version when APP_VERSION is not set."""
-        if not self.app_version:
-            object.__setattr__(self, "app_version", _read_pyproject_version())
+    def resolve_version(self) -> "Settings":
+        """Fall back to pyproject.toml version when VERSION is not set."""
+        if not self.version:
+            object.__setattr__(self, "version", _read_pyproject_version())
         return self
 
 

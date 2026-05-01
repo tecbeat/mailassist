@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 
 import {
   Dialog,
@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { AppButton } from "@/components/app-button";
 import { customInstance } from "@/services/client";
 
 const STORAGE_KEY = "mailassist-last-seen-version";
@@ -122,14 +122,14 @@ export function ChangelogDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleDismiss()}>
-      <DialogContent className="max-w-md max-h-[80vh] flex flex-col" aria-describedby="changelog-description">
+      <DialogContent className="sm:max-w-lg min-h-[360px] max-h-[90vh] flex flex-col" aria-describedby="changelog-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" />
             What&apos;s New
           </DialogTitle>
           <DialogDescription id="changelog-description">
-            mailassist v{data.version}
+            mailassist {data.version.startsWith("v") ? data.version : `v${data.version}`}
           </DialogDescription>
         </DialogHeader>
 
@@ -142,9 +142,9 @@ export function ChangelogDialog() {
         </div>
 
         <DialogFooter>
-          <Button onClick={handleDismiss} className="w-full sm:w-auto">
-            Okay, Let&apos;s Go!
-          </Button>
+          <AppButton icon={<Check />} label="Got it" variant="primary" onClick={handleDismiss}>
+            Got it
+          </AppButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

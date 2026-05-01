@@ -70,7 +70,7 @@ class TestChangelogEndpoint:
             patch("app.api.changelog.get_settings") as mock_settings,
         ):
             mock_settings.return_value.enable_changelog = True
-            mock_settings.return_value.app_version = "1.2.0"
+            mock_settings.return_value.version = "1.2.0"
 
             result = await get_changelog()
 
@@ -112,6 +112,6 @@ class TestHealthVersionField:
         from app.core.config import get_settings
 
         settings = get_settings()
-        assert hasattr(settings, "app_version")
-        assert isinstance(settings.app_version, str)
-        assert len(settings.app_version) > 0
+        assert hasattr(settings, "version")
+        assert isinstance(settings.version, str)
+        assert len(settings.version) > 0
