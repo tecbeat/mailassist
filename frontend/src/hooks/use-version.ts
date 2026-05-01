@@ -11,13 +11,23 @@ interface HealthResponse {
 
 interface UseVersionResult {
   version: string | null;
-  /** Full GitLab release URL, or null when version is unknown or "dev". */
+  /**
+   * GitLab URL for this version.
+   * - CI builds  → specific release page (…/releases/v1.2.3)
+   * - Dev builds → releases list        (…/releases)
+   * null only while the health endpoint hasn't responded yet.
+   */
   releaseUrl: string | null;
+}
+
+/** Returns true for CI-produced versions (not the 0.0.0-dev local default). */
+function isReleaseVersion(v: string): boolean {
+  return !v.startsWith("0.0.0");
 }
 
 /**
  * Fetches the running app version from /health and derives the GitLab release URL.
- * Returns null values while loading or if the endpoint is unreachable.
+ * Always provides a link — specific release for CI builds, releases list for dev.
  */
 export function useVersion(): UseVersionResult {
   const [version, setVersion] = useState<string | null>(null);
@@ -37,10 +47,12 @@ export function useVersion(): UseVersionResult {
   }, []);
 
   const normalised = version?.startsWith("v") ? version.slice(1) : version;
-  const releaseUrl =
-    normalised && normalised !== "dev"
+
+  const releaseUrl = normalised
+    ? isReleaseVersion(normalised)
       ? `${RELEASE_BASE}/v${normalised}`
-      : null;
+      : RELEASE_BASE
+    : null;
 
   return { version: normalised ?? null, releaseUrl };
 }

@@ -451,23 +451,6 @@ export function Sidebar() {
 
               <Separator />
 
-              {version && (
-                <p className="text-center text-xs text-muted-foreground">
-                  {releaseUrl ? (
-                    <a
-                      href={releaseUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="transition-colors hover:text-foreground"
-                    >
-                      v{version}
-                    </a>
-                  ) : (
-                    <>v{version}</>
-                  )}
-                </p>
-              )}
-
               <AppButton
                 icon={<LogOut />}
                 label="Log out"
@@ -478,6 +461,19 @@ export function Sidebar() {
               >
                 Log out
               </AppButton>
+
+              {version && releaseUrl && (
+                <p className="text-center text-xs text-muted-foreground">
+                  <a
+                    href={releaseUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="transition-colors hover:text-foreground"
+                  >
+                    v{version}
+                  </a>
+                </p>
+              )}
             </div>
           </DialogContent>
         </Dialog>
