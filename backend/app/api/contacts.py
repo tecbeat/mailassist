@@ -65,7 +65,7 @@ async def get_config(
     This is intentional: ``null`` tells the frontend "not configured yet"
     and renders the setup form, whereas a 404 would trigger an error state.
     """
-    stmt = select(CardDAVConfig).where(CardDAVConfig.user_id == UUID(user_id))
+    stmt = select(CardDAVConfig).where(CardDAVConfig.user_id == user_id)
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
     if config is None:
@@ -81,7 +81,7 @@ async def upsert_config(
 ) -> CardDAVConfigResponse:
     """Create or update CardDAV configuration with encrypted credentials."""
     encryption = get_encryption()
-    uid = UUID(user_id)
+    uid = user_id
 
     stmt = select(CardDAVConfig).where(CardDAVConfig.user_id == uid)
     result = await db.execute(stmt)
@@ -159,7 +159,7 @@ async def trigger_sync(
     Uses the stored CardDAV configuration. Performs full re-sync
     if no sync-token exists, otherwise incremental.
     """
-    uid = UUID(user_id)
+    uid = user_id
     stmt = select(CardDAVConfig).where(CardDAVConfig.user_id == uid, CardDAVConfig.is_active.is_(True))
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
@@ -187,7 +187,7 @@ async def list_contacts(
     per_page: int = Query(default=50, ge=1, le=200),
 ) -> ContactListResponse:
     """List cached contacts with optional search and pagination."""
-    uid = UUID(user_id)
+    uid = user_id
     base_stmt = select(Contact).where(Contact.user_id == uid)
 
     if search:
@@ -231,7 +231,7 @@ async def list_all_senders(
     Use ``matched=false`` to get only unmatched senders,
     ``matched=true`` for only matched ones, or omit for all.
     """
-    uid = UUID(user_id)
+    uid = user_id
     search_term = search.strip().lower()
 
     # All unique senders with mail count
@@ -331,7 +331,7 @@ async def extract_contact_from_sender(
     Collects all email summaries for the given sender address and asks the
     AI to extract structured contact data (name, phone, organization, title).
     """
-    uid = UUID(user_id)
+    uid = user_id
     sender_lower = data.sender_email.strip().lower()
 
     # Fetch up to 10 most recent summaries from this sender
@@ -439,7 +439,7 @@ async def create_contact(
     auto-assigns the email addresses to the new contact.
     If CardDAV is configured, a write-back is attempted.
     """
-    uid = UUID(user_id)
+    uid = user_id
 
     # Generate a synthetic vCard for the local contact
     contact_uuid = uuid4()
@@ -521,7 +521,7 @@ async def get_mail_contact(
     stmt = (
         select(ContactAssignment)
         .where(
-            ContactAssignment.user_id == UUID(user_id),
+            ContactAssignment.user_id == user_id,
             ContactAssignment.mail_account_id == account_id,
             ContactAssignment.mail_uid == mail_uid,
         )
@@ -572,7 +572,7 @@ async def list_contact_mails(
     base_stmt = (
         select(ContactAssignment)
         .where(
-            ContactAssignment.user_id == UUID(user_id),
+            ContactAssignment.user_id == user_id,
             ContactAssignment.contact_id == contact_id,
         )
         .order_by(ContactAssignment.created_at.desc())
@@ -616,7 +616,7 @@ async def assign_email_to_contact(
     in the upstream address book.  Also updates the Valkey cache so
     subsequent matching resolves immediately.
     """
-    uid = UUID(user_id)
+    uid = user_id
     email_lower = data.email_address.strip().lower()
 
     contact = await get_or_404(db, Contact, contact_id, user_id, "Contact not found")
@@ -679,7 +679,7 @@ async def remove_email_from_contact_endpoint(
     triggers a CardDAV write-back to persist the change in the upstream
     address book.  Also invalidates the Valkey cache entry.
     """
-    uid = UUID(user_id)
+    uid = user_id
     email_lower = data.email_address.strip().lower()
 
     contact = await get_or_404(db, Contact, contact_id, user_id, "Contact not found")

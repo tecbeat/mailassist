@@ -36,7 +36,7 @@ async def list_newsletters(
     sort: Literal["newest", "oldest", "name"] = Query(default="newest", description="Sort order"),
 ) -> DetectedNewsletterListResponse:
     """List detected newsletters with pagination and optional sender filter."""
-    uid = UUID(user_id)
+    uid = user_id
 
     base_stmt = select(DetectedNewsletter).where(DetectedNewsletter.user_id == uid)
 

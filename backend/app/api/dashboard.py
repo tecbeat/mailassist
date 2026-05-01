@@ -100,7 +100,7 @@ async def get_dashboard_stats(
     Aggregates: mail processing actions, pending approvals, active accounts,
     AI token usage, matched rules.
     """
-    uid = UUID(user_id)
+    uid = user_id
     now = datetime.now(UTC)
 
     # -- Account health --
@@ -237,7 +237,7 @@ async def get_recent_actions(
     Uses a SQL UNION with ORDER BY / OFFSET / LIMIT so the database
     handles sorting and pagination instead of loading everything into memory.
     """
-    uid = UUID(user_id)
+    uid = user_id
 
     label_q: Any = select(
         LabelChangeLog.id,
@@ -287,7 +287,7 @@ async def get_dashboard_errors(
     per_page: int = Query(default=50, ge=1, le=200),
 ) -> DashboardErrorsResponse:
     """Get recent account errors with timestamps, paginated in SQL."""
-    uid = UUID(user_id)
+    uid = user_id
 
     base_filter = [MailAccount.user_id == uid, MailAccount.last_error.is_not(None)]
 
@@ -328,7 +328,7 @@ async def get_job_queue_status(
     queued jobs, transient Valkey result counts, and persistent
     DB-based completion/failure counters from ``TrackedEmail``.
     """
-    uid = UUID(user_id)
+    uid = user_id
     now = datetime.now(UTC)
 
     # -- DB-based metrics (persistent) --
@@ -654,7 +654,7 @@ async def _count_tracked(
     return result
 
 
-async def _get_token_usage(user_id: str, days: int) -> int:
+async def _get_token_usage(user_id: UUID, days: int) -> int:
     """Aggregate token usage from Valkey daily counters using a single MGET."""
     try:
         cache = get_cache_client()
@@ -794,7 +794,7 @@ async def get_failed_mails(
     per_page: int = Query(default=50, ge=1, le=200),
 ) -> FailedMailsResponse:
     """Get failed mails from tracked_emails, paginated."""
-    uid = UUID(user_id)
+    uid = user_id
 
     base_filters = [
         TrackedEmail.user_id == uid,
@@ -841,7 +841,7 @@ async def retry_failed_mail(
     tracked_email_id: str,
 ) -> FailedMailActionResponse:
     """Retry a failed mail: set status back to pending and reset retry_count."""
-    uid = UUID(user_id)
+    uid = user_id
     try:
         email_uuid = UUID(tracked_email_id)
     except ValueError:
@@ -874,7 +874,7 @@ async def resolve_failed_mail(
     tracked_email_id: str,
 ) -> FailedMailActionResponse:
     """Dismiss a failed mail: mark as completed (user considers it handled)."""
-    uid = UUID(user_id)
+    uid = user_id
     try:
         email_uuid = UUID(tracked_email_id)
     except ValueError:

@@ -36,7 +36,7 @@ async def list_providers(
     user_id: CurrentUserId,
 ) -> list[AIProviderResponse]:
     """List all AI providers for the current user."""
-    stmt = select(AIProvider).where(AIProvider.user_id == UUID(user_id)).order_by(AIProvider.created_at)
+    stmt = select(AIProvider).where(AIProvider.user_id == user_id).order_by(AIProvider.created_at)
     result = await db.execute(stmt)
     providers = result.scalars().all()
     return [AIProviderResponse.model_validate(p) for p in providers]
@@ -53,7 +53,7 @@ async def create_provider(
     When the user creates their first provider, all pipeline plugins
     are auto-assigned to it so the pipeline works out of the box.
     """
-    uid = UUID(user_id)
+    uid = user_id
     encryption = get_encryption()
 
     encrypted_key = None
@@ -102,7 +102,7 @@ async def list_plugins(
     plugin_infos = [PluginInfo(**info) for info in registry.get_plugin_info()]
 
     # Respect user-defined plugin order if stored in settings
-    settings = await get_or_create(db, UserSettings, UUID(user_id))
+    settings = await get_or_create(db, UserSettings, user_id)
     if settings.plugin_order:
         order_map = {name: idx for idx, name in enumerate(settings.plugin_order)}
         fallback = len(order_map)
@@ -130,7 +130,7 @@ async def update_provider(
     user_id: CurrentUserId,
 ) -> AIProviderResponse:
     """Update an AI provider. Only provided fields are updated."""
-    uid = UUID(user_id)
+    uid = user_id
     provider = await get_or_404(db, AIProvider, provider_id, user_id, "AI provider not found")
     encryption = get_encryption()
 

@@ -34,7 +34,7 @@ async def list_auto_replies(
     sort: Literal["newest", "oldest"] = Query(default="newest", description="Sort order"),
 ) -> AutoReplyRecordListResponse:
     """List auto-reply records with pagination and optional search filter."""
-    uid = UUID(user_id)
+    uid = user_id
 
     base_stmt = select(AutoReplyRecord).where(AutoReplyRecord.user_id == uid)
 

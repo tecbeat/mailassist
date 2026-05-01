@@ -44,7 +44,7 @@ async def list_approvals(
     per_page: int = Query(default=50, ge=1, le=200),
 ) -> ApprovalListResponse:
     """List approval queue entries for the current user."""
-    uid = UUID(user_id)
+    uid = user_id
     base_stmt = select(Approval).where(Approval.user_id == uid)
 
     if status:
@@ -181,7 +181,7 @@ async def delete_approval(
     logger.info("approval_deleted", approval_id=str(approval_id), user_id=user_id)
 
 
-async def _get_pending_or_404(db: AsyncSession, approval_id: UUID, user_id: str) -> Approval:
+async def _get_pending_or_404(db: AsyncSession, approval_id: UUID, user_id: UUID) -> Approval:
     """Fetch a pending/manual_input approval owned by the current user or raise 404.
 
     Accepts approvals in PENDING or MANUAL_INPUT status — both represent
@@ -215,12 +215,12 @@ async def _enqueue_execution(approval_id: str) -> None:
     logger.info("approval_execution_enqueued", approval_id=approval_id)
 
 
-async def _enqueue_spam_reprocess(user_id: str, account_id: str, mail_uid: str) -> None:
+async def _enqueue_spam_reprocess(user_id: UUID, account_id: str, mail_uid: str) -> None:
     """Enqueue an ARQ task to re-process an email after spam rejection."""
     arq = get_arq_client()
     await arq.enqueue_job(
         "handle_spam_rejection",
-        user_id,
+        str(user_id),
         account_id,
         mail_uid,
         _job_id=f"spam_reprocess:{account_id}:{mail_uid}",
