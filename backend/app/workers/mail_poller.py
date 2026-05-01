@@ -320,8 +320,10 @@ async def _poll_folder(
     if not new_uids:
         return 0
 
-    # Insert new UIDs in batches (respecting initial scan batch limit)
-    batch_size = get_settings().poll_initial_scan_batch if is_initial_scan else len(new_uids)
+    # Always batch envelope fetching — large mailboxes can have thousands of
+    # new UIDs even on a normal poll (e.g. first successful poll after a
+    # circuit-breaker reset), which would exceed the ARQ job timeout.
+    batch_size = get_settings().poll_initial_scan_batch
     total_inserted = 0
     total_envelopes_fetched = 0  # cumulative across all outer batches
 
