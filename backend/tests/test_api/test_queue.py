@@ -4,7 +4,7 @@ Covers list filtering, pagination, user isolation, and retry logic
 using mock-based patterns consistent with the rest of the test suite.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -48,8 +48,8 @@ def _make_email(
         current_folder="INBOX",
         retry_count=retry_count,
         plugin_results=None,
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
 
 
