@@ -133,6 +133,7 @@ async def _set_pipeline_progress(
     current_plugin_display: str | None = None,
     plugin_index: int | None = None,
     plugins_total: int | None = None,
+    plugin_names: list[dict[str, str]] | None = None,
 ) -> None:
     """Write ephemeral pipeline progress to Valkey.
 
@@ -144,15 +145,16 @@ async def _set_pipeline_progress(
         from app.core.redis import get_task_client
 
         client = get_task_client()
-        value = json.dumps(
-            {
-                "phase": phase,
-                "current_plugin": current_plugin,
-                "current_plugin_display": current_plugin_display,
-                "plugin_index": plugin_index,
-                "plugins_total": plugins_total,
-            }
-        )
+        payload: dict[str, Any] = {
+            "phase": phase,
+            "current_plugin": current_plugin,
+            "current_plugin_display": current_plugin_display,
+            "plugin_index": plugin_index,
+            "plugins_total": plugins_total,
+        }
+        if plugin_names is not None:
+            payload["plugin_names"] = plugin_names
+        value = json.dumps(payload)
         await client.set(
             _progress_key(account_id, mail_uid, current_folder),
             value,
@@ -555,6 +557,7 @@ async def run_ai_pipeline(
     # non-pipeline and explicitly skipped plugins).
     pipeline_plugins = [p for p in all_plugins if p.runs_in_pipeline and not (skip_plugins and p.name in skip_plugins)]
     plugins_total = len(pipeline_plugins)
+    plugin_names_list = [{"name": p.name, "display_name": p.display_name} for p in pipeline_plugins]
 
     try:
         async with db.begin_nested():  # Savepoint
@@ -583,6 +586,7 @@ async def run_ai_pipeline(
                     current_plugin_display=plugin.display_name,
                     plugin_index=plugin_index,
                     plugins_total=plugins_total,
+                    plugin_names=plugin_names_list,
                 )
 
                 try:

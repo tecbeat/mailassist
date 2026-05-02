@@ -18,6 +18,24 @@ class PluginResultEntry(BaseModel):
     details: dict[str, Any] | None = None
 
 
+class PipelinePluginName(BaseModel):
+    """Plugin name/display_name pair for progress tracking."""
+
+    name: str
+    display_name: str
+
+
+class PipelineProgress(BaseModel):
+    """Live pipeline progress for a processing email (from Valkey)."""
+
+    phase: str | None = None
+    current_plugin: str | None = None
+    current_plugin_display: str | None = None
+    plugin_index: int | None = None
+    plugins_total: int | None = None
+    plugin_names: list[PipelinePluginName] | None = None
+
+
 class TrackedEmailResponse(BaseModel):
     """Response schema for a single tracked email in the processing queue."""
 
@@ -33,6 +51,7 @@ class TrackedEmailResponse(BaseModel):
     plugins_failed: list[str] | None
     plugins_skipped: list[str] | None
     plugin_results: dict[str, PluginResultEntry] | None = None
+    pipeline_progress: PipelineProgress | None = None
     completion_reason: CompletionReason | None
     current_folder: str
     mail_account_id: UUID

@@ -23,6 +23,8 @@ import type {
   ErrorType,
   MailAccountResponse,
   PluginResultEntry,
+  PipelineProgress,
+  PipelinePluginName,
 } from "@/types/api";
 
 import { AppButton } from "@/components/app-button";
@@ -56,8 +58,8 @@ import { cn, formatRelativeTime, unwrapResponse } from "@/lib/utils";
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Auto-refresh interval when processing mails are present (10s). */
-const ACTIVE_REFRESH_MS = 10_000;
+/** Auto-refresh interval when processing mails are present (3s). */
+const ACTIVE_REFRESH_MS = 3_000;
 
 const STATUS_OPTIONS: { value: TrackedEmailStatus | "all"; label: string }[] = [
   { value: "all", label: "All statuses" },
@@ -193,6 +195,36 @@ function PluginResultDetail({ result }: { result: PluginResultEntry }) {
 }
 
 // ---------------------------------------------------------------------------
+// Helper: derive plugin pill list for processing mails from pipeline_progress
+// ---------------------------------------------------------------------------
+
+interface DerivedPlugin {
+  name: string;
+  displayName: string;
+  status: string; // "completed" | "processing" | "pending"
+}
+
+function deriveProcessingPlugins(progress: PipelineProgress): DerivedPlugin[] {
+  const names: PipelinePluginName[] = progress.plugin_names ?? [];
+  if (names.length === 0) return [];
+
+  const currentIdx = progress.plugin_index ?? 0;
+
+  return names.map((p, i) => {
+    const idx = i + 1; // plugin_index is 1-based
+    let status: string;
+    if (idx < currentIdx) {
+      status = "completed";
+    } else if (idx === currentIdx) {
+      status = "processing";
+    } else {
+      status = "pending";
+    }
+    return { name: p.name, displayName: p.display_name, status };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Expanded content: error detail + plugin pills with click-to-show results
 // ---------------------------------------------------------------------------
 
@@ -207,17 +239,24 @@ function ExpandedContent({
 }) {
   const hasError = email.status === "failed" && email.last_error;
   const pluginResults = email.plugin_results;
+  const progress = email.pipeline_progress;
 
-  // Collect all known plugins from results, completed, failed, skipped lists
+  // For processing mails: derive plugin list from live pipeline progress
+  const isProcessing = email.status === "processing";
+  const processingPlugins = isProcessing && progress ? deriveProcessingPlugins(progress) : [];
+
+  // For completed/failed mails: collect plugins from results + status lists
   const allPlugins = new Set<string>();
-  if (pluginResults) {
-    for (const name of Object.keys(pluginResults)) allPlugins.add(name);
+  if (!isProcessing) {
+    if (pluginResults) {
+      for (const name of Object.keys(pluginResults)) allPlugins.add(name);
+    }
+    for (const name of email.plugins_completed ?? []) allPlugins.add(name);
+    for (const name of email.plugins_failed ?? []) allPlugins.add(name);
+    for (const name of email.plugins_skipped ?? []) allPlugins.add(name);
   }
-  for (const name of email.plugins_completed ?? []) allPlugins.add(name);
-  for (const name of email.plugins_failed ?? []) allPlugins.add(name);
-  for (const name of email.plugins_skipped ?? []) allPlugins.add(name);
 
-  const hasPlugins = allPlugins.size > 0;
+  const hasPlugins = isProcessing ? processingPlugins.length > 0 : allPlugins.size > 0;
   if (!hasError && !hasPlugins) return null;
 
   const selectedResult = selectedPlugin && pluginResults?.[selectedPlugin];
@@ -237,18 +276,40 @@ function ExpandedContent({
 
       {hasPlugins && (
         <div>
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Plugins</p>
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+            {isProcessing && progress
+              ? `Plugins (${progress.plugin_index ?? 0}/${progress.plugins_total ?? processingPlugins.length})`
+              : "Plugins"}
+          </p>
           <div className="flex flex-wrap gap-1">
-            {[...allPlugins].map((name) => (
-              <PluginPill
-                key={name}
-                name={name}
-                result={pluginResults?.[name]}
-                emailStatus={email.status}
-                isSelected={selectedPlugin === name}
-                onClick={() => onSelectPlugin(selectedPlugin === name ? null : name)}
-              />
-            ))}
+            {isProcessing
+              ? processingPlugins.map((p) => {
+                  const variant = PLUGIN_STATUS_VARIANT[p.status] ?? "secondary";
+                  return (
+                    <ToggleBadge
+                      key={p.name}
+                      selected={false}
+                      selectedVariant={variant}
+                      unselectedVariant={variant}
+                      className={cn(
+                        p.status === "processing" && "animate-pulse",
+                        p.status === "pending" && "opacity-50",
+                      )}
+                    >
+                      {p.displayName}
+                    </ToggleBadge>
+                  );
+                })
+              : [...allPlugins].map((name) => (
+                  <PluginPill
+                    key={name}
+                    name={name}
+                    result={pluginResults?.[name]}
+                    emailStatus={email.status}
+                    isSelected={selectedPlugin === name}
+                    onClick={() => onSelectPlugin(selectedPlugin === name ? null : name)}
+                  />
+                ))}
           </div>
           {selectedResult && (
             <div className="mt-2">
@@ -403,6 +464,26 @@ export default function QueuePage() {
     setSelectedPlugins((prev) => ({ ...prev, [emailId]: pluginName }));
   }, []);
 
+  // Auto-expand processing mails that have live pipeline progress
+  useEffect(() => {
+    const processingWithProgress = emails.filter(
+      (e) => e.status === "processing" && !!e.pipeline_progress?.plugin_names?.length,
+    );
+    if (processingWithProgress.length > 0) {
+      setExpandedIds((prev) => {
+        const next = new Set(prev);
+        let changed = false;
+        for (const e of processingWithProgress) {
+          if (!next.has(e.id)) {
+            next.add(e.id);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }
+  }, [emails]);
+
   const hasActiveFilters =
     statusFilter !== "all" || accountFilter !== "all" || errorTypeFilter !== "all";
 
@@ -526,13 +607,15 @@ export default function QueuePage() {
               const isReprocessing = reprocessingIds.has(email.id);
               const isBusy = isRetrying || isReprocessing;
 
-              // Expandable when there are plugin results, error details, or plugin lists
+              // Expandable when there are plugin results, error details, plugin lists,
+              // or live pipeline progress for processing mails
               const hasPluginInfo = !!(
                 email.plugin_results && Object.keys(email.plugin_results).length > 0
               ) || (email.plugins_completed?.length ?? 0) > 0
                 || (email.plugins_failed?.length ?? 0) > 0
                 || (email.plugins_skipped?.length ?? 0) > 0;
-              const isExpandable = (email.status === "failed" && !!email.last_error) || hasPluginInfo;
+              const hasLiveProgress = email.status === "processing" && !!email.pipeline_progress?.plugin_names?.length;
+              const isExpandable = (email.status === "failed" && !!email.last_error) || hasPluginInfo || hasLiveProgress;
               const isExpanded = expandedIds.has(email.id);
               const accountName = accountMap[email.mail_account_id];
 

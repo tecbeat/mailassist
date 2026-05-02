@@ -141,6 +141,7 @@ export * from './notificationTestRequest';
 export * from './notificationTestResponse';
 export * from './notificationUrlAdd';
 export * from './notifyOnConfig';
+export * from './pipelineProgress';
 export * from './pipelineTestRequest';
 export * from './pluginInfo';
 export * from './pluginResultEntry';

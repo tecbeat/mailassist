@@ -4,6 +4,7 @@ Provides a paginated view of all tracked emails with their processing
 status, error details, and the ability to retry failed mails.
 """
 
+import json
 from uuid import UUID
 
 import structlog
@@ -12,7 +13,7 @@ from sqlalchemy import or_, select
 
 from app.api.deps import CurrentUserId, DbSession, build_paginated_response, paginate, sanitize_like
 from app.models.mail import ErrorType, TrackedEmail, TrackedEmailStatus
-from app.schemas.queue import TrackedEmailListResponse, TrackedEmailResponse
+from app.schemas.queue import PipelineProgress, TrackedEmailListResponse, TrackedEmailResponse
 
 logger = structlog.get_logger()
 
@@ -58,7 +59,9 @@ async def list_queue(
     stmt = stmt.order_by(TrackedEmail.updated_at.desc())
 
     result = await paginate(db, stmt, page, per_page)
-    return build_paginated_response(result, TrackedEmailResponse, TrackedEmailListResponse)
+    response = build_paginated_response(result, TrackedEmailResponse, TrackedEmailListResponse)
+    await _enrich_pipeline_progress(response.items)
+    return response
 
 
 @router.post("/{email_id}/retry")
@@ -151,3 +154,34 @@ async def reprocess_email(
     )
 
     return TrackedEmailResponse.model_validate(email)
+
+
+# ---------------------------------------------------------------------------
+# Pipeline progress enrichment (Valkey)
+# ---------------------------------------------------------------------------
+
+
+async def _enrich_pipeline_progress(items: list[TrackedEmailResponse]) -> None:
+    """Attach live pipeline progress from Valkey to processing emails."""
+    processing = [item for item in items if item.status == TrackedEmailStatus.PROCESSING]
+    if not processing:
+        return
+
+    try:
+        from app.core.redis import get_task_client
+        from app.workers.pipeline_orchestrator import _progress_key
+
+        client = get_task_client()
+        for item in processing:
+            key = _progress_key(str(item.mail_account_id), item.mail_uid, item.current_folder)
+            raw = await client.get(key)
+            if not raw:
+                continue
+            try:
+                data = json.loads(raw)
+                item.pipeline_progress = PipelineProgress(**data)
+            except (ValueError, TypeError):
+                continue
+    except Exception:
+        # Progress enrichment is best-effort
+        pass
