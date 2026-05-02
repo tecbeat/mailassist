@@ -7,8 +7,6 @@ import {
   RotateCcw,
   RotateCw,
   Inbox,
-  ChevronDown,
-  ChevronRight,
 } from "lucide-react";
 
 import {
@@ -25,6 +23,8 @@ import type {
 } from "@/types/api";
 
 import { AppButton } from "@/components/app-button";
+import { FilterListItem } from "@/components/filter-list-item";
+import { ListSkeleton } from "@/components/list-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 import { SearchableCardList } from "@/components/searchable-card-list";
 import { useSearchableList } from "@/hooks/use-searchable-list";
@@ -44,7 +44,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { cn, formatRelativeTime, unwrapResponse } from "@/lib/utils";
 
@@ -71,18 +70,26 @@ const ERROR_TYPE_OPTIONS: { value: ErrorType | "all"; label: string }[] = [
   { value: "timeout", label: "Timeout" },
 ];
 
+const STATUS_BADGE_CONFIG: Record<TrackedEmailStatus, { label: string; variant: "default" | "secondary" | "destructive" | "success" | "warning"; className?: string }> = {
+  queued: { label: "Queued", variant: "secondary" },
+  processing: { label: "Processing", variant: "default", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  completed: { label: "Completed", variant: "success" },
+  failed: { label: "Failed", variant: "destructive" },
+};
+
+const ERROR_TYPE_LABELS: Record<string, string> = {
+  provider_imap: "IMAP Error",
+  provider_ai: "AI Error",
+  mail: "Mail Error",
+  timeout: "Timeout",
+};
+
 // ---------------------------------------------------------------------------
 // Status badge
 // ---------------------------------------------------------------------------
 
 function StatusBadge({ status }: { status: TrackedEmailStatus }) {
-  const config: Record<TrackedEmailStatus, { label: string; variant: "default" | "secondary" | "destructive" | "success" | "warning"; className?: string }> = {
-    queued: { label: "Queued", variant: "secondary" },
-    processing: { label: "Processing", variant: "default", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-    completed: { label: "Completed", variant: "success" },
-    failed: { label: "Failed", variant: "destructive" },
-  };
-  const { label, variant, className } = config[status] ?? { label: status, variant: "secondary" as const };
+  const { label, variant, className } = STATUS_BADGE_CONFIG[status] ?? { label: status, variant: "secondary" as const };
   return (
     <Badge variant={variant} className={cn("text-xs font-medium", className)}>
       {status === "processing" && (
@@ -94,25 +101,18 @@ function StatusBadge({ status }: { status: TrackedEmailStatus }) {
 }
 
 // ---------------------------------------------------------------------------
-// Plugin pills
+// Expanded content: error detail + plugin pills
 // ---------------------------------------------------------------------------
 
-function PluginPills({
-  completed,
-  failed,
-  skipped,
-}: {
-  completed: string[] | null | undefined;
-  failed: string[] | null | undefined;
-  skipped: string[] | null | undefined;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const all = [
-    ...(completed ?? []).map((p) => ({ name: p, state: "completed" as const })),
-    ...(failed ?? []).map((p) => ({ name: p, state: "failed" as const })),
-    ...(skipped ?? []).map((p) => ({ name: p, state: "skipped" as const })),
-  ];
-  if (all.length === 0) return null;
+function ExpandedContent({ email }: { email: TrackedEmailResponse }) {
+  const hasError = email.status === "failed" && email.last_error;
+  const hasPlugins =
+    email.status === "completed" &&
+    ((email.plugins_completed?.length ?? 0) > 0 ||
+      (email.plugins_failed?.length ?? 0) > 0 ||
+      (email.plugins_skipped?.length ?? 0) > 0);
+
+  if (!hasError && !hasPlugins) return null;
 
   const pillClass: Record<string, string> = {
     completed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
@@ -121,145 +121,39 @@ function PluginPills({
   };
 
   return (
-    <div className="mt-2">
-      <button
-        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-        onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-      >
-        {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        {all.length} plugin{all.length !== 1 ? "s" : ""}
-      </button>
-      {expanded && (
-        <div className="mt-1.5 flex flex-wrap gap-1">
-          {all.map(({ name, state }) => (
-            <span
-              key={`${state}-${name}`}
-              className={cn("rounded px-1.5 py-0.5 text-xs font-medium", pillClass[state])}
-            >
-              {name}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Error detail row
-// ---------------------------------------------------------------------------
-
-function ErrorDetail({ error, errorType }: { error: string | null | undefined; errorType: ErrorType | null | undefined }) {
-  const [expanded, setExpanded] = useState(false);
-  if (!error) return null;
-
-  const label = errorType
-    ? { provider_imap: "IMAP Error", provider_ai: "AI Error", mail: "Mail Error", timeout: "Timeout" }[errorType] ?? errorType
-    : "Error";
-
-  return (
-    <div className="mt-2">
-      <button
-        className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700 dark:text-red-400"
-        onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-      >
-        {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        {label}
-      </button>
-      {expanded && (
-        <p className="mt-1 rounded bg-red-50 px-2 py-1.5 text-xs text-red-700 dark:bg-red-900/20 dark:text-red-400">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Queue row skeleton
-// ---------------------------------------------------------------------------
-
-function QueueRowSkeleton() {
-  return (
-    <div className="flex items-start gap-3 rounded-lg border p-3">
-      <div className="flex-1 space-y-2">
-        <Skeleton className="h-4 w-48" />
-        <Skeleton className="h-3 w-32" />
-      </div>
-      <Skeleton className="h-5 w-20" />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Queue row
-// ---------------------------------------------------------------------------
-
-function QueueRow({
-  email,
-  accountName,
-  onRetry,
-  isRetrying,
-}: {
-  email: TrackedEmailResponse;
-  accountName: string | undefined;
-  onRetry: (id: string) => void;
-  isRetrying: boolean;
-}) {
-  return (
-    <div className="rounded-lg border p-3 text-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">
-            {email.subject ?? email.mail_uid}
+    <div className="space-y-3">
+      {hasError && (
+        <div>
+          <p className="mb-1 text-xs font-medium text-red-600 dark:text-red-400">
+            {email.error_type ? (ERROR_TYPE_LABELS[email.error_type] ?? email.error_type) : "Error"}
           </p>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">
-            {email.sender ?? "—"}
-            {accountName && (
-              <span className="ml-2 text-muted-foreground/60">· {accountName}</span>
-            )}
+          <p className="rounded bg-red-50 px-2 py-1.5 text-xs text-red-700 dark:bg-red-900/20 dark:text-red-400">
+            {email.last_error}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <StatusBadge status={email.status} />
-          {email.status === "failed" && (
-            <AppButton
-              icon={<RotateCcw />}
-              label="Retry"
-              variant="ghost"
-              size="sm"
-              loading={isRetrying}
-              disabled={isRetrying}
-              onClick={() => onRetry(email.id)}
-            />
-          )}
-        </div>
-      </div>
-
-      <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-        {email.received_at && (
-          <span>Received {formatRelativeTime(email.received_at)}</span>
-        )}
-        <span>Updated {formatRelativeTime(email.updated_at)}</span>
-        {email.retry_count > 0 && (
-          <span className="text-orange-600 dark:text-orange-400">
-            {email.retry_count} retr{email.retry_count === 1 ? "y" : "ies"}
-          </span>
-        )}
-      </div>
-
-      {email.status === "failed" && (
-        <ErrorDetail error={email.last_error} errorType={email.error_type} />
       )}
 
-      {email.status === "completed" && (
-        <PluginPills
-          completed={email.plugins_completed}
-          failed={email.plugins_failed}
-          skipped={email.plugins_skipped}
-        />
+      {hasPlugins && (
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Plugins</p>
+          <div className="flex flex-wrap gap-1">
+            {(email.plugins_completed ?? []).map((name) => (
+              <span key={`completed-${name}`} className={cn("rounded px-1.5 py-0.5 text-xs font-medium", pillClass.completed)}>
+                {name}
+              </span>
+            ))}
+            {(email.plugins_failed ?? []).map((name) => (
+              <span key={`failed-${name}`} className={cn("rounded px-1.5 py-0.5 text-xs font-medium", pillClass.failed)}>
+                {name}
+              </span>
+            ))}
+            {(email.plugins_skipped ?? []).map((name) => (
+              <span key={`skipped-${name}`} className={cn("rounded px-1.5 py-0.5 text-xs font-medium", pillClass.skipped)}>
+                {name}
+              </span>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -284,6 +178,7 @@ export default function QueuePage() {
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [errorTypeFilter, setErrorTypeFilter] = useState<ErrorType | "all">("all");
   const [retryingIds, setRetryingIds] = useState<Set<string>>(new Set());
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -358,6 +253,18 @@ export default function QueuePage() {
     },
     [retryMutation, queryClient, toast],
   );
+
+  const toggleExpanded = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
 
   const hasActiveFilters =
     statusFilter !== "all" || accountFilter !== "all" || errorTypeFilter !== "all";
@@ -474,24 +381,63 @@ export default function QueuePage() {
                 )}
               </div>
             }
-            skeleton={
-              <div className="space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <QueueRowSkeleton key={i} />
-                ))}
-              </div>
-            }
+            skeleton={<ListSkeleton count={5} lines={["w-1/2", "w-1/3"]} />}
             emptyIcon={<Inbox className="mb-3 h-10 w-10 text-muted-foreground" />}
             emptyMessage="No emails in the queue."
-            renderItem={(email) => (
-              <QueueRow
-                key={email.id}
-                email={email}
-                accountName={accountMap[email.mail_account_id]}
-                onRetry={handleRetry}
-                isRetrying={retryingIds.has(email.id)}
-              />
-            )}
+            renderItem={(email) => {
+              const isRetrying = retryingIds.has(email.id);
+              const isExpandable = (email.status === "failed" && !!email.last_error) ||
+                (email.status === "completed" &&
+                  ((email.plugins_completed?.length ?? 0) > 0 ||
+                    (email.plugins_failed?.length ?? 0) > 0 ||
+                    (email.plugins_skipped?.length ?? 0) > 0));
+              const isExpanded = expandedIds.has(email.id);
+              const accountName = accountMap[email.mail_account_id];
+
+              return (
+                <FilterListItem
+                  key={email.id}
+                  className={cn(isRetrying && "opacity-50")}
+                  title={email.subject ?? email.mail_uid}
+                  badges={
+                    <>
+                      <StatusBadge status={email.status} />
+                      {email.retry_count > 0 && (
+                        <Badge variant="warning" className="text-xs">
+                          {email.retry_count} retr{email.retry_count === 1 ? "y" : "ies"}
+                        </Badge>
+                      )}
+                    </>
+                  }
+                  subtitle={
+                    <p className="truncate text-xs text-muted-foreground">
+                      {email.sender ?? "\u2014"}
+                      {accountName && (
+                        <span className="ml-2 text-muted-foreground/60">&middot; {accountName}</span>
+                      )}
+                    </p>
+                  }
+                  date={formatRelativeTime(email.updated_at)}
+                  expandable={isExpandable}
+                  expanded={isExpanded}
+                  onToggleExpand={() => toggleExpanded(email.id)}
+                  expandedContent={<ExpandedContent email={email} />}
+                  actions={
+                    email.status === "failed" ? (
+                      <AppButton
+                        icon={<RotateCcw />}
+                        label="Retry"
+                        variant="ghost"
+                        size="sm"
+                        loading={isRetrying}
+                        disabled={isRetrying}
+                        onClick={() => handleRetry(email.id)}
+                      />
+                    ) : undefined
+                  }
+                />
+              );
+            }}
           />
 
           {listQuery.dataUpdatedAt > 0 && (
