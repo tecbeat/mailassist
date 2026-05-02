@@ -70,54 +70,12 @@ async def retry_email(
     db: DbSession,
     user_id: CurrentUserId,
 ) -> TrackedEmailResponse:
-    """Reset a failed tracked email to queued status for reprocessing.
+    """Reset a tracked email and immediately start reprocessing.
 
-    Only emails in FAILED status can be retried. The retry_count is
-    incremented so the worker can track repeated failures.
-    """
-    stmt = select(TrackedEmail).where(
-        TrackedEmail.id == email_id,
-        TrackedEmail.user_id == user_id,
-    )
-    result = await db.execute(stmt)
-    email = result.scalar_one_or_none()
-
-    if email is None:
-        raise HTTPException(status_code=404, detail="Tracked email not found")
-
-    if email.status != TrackedEmailStatus.FAILED:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Only failed emails can be retried (current status: {email.status.value})",
-        )
-
-    email.status = TrackedEmailStatus.QUEUED
-    email.retry_count += 1
-    email.last_error = None
-    email.error_type = None
-    await db.flush()
-
-    logger.info(
-        "tracked_email_retry_queued",
-        email_id=str(email_id),
-        user_id=str(user_id),
-        retry_count=email.retry_count,
-    )
-
-    return TrackedEmailResponse.model_validate(email)
-
-
-@router.post("/{email_id}/reprocess")
-async def reprocess_email(
-    email_id: UUID,
-    db: DbSession,
-    user_id: CurrentUserId,
-) -> TrackedEmailResponse:
-    """Re-queue any tracked email for reprocessing.
-
-    Unlike retry (which only works on failed emails), reprocess resets
-    any email back to queued status so the full pipeline runs again.
-    Clears previous plugin results and error state.
+    Works for any email that is not currently being processed.  Clears
+    previous plugin results and error state, transitions the mail to
+    PROCESSING, and enqueues the ARQ job so the pipeline starts right
+    away instead of waiting for the next scheduler cycle.
     """
     stmt = select(TrackedEmail).where(
         TrackedEmail.id == email_id,
@@ -132,10 +90,10 @@ async def reprocess_email(
     if email.status == TrackedEmailStatus.PROCESSING:
         raise HTTPException(
             status_code=409,
-            detail="Cannot reprocess an email that is currently being processed",
+            detail="Cannot retry an email that is currently being processed",
         )
 
-    email.status = TrackedEmailStatus.QUEUED
+    # Reset state
     email.retry_count += 1
     email.last_error = None
     email.error_type = None
@@ -144,13 +102,48 @@ async def reprocess_email(
     email.plugins_skipped = None
     email.plugin_results = None
     email.completion_reason = None
+
+    # Try to enqueue ARQ job immediately (transition to PROCESSING)
+    enqueued = False
+    try:
+        from app.core.redis import get_arq_client
+
+        arq = get_arq_client()
+        job_id = f"process_mail:{email.mail_account_id}:{email.mail_uid}:{email.current_folder}"
+
+        # Clear stale result key so enqueue succeeds
+        result_key = f"arq:result:{job_id}"
+        try:
+            await arq.delete(result_key)
+        except Exception:
+            pass
+
+        job = await arq.enqueue_job(
+            "process_mail",
+            str(user_id),
+            str(email.mail_account_id),
+            email.mail_uid,
+            email.current_folder,
+            _job_id=job_id,
+        )
+        if job is not None:
+            email.status = TrackedEmailStatus.PROCESSING
+            enqueued = True
+    except Exception:
+        logger.warning("retry_enqueue_failed", email_id=str(email_id))
+
+    if not enqueued:
+        # Fallback: set to QUEUED so the scheduler picks it up
+        email.status = TrackedEmailStatus.QUEUED
+
     await db.flush()
 
     logger.info(
-        "tracked_email_reprocess_queued",
+        "tracked_email_retry",
         email_id=str(email_id),
         user_id=str(user_id),
         retry_count=email.retry_count,
+        enqueued=enqueued,
     )
 
     return TrackedEmailResponse.model_validate(email)

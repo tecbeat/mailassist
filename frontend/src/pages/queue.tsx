@@ -7,13 +7,11 @@ import {
   RotateCcw,
   RotateCw,
   Inbox,
-  Play,
 } from "lucide-react";
 
 import {
   useListQueueApiQueueGet,
   useRetryEmailApiQueueEmailIdRetryPost,
-  useReprocessEmailApiQueueEmailIdReprocessPost,
 } from "@/services/api/queue/queue";
 import { useListMailAccountsApiMailAccountsGet } from "@/services/api/mail-accounts/mail-accounts";
 import type {
@@ -325,7 +323,6 @@ export default function QueuePage() {
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [errorTypeFilter, setErrorTypeFilter] = useState<ErrorType | "all">("all");
   const [retryingIds, setRetryingIds] = useState<Set<string>>(new Set());
-  const [reprocessingIds, setReprocessingIds] = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedPlugins, setSelectedPlugins] = useState<Record<string, string | null>>({});
 
@@ -401,35 +398,6 @@ export default function QueuePage() {
       );
     },
     [retryMutation, queryClient, toast],
-  );
-
-  // Reprocess mutation (for any email)
-  const reprocessMutation = useReprocessEmailApiQueueEmailIdReprocessPost();
-
-  const handleReprocess = useCallback(
-    (id: string) => {
-      setReprocessingIds((prev) => new Set(prev).add(id));
-      reprocessMutation.mutate(
-        { emailId: id },
-        {
-          onSuccess: () => {
-            toast({ title: "Reprocessing queued", description: "The email has been re-queued for full reprocessing." });
-            queryClient.invalidateQueries({ queryKey: ["/api/queue"] });
-          },
-          onError: () => {
-            toast({ title: "Reprocessing failed", description: "Could not reprocess this email. Please try again.", variant: "destructive" });
-          },
-          onSettled: () => {
-            setReprocessingIds((prev) => {
-              const next = new Set(prev);
-              next.delete(id);
-              return next;
-            });
-          },
-        },
-      );
-    },
-    [reprocessMutation, queryClient, toast],
   );
 
   const toggleExpanded = useCallback((id: string) => {
@@ -588,8 +556,6 @@ export default function QueuePage() {
             emptyMessage="No emails in the queue."
             renderItem={(email) => {
               const isRetrying = retryingIds.has(email.id);
-              const isReprocessing = reprocessingIds.has(email.id);
-              const isBusy = isRetrying || isReprocessing;
 
               // Expandable when there are plugin results, error details, plugin lists,
               // or live pipeline progress for processing mails
@@ -606,7 +572,7 @@ export default function QueuePage() {
               return (
                 <FilterListItem
                   key={email.id}
-                  className={cn(isBusy && "opacity-50")}
+                  className={cn(isRetrying && "opacity-50")}
                   title={email.subject ?? email.mail_uid}
                   badges={
                     <>
@@ -638,30 +604,17 @@ export default function QueuePage() {
                     />
                   }
                   actions={
-                    <div className="flex items-center gap-1">
-                      {email.status === "failed" && (
-                        <AppButton
-                          icon={<RotateCcw />}
-                          label="Retry"
-                          variant="ghost"
-                          size="sm"
-                          loading={isRetrying}
-                          disabled={isBusy}
-                          onClick={() => handleRetry(email.id)}
-                        />
-                      )}
-                      {email.status !== "processing" && (
-                        <AppButton
-                          icon={<Play />}
-                          label="Reprocess"
-                          variant="ghost"
-                          size="sm"
-                          loading={isReprocessing}
-                          disabled={isBusy}
-                          onClick={() => handleReprocess(email.id)}
-                        />
-                      )}
-                    </div>
+                    email.status !== "processing" ? (
+                      <AppButton
+                        icon={<RotateCcw />}
+                        label="Retry"
+                        variant="ghost"
+                        size="sm"
+                        loading={isRetrying}
+                        disabled={isRetrying}
+                        onClick={() => handleRetry(email.id)}
+                      />
+                    ) : undefined
                   }
                 />
               );

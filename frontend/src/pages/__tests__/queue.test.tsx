@@ -15,7 +15,6 @@ vi.mock("@/services/api/queue/queue", () => ({
   useListQueueApiQueueGet: vi.fn(),
   getListQueueApiQueueGetQueryKey: vi.fn().mockReturnValue(["/api/queue"]),
   useRetryEmailApiQueueEmailIdRetryPost: vi.fn(),
-  useReprocessEmailApiQueueEmailIdReprocessPost: vi.fn(),
 }));
 
 vi.mock("@/services/api/mail-accounts/mail-accounts", () => ({
@@ -25,7 +24,6 @@ vi.mock("@/services/api/mail-accounts/mail-accounts", () => ({
 import {
   useListQueueApiQueueGet,
   useRetryEmailApiQueueEmailIdRetryPost,
-  useReprocessEmailApiQueueEmailIdReprocessPost,
 } from "@/services/api/queue/queue";
 import { useListMailAccountsApiMailAccountsGet } from "@/services/api/mail-accounts/mail-accounts";
 
@@ -33,7 +31,6 @@ type MockedFn = ReturnType<typeof vi.fn>;
 
 const mockListHook = useListQueueApiQueueGet as MockedFn;
 const mockRetryMutation = useRetryEmailApiQueueEmailIdRetryPost as MockedFn;
-const mockReprocessMutation = useReprocessEmailApiQueueEmailIdReprocessPost as MockedFn;
 const mockAccountsHook = useListMailAccountsApiMailAccountsGet as MockedFn;
 
 // ---------------------------------------------------------------------------
@@ -135,7 +132,6 @@ describe("QueuePage", () => {
     vi.clearAllMocks();
     mockListHook.mockReturnValue(querySuccess(createMockEmailList()));
     mockRetryMutation.mockReturnValue(mutationIdle());
-    mockReprocessMutation.mockReturnValue(mutationIdle());
     mockAccountsHook.mockReturnValue(querySuccess([]));
   });
 
@@ -212,10 +208,10 @@ describe("QueuePage", () => {
     expect(screen.getByLabelText("Retry")).toBeInTheDocument();
   });
 
-  it("does not render retry button for non-failed emails", () => {
+  it("does not render retry button for processing emails", () => {
     mockListHook.mockReturnValue(
       querySuccess(
-        createMockEmailList([createMockEmail({ status: "completed" })]),
+        createMockEmailList([createMockEmail({ status: "processing" })]),
       ),
     );
 
