@@ -70,6 +70,7 @@ class PluginOutcome:
     """Result of executing a single plugin."""
 
     plugin_name: str
+    plugin_display_name: str = ""
     executed: bool = False
     completed: bool = False
     failed: bool = False
@@ -82,6 +83,8 @@ class PluginOutcome:
     transient_error_reason: str | None = None
     failed_provider_id: str | None = None
     break_pipeline: bool = False
+    result_summary: str | None = None
+    result_details: dict[str, Any] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +109,7 @@ async def execute_plugin(
     Returns a :class:`PluginOutcome` so the orchestrator can decide how
     to proceed (continue, break, re-enqueue, etc.).
     """
-    outcome = PluginOutcome(plugin_name=plugin.name)
+    outcome = PluginOutcome(plugin_name=plugin.name, plugin_display_name=plugin.display_name)
 
     # --- Check if plugin is enabled ---
     approval_col = PLUGIN_TO_APPROVAL_COLUMN.get(plugin.name)
@@ -295,6 +298,10 @@ async def execute_plugin(
 
     outcome.completed = True
 
+    # Extract result summary for queue display
+    outcome.result_summary = _extract_result_summary(plugin.name, ai_response)
+    outcome.result_details = _extract_result_details(plugin.name, ai_response)
+
     log.info(
         "plugin_executed",
         plugin=plugin.name,
@@ -338,7 +345,9 @@ async def _handle_blocklist(
 
     log.info("blocklist_hit", sender=context.sender, subject=context.subject)
 
-    outcome = PluginOutcome(plugin_name=plugin.name, executed=True, completed=True)
+    outcome = PluginOutcome(
+        plugin_name=plugin.name, plugin_display_name=plugin.display_name, executed=True, completed=True
+    )
     action_result = ActionResult(
         success=True,
         actions_taken=["move_to_spam (blocklist match)", "mark_as_read"],
@@ -645,3 +654,58 @@ async def _create_manual_input_approval(
     )
     db.add(approval)
     await db.flush()
+
+
+# ---------------------------------------------------------------------------
+# Result summary extraction for queue display
+# ---------------------------------------------------------------------------
+
+
+def _extract_result_summary(plugin_name: str, ai_response: BaseModel) -> str | None:
+    """Extract a short human-readable summary from a plugin's AI response."""
+    try:
+        if plugin_name == "email_summary":
+            return getattr(ai_response, "summary", None)
+        if plugin_name == "spam_detection":
+            is_spam = getattr(ai_response, "is_spam", False)
+            reason = getattr(ai_response, "reason", "")
+            return f"{'Spam' if is_spam else 'Not spam'}: {reason}" if reason else ("Spam" if is_spam else "Not spam")
+        if plugin_name == "smart_folder":
+            folder = getattr(ai_response, "folder", None)
+            return f"Folder: {folder}" if folder else None
+        if plugin_name == "labeling":
+            labels = getattr(ai_response, "labels", [])
+            return f"Labels: {', '.join(labels)}" if labels else "No labels"
+        if plugin_name == "newsletter_detection":
+            is_nl = getattr(ai_response, "is_newsletter", False)
+            name = getattr(ai_response, "newsletter_name", "")
+            return f"Newsletter: {name}" if is_nl else "Not a newsletter"
+        if plugin_name == "coupon_extraction":
+            has = getattr(ai_response, "has_coupons", False)
+            coupons = getattr(ai_response, "coupons", [])
+            return f"{len(coupons)} coupon(s) found" if has and coupons else "No coupons"
+        if plugin_name == "calendar_extraction":
+            has = getattr(ai_response, "has_event", False)
+            title = getattr(ai_response, "title", "")
+            return f"Event: {title}" if has and title else "No event"
+        if plugin_name == "auto_reply":
+            should = getattr(ai_response, "should_reply", False)
+            return "Reply drafted" if should else "No reply needed"
+        if plugin_name == "contacts":
+            name = getattr(ai_response, "contact_name", "")
+            return f"Contact: {name}" if name else "No contact match"
+    except Exception:
+        pass
+    return None
+
+
+def _extract_result_details(plugin_name: str, ai_response: BaseModel) -> dict[str, Any] | None:
+    """Extract structured details from a plugin's AI response for the queue UI."""
+    try:
+        data = ai_response.model_dump(mode="json")
+        # Remove very large fields to keep the stored JSON small
+        for key in ("draft_body",):
+            data.pop(key, None)
+        return data
+    except Exception:
+        return None

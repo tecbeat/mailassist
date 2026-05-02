@@ -12,6 +12,7 @@ import type { AIProviderResponse } from "@/types/api";
 import { Badge } from "@/components/ui/badge";
 import { AppButton } from "@/components/app-button";
 import { ResourceStatusBanner } from "@/components/resource-status-banner";
+import { ToggleBadge } from "@/components/toggle-badge";
 
 import { providerTypeLabel } from "./ai-settings-schemas";
 
@@ -162,14 +163,13 @@ export function AIProviderRow({
           {pipelinePlugins.map((plugin) => {
             const isAssigned = pluginProviderMap[plugin.name] === provider.id;
             return (
-              <Badge
+              <ToggleBadge
                 key={plugin.name}
-                variant={isAssigned ? "default" : "secondary"}
-                className="cursor-pointer select-none transition-colors"
+                selected={isAssigned}
                 onClick={() => onTogglePlugin(plugin.name, provider.id)}
               >
                 {plugin.display_name}
-              </Badge>
+              </ToggleBadge>
             );
           })}
         </div>

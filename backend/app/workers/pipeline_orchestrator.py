@@ -69,6 +69,25 @@ logger = structlog.get_logger()
 
 
 @dataclass
+class PluginResultEntry:
+    """Summary of a single plugin's execution result."""
+
+    status: str  # "completed", "failed", "skipped", "warning"
+    display_name: str
+    summary: str | None = None
+    details: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a JSON-compatible dict."""
+        d: dict[str, Any] = {"status": self.status, "display_name": self.display_name}
+        if self.summary is not None:
+            d["summary"] = self.summary
+        if self.details is not None:
+            d["details"] = self.details
+        return d
+
+
+@dataclass
 class PipelineResult:
     """Aggregated result of the full pipeline."""
 
@@ -76,6 +95,7 @@ class PipelineResult:
     plugins_completed: list[str] = field(default_factory=list)
     plugins_failed: list[str] = field(default_factory=list)
     plugins_skipped: list[str] = field(default_factory=list)
+    plugin_results: dict[str, PluginResultEntry] = field(default_factory=dict)
     approvals_created: int = 0
     auto_actions: list[str] = field(default_factory=list)
     completion_reason: CompletionReason | None = None
@@ -96,11 +116,28 @@ class PipelineResult:
 # ---------------------------------------------------------------------------
 
 PROGRESS_KEY_PREFIX = "pipeline:progress:"
+CANCEL_KEY_PREFIX = "pipeline:cancel:"
 
 
 def _progress_key(account_id: str, mail_uid: str, current_folder: str = "INBOX") -> str:
     """Build the Valkey key for pipeline progress of a specific mail job."""
     return f"{PROGRESS_KEY_PREFIX}process_mail:{account_id}:{mail_uid}:{current_folder}"
+
+
+def _cancel_key(account_id: str, mail_uid: str, current_folder: str = "INBOX") -> str:
+    """Build the Valkey key for pipeline cancellation of a specific mail job."""
+    return f"{CANCEL_KEY_PREFIX}process_mail:{account_id}:{mail_uid}:{current_folder}"
+
+
+async def _is_cancelled(account_id: str, mail_uid: str, current_folder: str) -> bool:
+    """Check whether this pipeline run has been cancelled by the user."""
+    try:
+        from app.core.redis import get_task_client
+
+        client = get_task_client()
+        return bool(await client.exists(_cancel_key(account_id, mail_uid, current_folder)))
+    except Exception:
+        return False
 
 
 async def _set_pipeline_progress(
@@ -113,6 +150,8 @@ async def _set_pipeline_progress(
     current_plugin_display: str | None = None,
     plugin_index: int | None = None,
     plugins_total: int | None = None,
+    plugin_names: list[dict[str, str]] | None = None,
+    plugin_results: dict[str, dict[str, Any]] | None = None,
 ) -> None:
     """Write ephemeral pipeline progress to Valkey.
 
@@ -124,15 +163,18 @@ async def _set_pipeline_progress(
         from app.core.redis import get_task_client
 
         client = get_task_client()
-        value = json.dumps(
-            {
-                "phase": phase,
-                "current_plugin": current_plugin,
-                "current_plugin_display": current_plugin_display,
-                "plugin_index": plugin_index,
-                "plugins_total": plugins_total,
-            }
-        )
+        payload: dict[str, Any] = {
+            "phase": phase,
+            "current_plugin": current_plugin,
+            "current_plugin_display": current_plugin_display,
+            "plugin_index": plugin_index,
+            "plugins_total": plugins_total,
+        }
+        if plugin_names is not None:
+            payload["plugin_names"] = plugin_names
+        if plugin_results is not None:
+            payload["plugin_results"] = plugin_results
+        value = json.dumps(payload)
         await client.set(
             _progress_key(account_id, mail_uid, current_folder),
             value,
@@ -154,6 +196,7 @@ async def _clear_pipeline_progress(
 
         client = get_task_client()
         await client.delete(_progress_key(account_id, mail_uid, current_folder))
+        await client.delete(_cancel_key(account_id, mail_uid, current_folder))
     except Exception:
         pass
 
@@ -535,6 +578,7 @@ async def run_ai_pipeline(
     # non-pipeline and explicitly skipped plugins).
     pipeline_plugins = [p for p in all_plugins if p.runs_in_pipeline and not (skip_plugins and p.name in skip_plugins)]
     plugins_total = len(pipeline_plugins)
+    plugin_names_list = [{"name": p.name, "display_name": p.display_name} for p in pipeline_plugins]
 
     try:
         async with db.begin_nested():  # Savepoint
@@ -546,9 +590,21 @@ async def run_ai_pipeline(
                 if skip_plugins and plugin.name in skip_plugins:
                     log.debug("plugin_skipped_explicitly", plugin=plugin.name)
                     result.plugins_skipped.append(plugin.name)
+                    result.plugin_results[plugin.name] = PluginResultEntry(
+                        status="skipped",
+                        display_name=plugin.display_name,
+                        summary="Skipped (explicitly excluded)",
+                    )
                     continue
 
                 plugin_index += 1
+
+                # Check for user-initiated cancellation between plugins
+                if await _is_cancelled(account_id, mail_uid, current_folder):
+                    log.info("pipeline_cancelled_by_user", plugin=plugin.name)
+                    result.completion_reason = CompletionReason.CANCELLED
+                    break
+
                 await _set_pipeline_progress(
                     account_id,
                     mail_uid,
@@ -558,6 +614,8 @@ async def run_ai_pipeline(
                     current_plugin_display=plugin.display_name,
                     plugin_index=plugin_index,
                     plugins_total=plugins_total,
+                    plugin_names=plugin_names_list,
+                    plugin_results={k: v.to_dict() for k, v in result.plugin_results.items()} or None,
                 )
 
                 try:
@@ -575,6 +633,24 @@ async def run_ai_pipeline(
                 except Exception as exc:
                     log.exception("plugin_execution_failed", plugin=plugin.name)
                     result.plugins_failed.append(plugin.name)
+                    result.plugin_results[plugin.name] = PluginResultEntry(
+                        status="failed",
+                        display_name=plugin.display_name,
+                        summary=f"Unhandled error: {exc}",
+                    )
+                    # Update progress with accumulated results
+                    await _set_pipeline_progress(
+                        account_id,
+                        mail_uid,
+                        current_folder=current_folder,
+                        phase="ai_pipeline",
+                        current_plugin=plugin.name,
+                        current_plugin_display=plugin.display_name,
+                        plugin_index=plugin_index,
+                        plugins_total=plugins_total,
+                        plugin_names=plugin_names_list,
+                        plugin_results={k: v.to_dict() for k, v in result.plugin_results.items()},
+                    )
                     # Create manual_input approval for unhandled exception
                     try:
                         from app.workers.plugin_executor import _create_manual_input_approval
@@ -593,6 +669,20 @@ async def run_ai_pipeline(
                     continue
 
                 _apply_outcome(result, outcome)
+
+                # Update progress with accumulated plugin results
+                await _set_pipeline_progress(
+                    account_id,
+                    mail_uid,
+                    current_folder=current_folder,
+                    phase="ai_pipeline",
+                    current_plugin=plugin.name,
+                    current_plugin_display=plugin.display_name,
+                    plugin_index=plugin_index,
+                    plugins_total=plugins_total,
+                    plugin_names=plugin_names_list,
+                    plugin_results={k: v.to_dict() for k, v in result.plugin_results.items()},
+                )
 
                 if outcome.skip_reason == "no_user_settings":
                     log.warning("no_user_settings", reason="skipping_all_plugins")
@@ -781,6 +871,11 @@ def _apply_outcome(result: PipelineResult, outcome: PluginOutcome) -> None:
     """Merge a single plugin outcome into the pipeline result."""
     if outcome.skipped:
         result.plugins_skipped.append(outcome.plugin_name)
+        result.plugin_results[outcome.plugin_name] = PluginResultEntry(
+            status="skipped",
+            display_name=outcome.plugin_display_name,
+            summary=f"Skipped: {outcome.skip_reason or 'disabled'}",
+        )
         return
 
     if outcome.executed:
@@ -788,8 +883,20 @@ def _apply_outcome(result: PipelineResult, outcome: PluginOutcome) -> None:
 
     if outcome.completed:
         result.plugins_completed.append(outcome.plugin_name)
+        result.plugin_results[outcome.plugin_name] = PluginResultEntry(
+            status="completed",
+            display_name=outcome.plugin_display_name,
+            summary=outcome.result_summary,
+            details=outcome.result_details,
+        )
     elif outcome.failed:
         result.plugins_failed.append(outcome.plugin_name)
+        status = "warning" if outcome.transient_error else "failed"
+        result.plugin_results[outcome.plugin_name] = PluginResultEntry(
+            status=status,
+            display_name=outcome.plugin_display_name,
+            summary=outcome.transient_error_reason or "Plugin failed",
+        )
 
     if outcome.approval_created:
         result.approvals_created += 1

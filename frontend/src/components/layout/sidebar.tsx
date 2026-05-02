@@ -23,6 +23,7 @@ import {
   X,
   Globe,
   Languages,
+  List,
   type LucideIcon,
 } from "lucide-react";
 import { cn, unwrapResponse } from "@/lib/utils";
@@ -88,6 +89,7 @@ interface NavItem {
 const OVERVIEW_ITEMS: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard },
   { label: "Approvals", to: "/approvals", icon: CheckCircle },
+  { label: "Mail Queue", to: "/queue", icon: List },
 ];
 
 const STATIC_CONFIG_ITEMS_TOP: NavItem[] = [
