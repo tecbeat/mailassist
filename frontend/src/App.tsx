@@ -15,6 +15,7 @@ const AIProviders = lazy(() => import("@/pages/ai-settings"));
 const Plugins = lazy(() => import("@/pages/plugins"));
 const Prompts = lazy(() => import("@/pages/prompts"));
 const Approvals = lazy(() => import("@/pages/approvals"));
+const Queue = lazy(() => import("@/pages/queue"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -68,6 +69,7 @@ export default function App() {
                         {/* Overview */}
                         <Route index element={<RouteErrorBoundary><Dashboard /></RouteErrorBoundary>} />
                         <Route path="approvals" element={<RouteErrorBoundary><Approvals /></RouteErrorBoundary>} />
+                        <Route path="queue" element={<RouteErrorBoundary><Queue /></RouteErrorBoundary>} />
 
                         {/* Configuration (static) */}
                         <Route path="plugins" element={<RouteErrorBoundary><Plugins /></RouteErrorBoundary>} />

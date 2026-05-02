@@ -33,6 +33,7 @@ from app.api import (
     notifications,
     pipeline,
     prompts,
+    queue,
     rules,
     spam,
     summaries,
@@ -273,6 +274,7 @@ def create_app() -> FastAPI:
     application.include_router(settings_api.router)
     application.include_router(spam.router)
     application.include_router(pipeline.router)
+    application.include_router(queue.router)
 
     # Serve frontend static files (if built)
     static_dir = Path(__file__).parent.parent / "static"

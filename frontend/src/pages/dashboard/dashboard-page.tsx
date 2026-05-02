@@ -87,12 +87,12 @@ export default function DashboardPage() {
     subtitle?: string;
     href?: string;
   }[] = [
-    { label: "Processed Mails", icon: <Inbox className="h-4 w-4 text-muted-foreground" />, base: "processed_mails" },
+    { label: "Processed Mails", icon: <Inbox className="h-4 w-4 text-muted-foreground" />, base: "processed_mails", href: "/queue?status=completed" },
     { label: "Pending Approvals", icon: <ShieldCheck className="h-4 w-4 text-muted-foreground" />, base: "", todayOnly: true, value: stats?.pending_approvals, href: "/approvals" },
     { label: "Tokens Used", icon: <Coins className="h-4 w-4 text-muted-foreground" />, base: "token_usage" },
     { label: "Unhealthy Accounts", icon: <AlertTriangle className="h-4 w-4 text-muted-foreground" />, base: "", todayOnly: true, value: stats?.unhealthy_accounts, href: "/mail-accounts", subtitle: stats ? `${stats.unhealthy_accounts ?? 0} unhealthy` : undefined },
     { label: "AI Provider Issues", icon: <BrainCircuit className="h-4 w-4 text-muted-foreground" />, base: "", todayOnly: true, value: (stats?.unhealthy_ai_providers ?? 0) + (stats?.paused_ai_providers ?? 0), subtitle: stats ? `${stats.unhealthy_ai_providers ?? 0} unhealthy · ${stats.paused_ai_providers ?? 0} paused` : undefined, href: "/ai-settings" },
-    { label: "Failed Mails", icon: <MailX className="h-4 w-4 text-destructive" />, base: "", todayOnly: true, value: stats?.failed_mails, href: "/mail-accounts" },
+    { label: "Failed Mails", icon: <MailX className="h-4 w-4 text-destructive" />, base: "", todayOnly: true, value: stats?.failed_mails, href: "/queue?status=failed" },
   ];
 
   const periodStats: Record<string, Record<TimePeriod, keyof DashboardStatsResponse>> = {
