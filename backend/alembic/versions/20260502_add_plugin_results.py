@@ -8,8 +8,9 @@ Stores per-plugin execution results (status, display_name, summary,
 details) so the queue UI can show detailed plugin outcomes.
 """
 
-from alembic import op
 from sqlalchemy import JSON, Column
+
+from alembic import op
 
 revision = "20260502_add_plugin_results"
 down_revision = "20260501_fix_notif_mode"
