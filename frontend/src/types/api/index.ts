@@ -143,6 +143,7 @@ export * from './notificationUrlAdd';
 export * from './notifyOnConfig';
 export * from './pipelineTestRequest';
 export * from './pluginInfo';
+export * from './pluginResultEntry';
 export * from './promptPreviewRequest';
 export * from './promptPreviewResponse';
 export * from './promptResponse';

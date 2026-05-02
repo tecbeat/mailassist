@@ -2,7 +2,7 @@
 
 import enum
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
@@ -544,6 +544,9 @@ class TrackedEmail(Base):
     plugins_completed: Mapped[list[str] | None] = mapped_column(JSON, nullable=True, default=None)
     plugins_failed: Mapped[list[str] | None] = mapped_column(JSON, nullable=True, default=None)
     plugins_skipped: Mapped[list[str] | None] = mapped_column(JSON, nullable=True, default=None)
+    # Per-plugin result summaries: {"plugin_name": {"status": "completed"|"failed"|"skipped"|"warning",
+    #   "display_name": "...", "summary": "...", "details": {...}}}
+    plugin_results: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True, default=None)
     completion_reason: Mapped[CompletionReason | None] = mapped_column(
         Enum(CompletionReason, values_callable=lambda e: [m.value for m in e]),
         nullable=True,

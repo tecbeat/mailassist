@@ -1,11 +1,21 @@
 """Pydantic schemas for the Mail Processing Queue API."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
 
 from app.models.mail import CompletionReason, ErrorType, TrackedEmailStatus
+
+
+class PluginResultEntry(BaseModel):
+    """Summary of a single plugin's execution result."""
+
+    status: str  # "completed", "failed", "skipped", "warning"
+    display_name: str
+    summary: str | None = None
+    details: dict[str, Any] | None = None
 
 
 class TrackedEmailResponse(BaseModel):
@@ -22,6 +32,7 @@ class TrackedEmailResponse(BaseModel):
     plugins_completed: list[str] | None
     plugins_failed: list[str] | None
     plugins_skipped: list[str] | None
+    plugin_results: dict[str, PluginResultEntry] | None = None
     completion_reason: CompletionReason | None
     current_folder: str
     mail_account_id: UUID

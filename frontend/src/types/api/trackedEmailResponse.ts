@@ -6,6 +6,7 @@
  */
 import type { CompletionReason } from './completionReason';
 import type { ErrorType } from './errorType';
+import type { PluginResultEntry } from './pluginResultEntry';
 import type { TrackedEmailStatus } from './trackedEmailStatus';
 
 /**
@@ -23,6 +24,7 @@ export interface TrackedEmailResponse {
   plugins_completed?: string[] | null;
   plugins_failed?: string[] | null;
   plugins_skipped?: string[] | null;
+  plugin_results?: Record<string, PluginResultEntry> | null;
   completion_reason?: CompletionReason | null;
   current_folder: string;
   mail_account_id: string;

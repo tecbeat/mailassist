@@ -253,3 +253,61 @@ export const useRetryEmailApiQueueEmailIdRetryPost = <TError = HTTPValidationErr
       > => {
       return useMutation(getRetryEmailApiQueueEmailIdRetryPostMutationOptions(options), queryClient);
     }
+
+
+/**
+ * Re-queue any tracked email for reprocessing.
+ * @summary Reprocess Email
+ */
+export type reprocessEmailApiQueueEmailIdReprocessPostResponse = {
+  data: TrackedEmailResponse;
+  status: number;
+  headers: Headers;
+};
+
+export const getReprocessEmailApiQueueEmailIdReprocessPostUrl = (emailId: string,) => {
+  return `/api/queue/${emailId}/reprocess`;
+};
+
+export const reprocessEmailApiQueueEmailIdReprocessPost = async (emailId: string, options?: RequestInit): Promise<reprocessEmailApiQueueEmailIdReprocessPostResponse> => {
+  return customInstance<reprocessEmailApiQueueEmailIdReprocessPostResponse>(getReprocessEmailApiQueueEmailIdReprocessPostUrl(emailId),
+  {
+    ...options,
+    method: 'POST'
+  });
+};
+
+export const getReprocessEmailApiQueueEmailIdReprocessPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof reprocessEmailApiQueueEmailIdReprocessPost>>, TError, {emailId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof reprocessEmailApiQueueEmailIdReprocessPost>>, TError, {emailId: string}, TContext> => {
+  const mutationKey = ['reprocessEmailApiQueueEmailIdReprocessPost'];
+  const {mutation: mutationOptions, request: requestOptions} = options ?
+        options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+        options
+        : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: { mutationKey }, request: undefined};
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof reprocessEmailApiQueueEmailIdReprocessPost>>, {emailId: string}> = (props) => {
+    const {emailId} = props ?? {};
+    return reprocessEmailApiQueueEmailIdReprocessPost(emailId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReprocessEmailApiQueueEmailIdReprocessPostMutationResult = NonNullable<Awaited<ReturnType<typeof reprocessEmailApiQueueEmailIdReprocessPost>>>;
+export type ReprocessEmailApiQueueEmailIdReprocessPostMutationError = HTTPValidationError;
+
+/**
+ * @summary Reprocess Email
+ */
+export const useReprocessEmailApiQueueEmailIdReprocessPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof reprocessEmailApiQueueEmailIdReprocessPost>>, TError, {emailId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reprocessEmailApiQueueEmailIdReprocessPost>>,
+        TError,
+        {emailId: string},
+        TContext
+      > => {
+      return useMutation(getReprocessEmailApiQueueEmailIdReprocessPostMutationOptions(options), queryClient);
+    }

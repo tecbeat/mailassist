@@ -132,6 +132,7 @@ async def _update_tracked_status(
     plugins_completed: list[str] | None = None,
     plugins_failed: list[str] | None = None,
     plugins_skipped: list[str] | None = None,
+    plugin_results: dict[str, dict[str, Any]] | None = None,
     completion_reason: CompletionReason | None = None,
 ) -> None:
     """Update the status of a tracked email.
@@ -162,6 +163,8 @@ async def _update_tracked_status(
             tracked.plugins_failed = plugins_failed
         if plugins_skipped is not None:
             tracked.plugins_skipped = plugins_skipped
+        if plugin_results is not None:
+            tracked.plugin_results = plugin_results
         if completion_reason is not None:
             tracked.completion_reason = completion_reason
 
@@ -682,6 +685,7 @@ async def _process_mail_inner(
             plugins_completed=pipeline_result.plugins_completed or None,
             plugins_failed=pipeline_result.plugins_failed or None,
             plugins_skipped=pipeline_result.plugins_skipped or None,
+            plugin_results={k: v.to_dict() for k, v in pipeline_result.plugin_results.items()} or None,
             completion_reason=pipeline_result.completion_reason,
         )
     else:

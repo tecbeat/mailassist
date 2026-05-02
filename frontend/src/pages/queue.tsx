@@ -7,11 +7,13 @@ import {
   RotateCcw,
   RotateCw,
   Inbox,
+  Play,
 } from "lucide-react";
 
 import {
   useListQueueApiQueueGet,
   useRetryEmailApiQueueEmailIdRetryPost,
+  useReprocessEmailApiQueueEmailIdReprocessPost,
 } from "@/services/api/queue/queue";
 import { useListMailAccountsApiMailAccountsGet } from "@/services/api/mail-accounts/mail-accounts";
 import type {
@@ -20,6 +22,7 @@ import type {
   TrackedEmailStatus,
   ErrorType,
   MailAccountResponse,
+  PluginResultEntry,
 } from "@/types/api";
 
 import { AppButton } from "@/components/app-button";
@@ -84,6 +87,16 @@ const ERROR_TYPE_LABELS: Record<string, string> = {
   timeout: "Timeout",
 };
 
+// Plugin pill color classes by result status
+const PLUGIN_PILL_CLASSES: Record<string, string> = {
+  completed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50",
+  failed: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50",
+  warning: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/50",
+  skipped: "bg-muted text-muted-foreground hover:bg-muted/80",
+  pending: "bg-gray-100 text-gray-500 dark:bg-gray-800/30 dark:text-gray-500",
+  processing: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 animate-pulse",
+};
+
 // ---------------------------------------------------------------------------
 // Status badge
 // ---------------------------------------------------------------------------
@@ -101,24 +114,113 @@ function StatusBadge({ status }: { status: TrackedEmailStatus }) {
 }
 
 // ---------------------------------------------------------------------------
-// Expanded content: error detail + plugin pills
+// Plugin pill with click-to-expand result
 // ---------------------------------------------------------------------------
 
-function ExpandedContent({ email }: { email: TrackedEmailResponse }) {
-  const hasError = email.status === "failed" && email.last_error;
-  const hasPlugins =
-    email.status === "completed" &&
-    ((email.plugins_completed?.length ?? 0) > 0 ||
-      (email.plugins_failed?.length ?? 0) > 0 ||
-      (email.plugins_skipped?.length ?? 0) > 0);
+interface PluginPillProps {
+  name: string;
+  result: PluginResultEntry | undefined;
+  emailStatus: TrackedEmailStatus;
+  isSelected: boolean;
+  onClick: () => void;
+}
 
+function PluginPill({ name, result, emailStatus, isSelected, onClick }: PluginPillProps) {
+  // Determine pill status based on result or email status
+  let pillStatus: string;
+  if (result) {
+    pillStatus = result.status;
+  } else if (emailStatus === "processing") {
+    pillStatus = "processing";
+  } else if (emailStatus === "queued") {
+    pillStatus = "pending";
+  } else {
+    pillStatus = "pending";
+  }
+
+  const displayName = result?.display_name ?? name;
+  const pillClass = PLUGIN_PILL_CLASSES[pillStatus] ?? PLUGIN_PILL_CLASSES.pending;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "rounded px-1.5 py-0.5 text-xs font-medium transition-colors cursor-pointer",
+        pillClass,
+        isSelected && "ring-2 ring-primary ring-offset-1",
+      )}
+    >
+      {displayName}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Plugin result detail panel
+// ---------------------------------------------------------------------------
+
+function PluginResultDetail({ result }: { result: PluginResultEntry }) {
+  return (
+    <div className="rounded-md border border-border bg-muted/30 p-3 text-xs space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="font-medium">{result.display_name}</span>
+        <Badge
+          variant={
+            result.status === "completed" ? "success" :
+            result.status === "failed" ? "destructive" :
+            result.status === "warning" ? "warning" :
+            "secondary"
+          }
+          className="text-[10px]"
+        >
+          {result.status}
+        </Badge>
+      </div>
+      {result.summary && (
+        <p className="text-muted-foreground">{result.summary}</p>
+      )}
+      {result.details && (
+        <details className="text-muted-foreground">
+          <summary className="cursor-pointer font-medium text-foreground">Details</summary>
+          <pre className="mt-1 overflow-auto rounded bg-muted p-2 text-[11px]">
+            {JSON.stringify(result.details, null, 2)}
+          </pre>
+        </details>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Expanded content: error detail + plugin pills with click-to-show results
+// ---------------------------------------------------------------------------
+
+function ExpandedContent({
+  email,
+  selectedPlugin,
+  onSelectPlugin,
+}: {
+  email: TrackedEmailResponse;
+  selectedPlugin: string | null;
+  onSelectPlugin: (name: string | null) => void;
+}) {
+  const hasError = email.status === "failed" && email.last_error;
+  const pluginResults = email.plugin_results;
+
+  // Collect all known plugins from results, completed, failed, skipped lists
+  const allPlugins = new Set<string>();
+  if (pluginResults) {
+    for (const name of Object.keys(pluginResults)) allPlugins.add(name);
+  }
+  for (const name of email.plugins_completed ?? []) allPlugins.add(name);
+  for (const name of email.plugins_failed ?? []) allPlugins.add(name);
+  for (const name of email.plugins_skipped ?? []) allPlugins.add(name);
+
+  const hasPlugins = allPlugins.size > 0;
   if (!hasError && !hasPlugins) return null;
 
-  const pillClass: Record<string, string> = {
-    completed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-    failed: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-    skipped: "bg-muted text-muted-foreground",
-  };
+  const selectedResult = selectedPlugin && pluginResults?.[selectedPlugin];
 
   return (
     <div className="space-y-3">
@@ -137,22 +239,22 @@ function ExpandedContent({ email }: { email: TrackedEmailResponse }) {
         <div>
           <p className="mb-1.5 text-xs font-medium text-muted-foreground">Plugins</p>
           <div className="flex flex-wrap gap-1">
-            {(email.plugins_completed ?? []).map((name) => (
-              <span key={`completed-${name}`} className={cn("rounded px-1.5 py-0.5 text-xs font-medium", pillClass.completed)}>
-                {name}
-              </span>
-            ))}
-            {(email.plugins_failed ?? []).map((name) => (
-              <span key={`failed-${name}`} className={cn("rounded px-1.5 py-0.5 text-xs font-medium", pillClass.failed)}>
-                {name}
-              </span>
-            ))}
-            {(email.plugins_skipped ?? []).map((name) => (
-              <span key={`skipped-${name}`} className={cn("rounded px-1.5 py-0.5 text-xs font-medium", pillClass.skipped)}>
-                {name}
-              </span>
+            {[...allPlugins].map((name) => (
+              <PluginPill
+                key={name}
+                name={name}
+                result={pluginResults?.[name]}
+                emailStatus={email.status}
+                isSelected={selectedPlugin === name}
+                onClick={() => onSelectPlugin(selectedPlugin === name ? null : name)}
+              />
             ))}
           </div>
+          {selectedResult && (
+            <div className="mt-2">
+              <PluginResultDetail result={selectedResult} />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -178,7 +280,9 @@ export default function QueuePage() {
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [errorTypeFilter, setErrorTypeFilter] = useState<ErrorType | "all">("all");
   const [retryingIds, setRetryingIds] = useState<Set<string>>(new Set());
+  const [reprocessingIds, setReprocessingIds] = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [selectedPlugins, setSelectedPlugins] = useState<Record<string, string | null>>({});
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -225,7 +329,7 @@ export default function QueuePage() {
     [accounts],
   );
 
-  // Retry mutation
+  // Retry mutation (for failed emails)
   const retryMutation = useRetryEmailApiQueueEmailIdRetryPost();
 
   const handleRetry = useCallback(
@@ -254,6 +358,35 @@ export default function QueuePage() {
     [retryMutation, queryClient, toast],
   );
 
+  // Reprocess mutation (for any email)
+  const reprocessMutation = useReprocessEmailApiQueueEmailIdReprocessPost();
+
+  const handleReprocess = useCallback(
+    (id: string) => {
+      setReprocessingIds((prev) => new Set(prev).add(id));
+      reprocessMutation.mutate(
+        { emailId: id },
+        {
+          onSuccess: () => {
+            toast({ title: "Reprocessing queued", description: "The email has been re-queued for full reprocessing." });
+            queryClient.invalidateQueries({ queryKey: ["/api/queue"] });
+          },
+          onError: () => {
+            toast({ title: "Reprocessing failed", description: "Could not reprocess this email. Please try again.", variant: "destructive" });
+          },
+          onSettled: () => {
+            setReprocessingIds((prev) => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+          },
+        },
+      );
+    },
+    [reprocessMutation, queryClient, toast],
+  );
+
   const toggleExpanded = useCallback((id: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
@@ -264,6 +397,10 @@ export default function QueuePage() {
       }
       return next;
     });
+  }, []);
+
+  const handleSelectPlugin = useCallback((emailId: string, pluginName: string | null) => {
+    setSelectedPlugins((prev) => ({ ...prev, [emailId]: pluginName }));
   }, []);
 
   const hasActiveFilters =
@@ -386,18 +523,23 @@ export default function QueuePage() {
             emptyMessage="No emails in the queue."
             renderItem={(email) => {
               const isRetrying = retryingIds.has(email.id);
-              const isExpandable = (email.status === "failed" && !!email.last_error) ||
-                (email.status === "completed" &&
-                  ((email.plugins_completed?.length ?? 0) > 0 ||
-                    (email.plugins_failed?.length ?? 0) > 0 ||
-                    (email.plugins_skipped?.length ?? 0) > 0));
+              const isReprocessing = reprocessingIds.has(email.id);
+              const isBusy = isRetrying || isReprocessing;
+
+              // Expandable when there are plugin results, error details, or plugin lists
+              const hasPluginInfo = !!(
+                email.plugin_results && Object.keys(email.plugin_results).length > 0
+              ) || (email.plugins_completed?.length ?? 0) > 0
+                || (email.plugins_failed?.length ?? 0) > 0
+                || (email.plugins_skipped?.length ?? 0) > 0;
+              const isExpandable = (email.status === "failed" && !!email.last_error) || hasPluginInfo;
               const isExpanded = expandedIds.has(email.id);
               const accountName = accountMap[email.mail_account_id];
 
               return (
                 <FilterListItem
                   key={email.id}
-                  className={cn(isRetrying && "opacity-50")}
+                  className={cn(isBusy && "opacity-50")}
                   title={email.subject ?? email.mail_uid}
                   badges={
                     <>
@@ -421,19 +563,38 @@ export default function QueuePage() {
                   expandable={isExpandable}
                   expanded={isExpanded}
                   onToggleExpand={() => toggleExpanded(email.id)}
-                  expandedContent={<ExpandedContent email={email} />}
+                  expandedContent={
+                    <ExpandedContent
+                      email={email}
+                      selectedPlugin={selectedPlugins[email.id] ?? null}
+                      onSelectPlugin={(name) => handleSelectPlugin(email.id, name)}
+                    />
+                  }
                   actions={
-                    email.status === "failed" ? (
-                      <AppButton
-                        icon={<RotateCcw />}
-                        label="Retry"
-                        variant="ghost"
-                        size="sm"
-                        loading={isRetrying}
-                        disabled={isRetrying}
-                        onClick={() => handleRetry(email.id)}
-                      />
-                    ) : undefined
+                    <div className="flex items-center gap-1">
+                      {email.status === "failed" && (
+                        <AppButton
+                          icon={<RotateCcw />}
+                          label="Retry"
+                          variant="ghost"
+                          size="sm"
+                          loading={isRetrying}
+                          disabled={isBusy}
+                          onClick={() => handleRetry(email.id)}
+                        />
+                      )}
+                      {email.status !== "processing" && (
+                        <AppButton
+                          icon={<Play />}
+                          label="Reprocess"
+                          variant="ghost"
+                          size="sm"
+                          loading={isReprocessing}
+                          disabled={isBusy}
+                          onClick={() => handleReprocess(email.id)}
+                        />
+                      )}
+                    </div>
                   }
                 />
               );

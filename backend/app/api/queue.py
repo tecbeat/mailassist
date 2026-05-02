@@ -102,3 +102,52 @@ async def retry_email(
     )
 
     return TrackedEmailResponse.model_validate(email)
+
+
+@router.post("/{email_id}/reprocess")
+async def reprocess_email(
+    email_id: UUID,
+    db: DbSession,
+    user_id: CurrentUserId,
+) -> TrackedEmailResponse:
+    """Re-queue any tracked email for reprocessing.
+
+    Unlike retry (which only works on failed emails), reprocess resets
+    any email back to queued status so the full pipeline runs again.
+    Clears previous plugin results and error state.
+    """
+    stmt = select(TrackedEmail).where(
+        TrackedEmail.id == email_id,
+        TrackedEmail.user_id == user_id,
+    )
+    result = await db.execute(stmt)
+    email = result.scalar_one_or_none()
+
+    if email is None:
+        raise HTTPException(status_code=404, detail="Tracked email not found")
+
+    if email.status == TrackedEmailStatus.PROCESSING:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot reprocess an email that is currently being processed",
+        )
+
+    email.status = TrackedEmailStatus.QUEUED
+    email.retry_count += 1
+    email.last_error = None
+    email.error_type = None
+    email.plugins_completed = None
+    email.plugins_failed = None
+    email.plugins_skipped = None
+    email.plugin_results = None
+    email.completion_reason = None
+    await db.flush()
+
+    logger.info(
+        "tracked_email_reprocess_queued",
+        email_id=str(email_id),
+        user_id=str(user_id),
+        retry_count=email.retry_count,
+    )
+
+    return TrackedEmailResponse.model_validate(email)
