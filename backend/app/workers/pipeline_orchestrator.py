@@ -116,11 +116,28 @@ class PipelineResult:
 # ---------------------------------------------------------------------------
 
 PROGRESS_KEY_PREFIX = "pipeline:progress:"
+CANCEL_KEY_PREFIX = "pipeline:cancel:"
 
 
 def _progress_key(account_id: str, mail_uid: str, current_folder: str = "INBOX") -> str:
     """Build the Valkey key for pipeline progress of a specific mail job."""
     return f"{PROGRESS_KEY_PREFIX}process_mail:{account_id}:{mail_uid}:{current_folder}"
+
+
+def _cancel_key(account_id: str, mail_uid: str, current_folder: str = "INBOX") -> str:
+    """Build the Valkey key for pipeline cancellation of a specific mail job."""
+    return f"{CANCEL_KEY_PREFIX}process_mail:{account_id}:{mail_uid}:{current_folder}"
+
+
+async def _is_cancelled(account_id: str, mail_uid: str, current_folder: str) -> bool:
+    """Check whether this pipeline run has been cancelled by the user."""
+    try:
+        from app.core.redis import get_task_client
+
+        client = get_task_client()
+        return await client.exists(_cancel_key(account_id, mail_uid, current_folder)) > 0
+    except Exception:
+        return False
 
 
 async def _set_pipeline_progress(
@@ -179,6 +196,7 @@ async def _clear_pipeline_progress(
 
         client = get_task_client()
         await client.delete(_progress_key(account_id, mail_uid, current_folder))
+        await client.delete(_cancel_key(account_id, mail_uid, current_folder))
     except Exception:
         pass
 
@@ -580,6 +598,13 @@ async def run_ai_pipeline(
                     continue
 
                 plugin_index += 1
+
+                # Check for user-initiated cancellation between plugins
+                if await _is_cancelled(account_id, mail_uid, current_folder):
+                    log.info("pipeline_cancelled_by_user", plugin=plugin.name)
+                    result.completion_reason = CompletionReason.CANCELLED
+                    break
+
                 await _set_pipeline_progress(
                     account_id,
                     mail_uid,

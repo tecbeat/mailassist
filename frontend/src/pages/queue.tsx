@@ -7,11 +7,13 @@ import {
   RotateCcw,
   RotateCw,
   Inbox,
+  XCircle,
 } from "lucide-react";
 
 import {
   useListQueueApiQueueGet,
   useRetryEmailApiQueueEmailIdRetryPost,
+  useCancelEmailApiQueueEmailIdCancelPost,
 } from "@/services/api/queue/queue";
 import { useListMailAccountsApiMailAccountsGet } from "@/services/api/mail-accounts/mail-accounts";
 import type {
@@ -191,11 +193,16 @@ function deriveProcessingPlugins(progress: PipelineProgress): DerivedPlugin[] {
   if (names.length === 0) return [];
 
   const currentIdx = progress.plugin_index ?? 0;
+  const results = progress.plugin_results;
 
   return names.map((p, i) => {
     const idx = i + 1; // plugin_index is 1-based
     let status: string;
-    if (idx < currentIdx) {
+    // If we have a result for this plugin, it's done — regardless of plugin_index
+    const pluginResult = results?.[p.name];
+    if (pluginResult) {
+      status = pluginResult.status; // "completed", "failed", "skipped", "warning"
+    } else if (idx < currentIdx) {
       status = "completed";
     } else if (idx === currentIdx) {
       status = "processing";
@@ -333,6 +340,7 @@ export default function QueuePage() {
   const [accountFilter, setAccountFilter] = useState<string>("all");
   const [errorTypeFilter, setErrorTypeFilter] = useState<ErrorType | "all">("all");
   const [retryingIds, setRetryingIds] = useState<Set<string>>(new Set());
+  const [cancellingIds, setCancellingIds] = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedPlugins, setSelectedPlugins] = useState<Record<string, string | null>>({});
 
@@ -408,6 +416,35 @@ export default function QueuePage() {
       );
     },
     [retryMutation, queryClient, toast],
+  );
+
+  // Cancel mutation (for processing emails)
+  const cancelMutation = useCancelEmailApiQueueEmailIdCancelPost();
+
+  const handleCancel = useCallback(
+    (id: string) => {
+      setCancellingIds((prev) => new Set(prev).add(id));
+      cancelMutation.mutate(
+        { emailId: id },
+        {
+          onSuccess: () => {
+            toast({ title: "Cancellation requested", description: "The pipeline will stop after the current plugin finishes." });
+            queryClient.invalidateQueries({ queryKey: ["/api/queue"] });
+          },
+          onError: () => {
+            toast({ title: "Cancel failed", description: "Could not cancel this email. Please try again.", variant: "destructive" });
+          },
+          onSettled: () => {
+            setCancellingIds((prev) => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+          },
+        },
+      );
+    },
+    [cancelMutation, queryClient, toast],
   );
 
   const toggleExpanded = useCallback((id: string) => {
@@ -566,6 +603,7 @@ export default function QueuePage() {
             emptyMessage="No emails in the queue."
             renderItem={(email) => {
               const isRetrying = retryingIds.has(email.id);
+              const isCancelling = cancellingIds.has(email.id);
 
               // Expandable when there are plugin results, error details, plugin lists,
               // or live pipeline progress for processing mails
@@ -614,7 +652,17 @@ export default function QueuePage() {
                     />
                   }
                   actions={
-                    email.status !== "processing" ? (
+                    email.status === "processing" ? (
+                      <AppButton
+                        icon={<XCircle />}
+                        label="Cancel"
+                        variant="ghost"
+                        size="sm"
+                        loading={isCancelling}
+                        disabled={isCancelling}
+                        onClick={() => handleCancel(email.id)}
+                      />
+                    ) : (
                       <AppButton
                         icon={<RotateCcw />}
                         label="Retry"
@@ -624,7 +672,7 @@ export default function QueuePage() {
                         disabled={isRetrying}
                         onClick={() => handleRetry(email.id)}
                       />
-                    ) : undefined
+                    )
                   }
                 />
               );

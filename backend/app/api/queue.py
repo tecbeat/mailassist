@@ -149,6 +149,58 @@ async def retry_email(
     return TrackedEmailResponse.model_validate(email)
 
 
+@router.post("/{email_id}/cancel")
+async def cancel_email(
+    email_id: UUID,
+    db: DbSession,
+    user_id: CurrentUserId,
+) -> TrackedEmailResponse:
+    """Request cancellation of a processing email.
+
+    Sets a Valkey cancel flag that the pipeline checks between plugins.
+    The pipeline will stop after the current plugin finishes and mark
+    the email as completed with reason ``cancelled``.
+    """
+    stmt = select(TrackedEmail).where(
+        TrackedEmail.id == email_id,
+        TrackedEmail.user_id == user_id,
+    )
+    result = await db.execute(stmt)
+    email = result.scalar_one_or_none()
+
+    if email is None:
+        raise HTTPException(status_code=404, detail="Tracked email not found")
+
+    if email.status != TrackedEmailStatus.PROCESSING:
+        raise HTTPException(
+            status_code=409,
+            detail="Can only cancel emails that are currently being processed",
+        )
+
+    try:
+        from app.core.redis import get_task_client
+        from app.workers.pipeline_orchestrator import _cancel_key
+
+        client = get_task_client()
+        # Set cancel flag with TTL (pipeline will pick it up between plugins)
+        await client.set(
+            _cancel_key(str(email.mail_account_id), email.mail_uid, email.current_folder),
+            "1",
+            ex=300,  # 5 min TTL as safety net
+        )
+    except Exception:
+        logger.exception("cancel_flag_set_failed", email_id=str(email_id))
+        raise HTTPException(status_code=500, detail="Failed to set cancellation flag")
+
+    logger.info(
+        "tracked_email_cancel_requested",
+        email_id=str(email_id),
+        user_id=str(user_id),
+    )
+
+    return TrackedEmailResponse.model_validate(email)
+
+
 # ---------------------------------------------------------------------------
 # Pipeline progress enrichment (Valkey)
 # ---------------------------------------------------------------------------

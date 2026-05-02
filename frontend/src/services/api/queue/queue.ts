@@ -311,3 +311,61 @@ export const useReprocessEmailApiQueueEmailIdReprocessPost = <TError = HTTPValid
       > => {
       return useMutation(getReprocessEmailApiQueueEmailIdReprocessPostMutationOptions(options), queryClient);
     }
+
+
+/**
+ * Request cancellation of a processing email.
+ * @summary Cancel Email
+ */
+export type cancelEmailApiQueueEmailIdCancelPostResponse = {
+  data: TrackedEmailResponse;
+  status: number;
+  headers: Headers;
+};
+
+export const getCancelEmailApiQueueEmailIdCancelPostUrl = (emailId: string,) => {
+  return `/api/queue/${emailId}/cancel`;
+};
+
+export const cancelEmailApiQueueEmailIdCancelPost = async (emailId: string, options?: RequestInit): Promise<cancelEmailApiQueueEmailIdCancelPostResponse> => {
+  return customInstance<cancelEmailApiQueueEmailIdCancelPostResponse>(getCancelEmailApiQueueEmailIdCancelPostUrl(emailId),
+  {
+    ...options,
+    method: 'POST'
+  });
+};
+
+export const getCancelEmailApiQueueEmailIdCancelPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof cancelEmailApiQueueEmailIdCancelPost>>, TError, {emailId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelEmailApiQueueEmailIdCancelPost>>, TError, {emailId: string}, TContext> => {
+  const mutationKey = ['cancelEmailApiQueueEmailIdCancelPost'];
+  const {mutation: mutationOptions, request: requestOptions} = options ?
+        options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+        options
+        : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: { mutationKey }, request: undefined};
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelEmailApiQueueEmailIdCancelPost>>, {emailId: string}> = (props) => {
+    const {emailId} = props ?? {};
+    return cancelEmailApiQueueEmailIdCancelPost(emailId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelEmailApiQueueEmailIdCancelPostMutationResult = NonNullable<Awaited<ReturnType<typeof cancelEmailApiQueueEmailIdCancelPost>>>;
+export type CancelEmailApiQueueEmailIdCancelPostMutationError = HTTPValidationError;
+
+/**
+ * @summary Cancel Email
+ */
+export const useCancelEmailApiQueueEmailIdCancelPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof cancelEmailApiQueueEmailIdCancelPost>>, TError, {emailId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof cancelEmailApiQueueEmailIdCancelPost>>,
+        TError,
+        {emailId: string},
+        TContext
+      > => {
+      return useMutation(getCancelEmailApiQueueEmailIdCancelPostMutationOptions(options), queryClient);
+    }

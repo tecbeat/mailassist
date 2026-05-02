@@ -58,6 +58,7 @@ class CompletionReason(str, enum.Enum):
     ALL_PLUGINS_FAILED = "all_plugins_failed"
     PIPELINE_DID_NOT_RUN = "pipeline_did_not_run"
     SPAM_SHORT_CIRCUIT = "spam_short_circuit"
+    CANCELLED = "cancelled"
 
 
 class MailAccount(Base):

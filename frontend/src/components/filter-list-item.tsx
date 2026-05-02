@@ -134,7 +134,7 @@ export function FilterListItem({
 
         {/* Expanded content */}
         {expanded && expandedContent && (
-          <div className="mt-4 space-y-3 border-t border-border pt-4">
+          <div className="mt-4 space-y-3 pt-1">
             {expandedContent}
           </div>
         )}
