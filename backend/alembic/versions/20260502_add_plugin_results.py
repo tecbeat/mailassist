@@ -8,8 +8,8 @@ Stores per-plugin execution results (status, display_name, summary,
 details) so the queue UI can show detailed plugin outcomes.
 """
 
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
 
 revision = "20260502_add_plugin_results"
 down_revision = "20260501_fix_notif_mode"
