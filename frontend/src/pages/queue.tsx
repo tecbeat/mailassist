@@ -146,10 +146,9 @@ function PluginPill({ name, result, emailStatus, isSelected, onClick }: PluginPi
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded px-1.5 py-0.5 text-xs font-medium transition-colors cursor-pointer",
+        "rounded px-1.5 py-0.5 text-xs transition-colors cursor-pointer",
         pillClass,
-        isSelected && "opacity-100 shadow-sm font-semibold",
-        !isSelected && "opacity-75",
+        isSelected ? "font-semibold" : "font-medium opacity-75",
       )}
     >
       {displayName}
