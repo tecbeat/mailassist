@@ -4,6 +4,7 @@ Covers list filtering, pagination, user isolation, and retry logic
 using mock-based patterns consistent with the rest of the test suite.
 """
 
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -46,8 +47,9 @@ def _make_email(
         completion_reason=None,
         current_folder="INBOX",
         retry_count=retry_count,
-        created_at=None,
-        updated_at=None,
+        plugin_results=None,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
     )
 
 
@@ -216,8 +218,8 @@ class TestRetryEmail:
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_retry_completed_email_raises_409(self):
-        """Returns 409 when the email is not in FAILED status."""
+    async def test_retry_completed_email_resets_to_queued(self):
+        """COMPLETED email is accepted and reset for reprocessing."""
         from app.api.queue import retry_email
 
         email = _make_email(status=TrackedEmailStatus.COMPLETED)
@@ -227,14 +229,15 @@ class TestRetryEmail:
         result.scalar_one_or_none.return_value = email
         db.execute.return_value = result
 
-        with pytest.raises(HTTPException) as exc_info:
+        with patch("app.api.queue.TrackedEmailResponse.model_validate", return_value=MagicMock()):
             await retry_email(email_id=email.id, db=db, user_id=email.user_id)
 
-        assert exc_info.value.status_code == 409
+        assert email.status in {TrackedEmailStatus.QUEUED, TrackedEmailStatus.PROCESSING}
+        assert email.retry_count == 1
 
     @pytest.mark.asyncio
-    async def test_retry_queued_email_raises_409(self):
-        """Returns 409 when the email is already QUEUED."""
+    async def test_retry_queued_email_resets_to_queued(self):
+        """QUEUED email is accepted and reset for reprocessing."""
         from app.api.queue import retry_email
 
         email = _make_email(status=TrackedEmailStatus.QUEUED)
@@ -244,10 +247,11 @@ class TestRetryEmail:
         result.scalar_one_or_none.return_value = email
         db.execute.return_value = result
 
-        with pytest.raises(HTTPException) as exc_info:
+        with patch("app.api.queue.TrackedEmailResponse.model_validate", return_value=MagicMock()):
             await retry_email(email_id=email.id, db=db, user_id=email.user_id)
 
-        assert exc_info.value.status_code == 409
+        assert email.status in {TrackedEmailStatus.QUEUED, TrackedEmailStatus.PROCESSING}
+        assert email.retry_count == 1
 
     @pytest.mark.asyncio
     async def test_retry_processing_email_raises_409(self):

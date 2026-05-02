@@ -4,6 +4,7 @@ Provides a paginated view of all tracked emails with their processing
 status, error details, and the ability to retry failed mails.
 """
 
+import contextlib
 import json
 from uuid import UUID
 
@@ -113,10 +114,8 @@ async def retry_email(
 
         # Clear stale result key so enqueue succeeds
         result_key = f"arq:result:{job_id}"
-        try:
+        with contextlib.suppress(Exception):
             await arq.delete(result_key)
-        except Exception:
-            pass
 
         job = await arq.enqueue_job(
             "process_mail",
@@ -190,7 +189,7 @@ async def cancel_email(
         )
     except Exception:
         logger.exception("cancel_flag_set_failed", email_id=str(email_id))
-        raise HTTPException(status_code=500, detail="Failed to set cancellation flag")
+        raise HTTPException(status_code=500, detail="Failed to set cancellation flag") from None
 
     logger.info(
         "tracked_email_cancel_requested",

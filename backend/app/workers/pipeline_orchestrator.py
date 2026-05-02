@@ -135,7 +135,7 @@ async def _is_cancelled(account_id: str, mail_uid: str, current_folder: str) -> 
         from app.core.redis import get_task_client
 
         client = get_task_client()
-        return await client.exists(_cancel_key(account_id, mail_uid, current_folder)) > 0
+        return bool(await client.exists(_cancel_key(account_id, mail_uid, current_folder)))
     except Exception:
         return False
 

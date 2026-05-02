@@ -15,6 +15,7 @@ vi.mock("@/services/api/queue/queue", () => ({
   useListQueueApiQueueGet: vi.fn(),
   getListQueueApiQueueGetQueryKey: vi.fn().mockReturnValue(["/api/queue"]),
   useRetryEmailApiQueueEmailIdRetryPost: vi.fn(),
+  useCancelEmailApiQueueEmailIdCancelPost: vi.fn(),
 }));
 
 vi.mock("@/services/api/mail-accounts/mail-accounts", () => ({
@@ -24,6 +25,7 @@ vi.mock("@/services/api/mail-accounts/mail-accounts", () => ({
 import {
   useListQueueApiQueueGet,
   useRetryEmailApiQueueEmailIdRetryPost,
+  useCancelEmailApiQueueEmailIdCancelPost,
 } from "@/services/api/queue/queue";
 import { useListMailAccountsApiMailAccountsGet } from "@/services/api/mail-accounts/mail-accounts";
 
@@ -31,6 +33,7 @@ type MockedFn = ReturnType<typeof vi.fn>;
 
 const mockListHook = useListQueueApiQueueGet as MockedFn;
 const mockRetryMutation = useRetryEmailApiQueueEmailIdRetryPost as MockedFn;
+const mockCancelMutation = useCancelEmailApiQueueEmailIdCancelPost as MockedFn;
 const mockAccountsHook = useListMailAccountsApiMailAccountsGet as MockedFn;
 
 // ---------------------------------------------------------------------------
@@ -132,6 +135,7 @@ describe("QueuePage", () => {
     vi.clearAllMocks();
     mockListHook.mockReturnValue(querySuccess(createMockEmailList()));
     mockRetryMutation.mockReturnValue(mutationIdle());
+    mockCancelMutation.mockReturnValue(mutationIdle());
     mockAccountsHook.mockReturnValue(querySuccess([]));
   });
 
