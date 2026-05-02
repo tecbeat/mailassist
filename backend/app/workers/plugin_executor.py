@@ -345,7 +345,9 @@ async def _handle_blocklist(
 
     log.info("blocklist_hit", sender=context.sender, subject=context.subject)
 
-    outcome = PluginOutcome(plugin_name=plugin.name, plugin_display_name=plugin.display_name, executed=True, completed=True)
+    outcome = PluginOutcome(
+        plugin_name=plugin.name, plugin_display_name=plugin.display_name, executed=True, completed=True
+    )
     action_result = ActionResult(
         success=True,
         actions_taken=["move_to_spam (blocklist match)", "mark_as_read"],

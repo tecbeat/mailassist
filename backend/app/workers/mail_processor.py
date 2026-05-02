@@ -605,8 +605,7 @@ async def _process_mail_inner(
     if pipeline_result.auto_actions:
         # Build plugin_names list for progress display
         plugin_names_list = [
-            {"name": k, "display_name": v.display_name}
-            for k, v in pipeline_result.plugin_results.items()
+            {"name": k, "display_name": v.display_name} for k, v in pipeline_result.plugin_results.items()
         ]
         await _set_pipeline_progress(
             account_id,
