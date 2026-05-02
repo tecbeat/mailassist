@@ -258,11 +258,24 @@ async def _idle_loop(account: MailAccount) -> None:
 
                 if has_new_mail:
                     logger.info("idle_new_mail", account_id=account_id)
-                    await _search_and_insert_new(
+                    inserted = await _search_and_insert_new(
                         conn,
                         account_id,
                         user_id,
                     )
+                    if inserted > 0:
+                        try:
+                            from app.core.redis import get_arq_client
+
+                            arq = get_arq_client()
+                            await arq.enqueue_job("schedule_pending_mails")
+                            logger.info(
+                                "idle_triggered_scheduling",
+                                account_id=account_id,
+                                inserted=inserted,
+                            )
+                        except Exception:
+                            logger.warning("idle_schedule_trigger_failed", account_id=account_id)
 
         except asyncio.CancelledError:
             logger.info("idle_cancelled", account_id=account_id)
