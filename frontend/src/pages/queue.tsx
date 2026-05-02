@@ -164,7 +164,7 @@ function PluginPill({ name, result, emailStatus, isSelected, onClick }: PluginPi
 
 function PluginResultDetail({ result }: { result: PluginResultEntry }) {
   return (
-    <div className="rounded-md border border-border bg-muted/30 p-3 text-xs space-y-2">
+    <div className="text-xs space-y-1.5">
       <div className="flex items-center gap-2">
         <span className="font-medium">{result.display_name}</span>
         <Badge
@@ -183,12 +183,9 @@ function PluginResultDetail({ result }: { result: PluginResultEntry }) {
         <p className="text-muted-foreground">{result.summary}</p>
       )}
       {result.details && (
-        <details className="text-muted-foreground">
-          <summary className="cursor-pointer font-medium text-foreground">Details</summary>
-          <pre className="mt-1 overflow-auto rounded bg-muted p-2 text-[11px]">
-            {JSON.stringify(result.details, null, 2)}
-          </pre>
-        </details>
+        <pre className="overflow-auto rounded bg-muted p-2 text-[11px] text-muted-foreground">
+          {JSON.stringify(result.details, null, 2)}
+        </pre>
       )}
     </div>
   );
