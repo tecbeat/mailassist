@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.3.0-beta) - 2026-05-02
+
+### ⛰️  Features
+
+- Clickable plugin results during processing, cancel button, separator cleanup - ([75ef74e](https://git.teccave.de/tecbeat/mailassist/commit/75ef74eee7f996ff14d60363c79914c727226dd6))
+- Trigger schedule_pending_mails immediately on IMAP IDLE push - ([c0b9a7b](https://git.teccave.de/tecbeat/mailassist/commit/c0b9a7b31c83d40b87c372cd91e39933097cf7d5))
+- Show clickable plugin results during processing - ([3701aa6](https://git.teccave.de/tecbeat/mailassist/commit/3701aa615f5c066930557789a9ed7cbaddf34a6c))
+- Show live plugin progress for processing mails in queue - ([486916b](https://git.teccave.de/tecbeat/mailassist/commit/486916b69413944c2c06646e77114373928c4cc6))
+- Add per-plugin results, color-coded pills, and reprocess button to queue - ([45bf33b](https://git.teccave.de/tecbeat/mailassist/commit/45bf33bde880ef115063f0b201b8424897253bb2))
+- Add mail processing queue page (#131) - ([60746f9](https://git.teccave.de/tecbeat/mailassist/commit/60746f9eb7badcd180f772de256835b9588d0e6a))
+
+### 🐛 Bug Fixes
+
+- Ruff format mail_processor and plugin_executor - ([3403c79](https://git.teccave.de/tecbeat/mailassist/commit/3403c796192ace6159eb84acc38a08acfb46f136))
+- Use datetime.UTC alias for ruff UP017 - ([8373668](https://git.teccave.de/tecbeat/mailassist/commit/8373668d1eacfc89abc99a498bd1da88a17998b4))
+- Resolve CI pipeline failures - ([8162d85](https://git.teccave.de/tecbeat/mailassist/commit/8162d85ab0db9a9f95ae1185526d4e496d2faa25))
+- Include plugin_results in all progress updates - ([630a34e](https://git.teccave.de/tecbeat/mailassist/commit/630a34e3818888b27399b73df9c02940930ba1ac))
+- Parse COPYUID from imaplib untagged response buffer - ([99e96ed](https://git.teccave.de/tecbeat/mailassist/commit/99e96ed867da1db2e81e1ca92e82cdd4df226e13))
+- Merge retry and reprocess into single retry that starts immediately - ([c759458](https://git.teccave.de/tecbeat/mailassist/commit/c7594585453821081b2e52bd6a12a7669bf6a9a0))
+- Add divider between plugin pills and detail, remove redundant status badge - ([c254a9a](https://git.teccave.de/tecbeat/mailassist/commit/c254a9a2d8a41e97032053d50c8385c92c01c7ec))
+- Show plugin result details inline without card wrapper - ([9916468](https://git.teccave.de/tecbeat/mailassist/commit/99164683f3f7573140981ed2f33b3cf95737523d))
+- Extract ToggleBadge component, reuse in queue and AI provider - ([bda93ef](https://git.teccave.de/tecbeat/mailassist/commit/bda93efc1c4dfc0581765b24089c5ec8f191eead))
+- Remove shadow from selected plugin pill to prevent layout shift - ([84f9042](https://git.teccave.de/tecbeat/mailassist/commit/84f9042f76c507a59824c9177c74ffe0a12593b1))
+- Remove ring border from selected plugin pills, use opacity/weight instead - ([5bc0eb3](https://git.teccave.de/tecbeat/mailassist/commit/5bc0eb3999eded1e54fb90cf6d30aad7b3f905c5))
+- Correct import order — sqlalchemy (third-party) before alembic (local) - ([7a829a2](https://git.teccave.de/tecbeat/mailassist/commit/7a829a28ae2d912df18afb11587c2646d1f75d6e))
+- Use from-imports in migration to satisfy ruff isort rule - ([18d26f2](https://git.teccave.de/tecbeat/mailassist/commit/18d26f20742e01f469a46544b14f5659660c25a1))
+- Resolve CI failures (import order, test mock for reprocess hook) - ([587ceea](https://git.teccave.de/tecbeat/mailassist/commit/587ceeaee36f84a6f0de691396983b4c8ba467ad))
+- Use FilterListItem and ListSkeleton in queue page - ([edcaa51](https://git.teccave.de/tecbeat/mailassist/commit/edcaa51b99dd42cf25b953b04d00cf541cf605b9))
+
+### ⚙️ Miscellaneous Tasks
+
+- Regenerate orval client (v8.6.2 → v8.9.0) - ([0850070](https://git.teccave.de/tecbeat/mailassist/commit/0850070e035ce3e79f5366c1eebaa8c602a648b1))
+
 ## [2.2.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.2.0-beta) - 2026-05-01
 
 ### ⛰️  Features
