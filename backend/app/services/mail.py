@@ -420,17 +420,38 @@ class MoveResult:
     new_uid: str | None = None
 
 
-_COPYUID_RE = re.compile(r"\[COPYUID\s+\d+\s+\d+\s+(\d+)\]", re.IGNORECASE)
+_COPYUID_RE = re.compile(r"(?:\[COPYUID\s+)?(\d+)\s+(\d+)\s+(\d+)\]?", re.IGNORECASE)
 
 
-def _parse_copyuid(data: list[Any]) -> str | None:
+def _parse_copyuid(data: list[Any], client: Any | None = None) -> str | None:
     """Extract the destination UID from an IMAP COPYUID response code.
 
-    Works with both imaplib response data (list of bytes) and string data.
+    imaplib stores the COPYUID response code in the untagged response
+    buffer, accessible via ``client.response('COPYUID')``.  The ``data``
+    list returned from ``uid("MOVE", ...)`` or ``uid("COPY", ...)`` is
+    typically ``[None]`` and does not contain the COPYUID information.
+
+    We check both sources for maximum compatibility.
     """
+    # Primary: read from imaplib's untagged response buffer
+    if client is not None:
+        try:
+            _typ, dat = client.response("COPYUID")
+            if dat and dat[0]:
+                text = dat[0].decode("utf-8", errors="replace") if isinstance(dat[0], bytes) else str(dat[0])
+                # Format: "uidvalidity src_uid dst_uid"
+                parts = text.strip().split()
+                if len(parts) >= 3:
+                    return parts[-1]
+        except Exception:
+            pass
+
+    # Fallback: scan the data list (works on some servers)
     for item in data:
+        if item is None:
+            continue
         text = item.decode("utf-8", errors="replace") if isinstance(item, bytes) else str(item)
-        m = _COPYUID_RE.search(text)
+        m = re.search(r"\[COPYUID\s+\d+\s+\d+\s+(\d+)\]", text, re.IGNORECASE)
         if m:
             return m.group(1)
     return None
@@ -461,7 +482,7 @@ async def move_message(
             try:
                 status, data = client.uid("MOVE", mail_uid, destination)
                 if status == "OK":
-                    new_uid = _parse_copyuid(data)
+                    new_uid = _parse_copyuid(data, client)
                     logger.info(
                         "message_moved",
                         mail_uid=mail_uid,
@@ -486,7 +507,7 @@ async def move_message(
             )
             return MoveResult(success=False)
 
-        new_uid = _parse_copyuid(data)
+        new_uid = _parse_copyuid(data, client)
 
         status, _ = client.uid("STORE", mail_uid, "+FLAGS", "(\\Deleted)")
         if status != "OK":
