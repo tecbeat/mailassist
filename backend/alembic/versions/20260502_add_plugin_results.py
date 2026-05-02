@@ -9,7 +9,7 @@ details) so the queue UI can show detailed plugin outcomes.
 """
 
 from alembic import op
-import sqlalchemy as sa
+from sqlalchemy import JSON, Column
 
 revision = "20260502_add_plugin_results"
 down_revision = "20260501_fix_notif_mode"
@@ -20,7 +20,7 @@ depends_on = None
 def upgrade() -> None:
     op.add_column(
         "tracked_emails",
-        sa.Column("plugin_results", sa.JSON(), nullable=True),
+        Column("plugin_results", JSON(), nullable=True),
     )
 
 
