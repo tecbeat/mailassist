@@ -241,7 +241,9 @@ function ExpandedContent({
   const hasPlugins = isProcessing ? processingPlugins.length > 0 : allPlugins.size > 0;
   if (!hasError && !hasPlugins) return null;
 
-  const selectedResult = selectedPlugin && pluginResults?.[selectedPlugin];
+  const selectedResult = selectedPlugin
+    ? (pluginResults?.[selectedPlugin] ?? progress?.plugin_results?.[selectedPlugin] ?? null)
+    : null;
 
   return (
     <div className="space-y-3">
@@ -266,16 +268,24 @@ function ExpandedContent({
           <div className="flex flex-wrap gap-1">
             {isProcessing
               ? processingPlugins.map((p) => {
+                  const hasResult = !!progress?.plugin_results?.[p.name];
+                  const isSelected = selectedPlugin === p.name;
                   const variant = PLUGIN_STATUS_VARIANT[p.status] ?? "secondary";
                   return (
                     <ToggleBadge
                       key={p.name}
-                      selected={false}
+                      selected={isSelected}
                       selectedVariant={variant}
                       unselectedVariant={variant}
+                      onClick={
+                        hasResult
+                          ? () => onSelectPlugin(isSelected ? null : p.name)
+                          : undefined
+                      }
                       className={cn(
+                        hasResult && !isSelected && "opacity-75",
+                        !hasResult && p.status === "pending" && "opacity-50",
                         p.status === "processing" && "animate-pulse",
-                        p.status === "pending" && "opacity-50",
                       )}
                     >
                       {p.displayName}

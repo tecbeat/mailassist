@@ -1,3 +1,5 @@
+import type { PluginResultEntry } from './pluginResultEntry';
+
 /**
  * Live pipeline progress for a processing email (from Valkey).
  */
@@ -14,4 +16,5 @@ export interface PipelineProgress {
   plugin_index?: number | null;
   plugins_total?: number | null;
   plugin_names?: PipelinePluginName[] | null;
+  plugin_results?: Record<string, PluginResultEntry> | null;
 }

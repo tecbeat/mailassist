@@ -134,6 +134,7 @@ async def _set_pipeline_progress(
     plugin_index: int | None = None,
     plugins_total: int | None = None,
     plugin_names: list[dict[str, str]] | None = None,
+    plugin_results: dict[str, dict[str, Any]] | None = None,
 ) -> None:
     """Write ephemeral pipeline progress to Valkey.
 
@@ -154,6 +155,8 @@ async def _set_pipeline_progress(
         }
         if plugin_names is not None:
             payload["plugin_names"] = plugin_names
+        if plugin_results is not None:
+            payload["plugin_results"] = plugin_results
         value = json.dumps(payload)
         await client.set(
             _progress_key(account_id, mail_uid, current_folder),
@@ -609,6 +612,19 @@ async def run_ai_pipeline(
                         display_name=plugin.display_name,
                         summary=f"Unhandled error: {exc}",
                     )
+                    # Update progress with accumulated results
+                    await _set_pipeline_progress(
+                        account_id,
+                        mail_uid,
+                        current_folder=current_folder,
+                        phase="ai_pipeline",
+                        current_plugin=plugin.name,
+                        current_plugin_display=plugin.display_name,
+                        plugin_index=plugin_index,
+                        plugins_total=plugins_total,
+                        plugin_names=plugin_names_list,
+                        plugin_results={k: v.to_dict() for k, v in result.plugin_results.items()},
+                    )
                     # Create manual_input approval for unhandled exception
                     try:
                         from app.workers.plugin_executor import _create_manual_input_approval
@@ -627,6 +643,20 @@ async def run_ai_pipeline(
                     continue
 
                 _apply_outcome(result, outcome)
+
+                # Update progress with accumulated plugin results
+                await _set_pipeline_progress(
+                    account_id,
+                    mail_uid,
+                    current_folder=current_folder,
+                    phase="ai_pipeline",
+                    current_plugin=plugin.name,
+                    current_plugin_display=plugin.display_name,
+                    plugin_index=plugin_index,
+                    plugins_total=plugins_total,
+                    plugin_names=plugin_names_list,
+                    plugin_results={k: v.to_dict() for k, v in result.plugin_results.items()},
+                )
 
                 if outcome.skip_reason == "no_user_settings":
                     log.warning("no_user_settings", reason="skipping_all_plugins")

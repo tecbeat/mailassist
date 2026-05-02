@@ -34,6 +34,7 @@ class PipelineProgress(BaseModel):
     plugin_index: int | None = None
     plugins_total: int | None = None
     plugin_names: list[PipelinePluginName] | None = None
+    plugin_results: dict[str, PluginResultEntry] | None = None
 
 
 class TrackedEmailResponse(BaseModel):
