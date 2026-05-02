@@ -30,6 +30,7 @@ import { FilterListItem } from "@/components/filter-list-item";
 import { ListSkeleton } from "@/components/list-skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 import { SearchableCardList } from "@/components/searchable-card-list";
+import { ToggleBadge } from "@/components/toggle-badge";
 import { useSearchableList } from "@/hooks/use-searchable-list";
 import {
   Card,
@@ -39,6 +40,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import type { BadgeProps } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -87,14 +89,14 @@ const ERROR_TYPE_LABELS: Record<string, string> = {
   timeout: "Timeout",
 };
 
-// Plugin pill color classes by result status
-const PLUGIN_PILL_CLASSES: Record<string, string> = {
-  completed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50",
-  failed: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50",
-  warning: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/50",
-  skipped: "bg-muted text-muted-foreground hover:bg-muted/80",
-  pending: "bg-gray-100 text-gray-500 dark:bg-gray-800/30 dark:text-gray-500",
-  processing: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 animate-pulse",
+// Plugin pill Badge variant by result status
+const PLUGIN_STATUS_VARIANT: Record<string, BadgeProps["variant"]> = {
+  completed: "success",
+  failed: "destructive",
+  warning: "warning",
+  skipped: "secondary",
+  pending: "secondary",
+  processing: "default",
 };
 
 // ---------------------------------------------------------------------------
@@ -114,7 +116,7 @@ function StatusBadge({ status }: { status: TrackedEmailStatus }) {
 }
 
 // ---------------------------------------------------------------------------
-// Plugin pill with click-to-expand result
+// Plugin pill using ToggleBadge
 // ---------------------------------------------------------------------------
 
 interface PluginPillProps {
@@ -126,33 +128,31 @@ interface PluginPillProps {
 }
 
 function PluginPill({ name, result, emailStatus, isSelected, onClick }: PluginPillProps) {
-  // Determine pill status based on result or email status
   let pillStatus: string;
   if (result) {
     pillStatus = result.status;
   } else if (emailStatus === "processing") {
     pillStatus = "processing";
-  } else if (emailStatus === "queued") {
-    pillStatus = "pending";
   } else {
     pillStatus = "pending";
   }
 
   const displayName = result?.display_name ?? name;
-  const pillClass = PLUGIN_PILL_CLASSES[pillStatus] ?? PLUGIN_PILL_CLASSES.pending;
+  const variant = PLUGIN_STATUS_VARIANT[pillStatus] ?? "secondary";
 
   return (
-    <button
-      type="button"
+    <ToggleBadge
+      selected={isSelected}
+      selectedVariant={variant}
+      unselectedVariant={variant}
       onClick={onClick}
       className={cn(
-        "rounded px-1.5 py-0.5 text-xs transition-colors cursor-pointer",
-        pillClass,
-        isSelected ? "font-semibold" : "font-medium opacity-75",
+        !isSelected && "opacity-75",
+        pillStatus === "processing" && "animate-pulse",
       )}
     >
       {displayName}
-    </button>
+    </ToggleBadge>
   );
 }
 
