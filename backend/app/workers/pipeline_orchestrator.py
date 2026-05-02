@@ -615,6 +615,7 @@ async def run_ai_pipeline(
                     plugin_index=plugin_index,
                     plugins_total=plugins_total,
                     plugin_names=plugin_names_list,
+                    plugin_results={k: v.to_dict() for k, v in result.plugin_results.items()} or None,
                 )
 
                 try:

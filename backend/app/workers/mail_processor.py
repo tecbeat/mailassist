@@ -603,11 +603,20 @@ async def _process_mail_inner(
 
     # --- Phase 4: IMAP actions ---
     if pipeline_result.auto_actions:
+        # Build plugin_names list for progress display
+        plugin_names_list = [
+            {"name": k, "display_name": v.display_name}
+            for k, v in pipeline_result.plugin_results.items()
+        ]
         await _set_pipeline_progress(
             account_id,
             mail_uid,
             current_folder=current_folder,
             phase="imap_actions",
+            plugins_total=len(plugin_names_list),
+            plugin_index=len(plugin_names_list),
+            plugin_names=plugin_names_list,
+            plugin_results={k: v.to_dict() for k, v in pipeline_result.plugin_results.items()},
         )
         try:
             new_folder, new_mail_uid = await execute_post_pipeline(
