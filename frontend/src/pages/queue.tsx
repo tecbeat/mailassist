@@ -165,20 +165,7 @@ function PluginPill({ name, result, emailStatus, isSelected, onClick }: PluginPi
 function PluginResultDetail({ result }: { result: PluginResultEntry }) {
   return (
     <div className="text-xs space-y-1.5">
-      <div className="flex items-center gap-2">
-        <span className="font-medium">{result.display_name}</span>
-        <Badge
-          variant={
-            result.status === "completed" ? "success" :
-            result.status === "failed" ? "destructive" :
-            result.status === "warning" ? "warning" :
-            "secondary"
-          }
-          className="text-[10px]"
-        >
-          {result.status}
-        </Badge>
-      </div>
+      <span className="font-medium">{result.display_name}</span>
       {result.summary && (
         <p className="text-muted-foreground">{result.summary}</p>
       )}
@@ -309,7 +296,7 @@ function ExpandedContent({
                 ))}
           </div>
           {selectedResult && (
-            <div className="mt-2">
+            <div className="mt-3 border-t border-border pt-3">
               <PluginResultDetail result={selectedResult} />
             </div>
           )}
