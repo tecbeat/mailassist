@@ -16,9 +16,23 @@ vi.mock("@/services/client", () => ({
 import { customInstance } from "@/services/client";
 const mockCustomInstance = vi.mocked(customInstance);
 
+// Provide a real in-memory localStorage since jsdom's implementation
+// may be replaced by vitest's --localstorage-file stub which lacks the full API.
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => { store[key] = value; },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+  };
+})();
+
+vi.stubGlobal("localStorage", localStorageMock);
+
 describe("ChangelogDialog", () => {
   beforeEach(() => {
-    localStorage.clear();
+    localStorageMock.clear();
     vi.clearAllMocks();
   });
 
