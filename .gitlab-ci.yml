@@ -114,6 +114,41 @@ frontend_unittest:
   tags:
     - teccave
 
+backend_migration_test:
+  stage: unittest
+  image: python:3.14-slim@sha256:5b3879b6f3cb77e712644d50262d05a7c146b7312d784a18eff7ff5462e77033
+  needs: []
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+      when: on_success
+    - when: never
+  services:
+    - name: postgres:18-alpine@sha256:54451ecb8ab38c24c3ec123f2fd501303a3a1856a5c66e98cecf2460d5e1e9d7
+      alias: postgres
+  variables:
+    POSTGRES_USER: mailassist
+    POSTGRES_PASSWORD: mailassist
+    POSTGRES_DB: mailassist
+    DATABASE_URL: "postgresql+asyncpg://mailassist:mailassist@postgres:5432/mailassist"
+  before_script:
+    - pip install --no-cache-dir uv
+  script:
+    - cd backend
+    - uv sync --frozen --no-dev
+    - |
+      for i in $(seq 1 30); do
+        if .venv/bin/alembic upgrade head; then
+          break
+        fi
+        echo "Waiting for Postgres... ($i/30)"
+        sleep 2
+      done
+    - .venv/bin/alembic downgrade base
+    - .venv/bin/alembic upgrade head
+    - .venv/bin/alembic check
+  tags:
+    - teccave
+
 helm_lint:
   stage: lint
   image:
