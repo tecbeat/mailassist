@@ -1,15 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, Sparkles } from "lucide-react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { AppButton } from "@/components/app-button";
+import { AppDialog } from "@/components/app-dialog";
 import { customInstance } from "@/services/client";
 
 const STORAGE_KEY = "mailassist-last-seen-version";
@@ -121,32 +113,30 @@ export function ChangelogDialog() {
     : data.entries;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && handleDismiss()}>
-      <DialogContent className="sm:max-w-lg min-h-[360px] max-h-[90vh] flex flex-col" aria-describedby="changelog-description">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
-            What&apos;s New
-          </DialogTitle>
-          <DialogDescription id="changelog-description">
-            mailassist {data.version.startsWith("v") ? data.version : `v${data.version}`}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="overflow-y-auto flex-1 pr-2">
-          {Object.entries(entriesToShow).map(([version, content]) => (
-            <div key={version}>
-              <ChangelogContent markdown={content} />
-            </div>
-          ))}
-        </div>
-
-        <DialogFooter>
-          <AppButton icon={<Check />} label="Got it" variant="primary" onClick={handleDismiss}>
-            Got it
-          </AppButton>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <AppDialog
+      open={open}
+      onOpenChange={(v) => !v && handleDismiss()}
+      title={
+        <>
+          <Sparkles className="h-5 w-5" />
+          What&apos;s New
+        </>
+      }
+      description={
+        data.version.startsWith("v") ? data.version : `v${data.version}`
+      }
+      primaryLabel="Got it"
+      primaryIcon={<Check />}
+      onPrimaryClick={handleDismiss}
+      contentClassName="sm:max-w-lg min-h-[360px] flex flex-col"
+    >
+      <div className="overflow-y-auto flex-1 pr-2">
+        {Object.entries(entriesToShow).map(([version, content]) => (
+          <div key={version}>
+            <ChangelogContent markdown={content} />
+          </div>
+        ))}
+      </div>
+    </AppDialog>
   );
 }

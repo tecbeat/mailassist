@@ -1,16 +1,6 @@
-import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AppDialog } from "@/components/app-dialog";
 
 interface DeleteConfirmDialogProps {
   open: boolean;
@@ -34,30 +24,16 @@ export function DeleteConfirmDialog({
   confirmVariant = "destructive",
 }: DeleteConfirmDialogProps) {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            className={
-              confirmVariant === "destructive"
-                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                : ""
-            }
-            disabled={isPending}
-            onClick={onConfirm}
-          >
-            {isPending && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            )}
-            {confirmLabel}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <AppDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description={description}
+      loading={isPending}
+      primaryLabel={confirmLabel}
+      primaryVariant={confirmVariant === "destructive" ? "destructive" : "primary"}
+      onPrimaryClick={onConfirm}
+      onCancel={() => onOpenChange(false)}
+    />
   );
 }
