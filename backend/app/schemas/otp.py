@@ -1,0 +1,35 @@
+"""Pydantic schemas for OTP code API requests and responses."""
+
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel
+
+
+class ExtractedOtpCodeResponse(BaseModel):
+    """Response schema for an extracted OTP code."""
+
+    id: UUID
+    mail_account_id: UUID
+    mail_uid: str
+    sender_email: str | None = None
+    mail_subject: str | None = None
+    code: str
+    service: str | None = None
+    code_type: str
+    expires_at: datetime | None = None
+    is_expired: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ExtractedOtpCodeListResponse(BaseModel):
+    """Paginated list of extracted OTP codes."""
+
+    items: list[ExtractedOtpCodeResponse]
+    total: int
+    page: int
+    per_page: int
+    pages: int

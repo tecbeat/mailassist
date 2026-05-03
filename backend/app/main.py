@@ -31,6 +31,7 @@ from app.api import (
     mail_accounts,
     newsletters,
     notifications,
+    otp,
     pipeline,
     prompts,
     queue,
@@ -275,6 +276,7 @@ def create_app() -> FastAPI:
     application.include_router(spam.router)
     application.include_router(pipeline.router)
     application.include_router(queue.router)
+    application.include_router(otp.router)
 
     # Serve frontend static files (if built)
     static_dir = Path(__file__).parent.parent / "static"

@@ -22,6 +22,7 @@ class ApprovalModes(BaseModel):
     rules: ApprovalMode = ApprovalMode.APPROVAL
     contacts: ApprovalMode = ApprovalMode.APPROVAL
     notifications: ApprovalMode = ApprovalMode.APPROVAL
+    otp: ApprovalMode = ApprovalMode.APPROVAL
 
 
 class ApprovalModesUpdate(BaseModel):
@@ -38,6 +39,7 @@ class ApprovalModesUpdate(BaseModel):
     rules: ApprovalMode | None = None
     contacts: ApprovalMode | None = None
     notifications: ApprovalMode | None = None
+    otp: ApprovalMode | None = None
 
 
 class SettingsResponse(BaseModel):

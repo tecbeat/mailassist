@@ -38,6 +38,7 @@ from app.services.persistence import (
     save_coupons,
     save_email_summary,
     save_newsletter,
+    save_otp,
     save_spam_detection,
 )
 from app.services.prompt_resolver import resolve_prompts
@@ -55,6 +56,7 @@ if TYPE_CHECKING:
     from app.plugins.email_summary import EmailSummaryResponse
     from app.plugins.labeling import LabelingResponse
     from app.plugins.newsletter_detection import NewsletterDetectionResponse
+    from app.plugins.otp_extraction import OtpExtractionResponse
     from app.plugins.smart_folder import SmartFolderResponse
     from app.plugins.spam_detection import SpamDetectionResponse
 
@@ -500,6 +502,19 @@ async def _persist_plugin_result(
             db=db,
         )
 
+    elif plugin.name == "otp_extraction":
+        resp_otp: OtpExtractionResponse = ai_response  # type: ignore[assignment]
+        await save_otp(
+            user_id=user_id,
+            account_id=account_id,
+            mail_uid=mail_uid,
+            has_codes=resp_otp.has_codes,
+            codes=[c.model_dump() for c in resp_otp.codes] if resp_otp.codes else [],
+            sender_email=context.sender,
+            mail_subject=context.subject,
+            db=db,
+        )
+
     elif plugin.name == "labeling":
         resp_lbl: LabelingResponse = ai_response  # type: ignore[assignment]
         await save_applied_labels(
@@ -684,6 +699,10 @@ def _extract_result_summary(plugin_name: str, ai_response: BaseModel) -> str | N
             has = getattr(ai_response, "has_coupons", False)
             coupons = getattr(ai_response, "coupons", [])
             return f"{len(coupons)} coupon(s) found" if has and coupons else "No coupons"
+        if plugin_name == "otp_extraction":
+            has = getattr(ai_response, "has_codes", False)
+            codes = getattr(ai_response, "codes", [])
+            return f"{len(codes)} OTP code(s) found" if has and codes else "No OTP codes"
         if plugin_name == "calendar_extraction":
             has = getattr(ai_response, "has_event", False)
             title = getattr(ai_response, "title", "")
