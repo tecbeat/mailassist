@@ -17,7 +17,7 @@ import type {
 import type {
   ExtractedOtpCodeListResponse,
   ListOtpCodesApiOtpCodesGetParams,
-} from '../../../types/api/otp';
+} from '../../../types/api';
 
 import { customInstance } from '../../client';
 
