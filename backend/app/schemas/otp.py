@@ -15,8 +15,10 @@ class ExtractedOtpCodeResponse(BaseModel):
     sender_email: str | None = None
     mail_subject: str | None = None
     code: str
+    description: str | None = None
     service: str | None = None
     code_type: str
+    url: str | None = None
     expires_at: datetime | None = None
     is_expired: bool
     created_at: datetime

@@ -55,9 +55,11 @@ _LEN_LOCATION = 500
 _LEN_TONE = 50
 _LEN_CONTACT_NAME = 255
 _LEN_REASONING = 500
-_LEN_OTP_CODE = 20
+_LEN_OTP_CODE = 2000
+_LEN_OTP_DESCRIPTION = 500
 _LEN_OTP_SERVICE = 100
 _LEN_OTP_CODE_TYPE = 30
+_LEN_OTP_URL = 2000
 
 
 def _trunc(value: str | None, max_len: int) -> str | None:
@@ -685,6 +687,7 @@ async def save_otp(
     for code_item in codes:
         code = code_item.get("code", "") if isinstance(code_item, dict) else getattr(code_item, "code", "")
         service = code_item.get("service") if isinstance(code_item, dict) else getattr(code_item, "service", None)
+        description = code_item.get("description") if isinstance(code_item, dict) else getattr(code_item, "description", None)
         code_type = (
             code_item.get("code_type", "other")
             if isinstance(code_item, dict)
@@ -695,6 +698,7 @@ async def save_otp(
             if isinstance(code_item, dict)
             else getattr(code_item, "expires_in_minutes", None)
         )
+        url = code_item.get("url") if isinstance(code_item, dict) else getattr(code_item, "url", None)
 
         expires_at = None
         if isinstance(expires_in, int) and expires_in > 0:
@@ -708,8 +712,10 @@ async def save_otp(
                 sender_email=_trunc(sender_email, _LEN_EMAIL_ADDRESS),
                 mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
                 code=_trunc_required(code, _LEN_OTP_CODE),
+                description=_trunc(description, _LEN_OTP_DESCRIPTION),
                 service=_trunc(service, _LEN_OTP_SERVICE),
                 code_type=code_type[:_LEN_OTP_CODE_TYPE] if code_type else "other",
+                url=_trunc(url, _LEN_OTP_URL),
                 expires_at=expires_at,
             )
         )

@@ -14,10 +14,12 @@ from app.plugins.registry import register_plugin
 class OtpCode(BaseModel):
     """A single extracted OTP or verification code."""
 
-    code: str = Field(max_length=20)
+    code: str = Field(max_length=2000)
+    description: str | None = Field(default=None, max_length=500)
     service: str | None = Field(default=None, max_length=100)
     code_type: str = Field(max_length=30)
     expires_in_minutes: int | None = None
+    url: str | None = Field(default=None, max_length=2000)
 
     @field_validator("code_type")
     @classmethod
