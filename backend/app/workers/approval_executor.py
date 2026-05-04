@@ -115,7 +115,12 @@ async def execute_approved_actions(ctx: dict[str, Any], approval_id: str) -> Non
             raw_actions = _rebuild_actions(approval.function_type, source)
 
         if not raw_actions:
-            log.info("no_actions_to_execute")
+            # Data-only plugins (otp_extraction, email_summary, newsletter_detection,
+            # coupon_extraction, calendar_extraction, auto_reply, contacts) have no
+            # IMAP actions.  Persist plugin data and mark complete.
+            log.info("no_imap_actions", function_type=approval.function_type)
+            await _persist_plugin_data(approval)
+            log.info("approved_actions_complete", mail_uid=approval.mail_uid)
             return
 
         # parse_action (used inside execute_imap_actions and change_logger)

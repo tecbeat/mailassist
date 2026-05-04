@@ -4,16 +4,12 @@ Defines condition trees (nested AND/OR), action definitions, and
 CRUD / NL-to-rule / test request/response models.
 """
 
-from __future__ import annotations
-
+from datetime import datetime
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
-
-if TYPE_CHECKING:
-    from datetime import datetime
-    from uuid import UUID
 
 # -- Enums -----------------------------------------------------------------
 
@@ -89,15 +85,18 @@ class ConditionGroup(BaseModel):
     """
 
     operator: ConditionOperator
-    rules: list[ConditionRule | ConditionGroup] = Field(
+    rules: list["ConditionRule | ConditionGroup"] = Field(
         min_length=1,
         max_length=MAX_RULES_PER_GROUP,
     )
 
     @model_validator(mode="after")
-    def _validate_nesting_depth(self) -> ConditionGroup:
+    def _validate_nesting_depth(self) -> "ConditionGroup":
         _check_depth(self, current_depth=1)
         return self
+
+
+ConditionGroup.model_rebuild()
 
 
 def _check_depth(group: ConditionGroup, current_depth: int) -> None:
@@ -126,7 +125,7 @@ class RuleAction(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _validate_params(self) -> RuleAction:
+    def _validate_params(self) -> "RuleAction":
         """Ensure required parameters are present for actions that need them."""
         if self.type in (ActionType.MOVE, ActionType.COPY) and not self.target:
             raise ValueError(f"Action '{self.type.value}' requires a 'target' folder")
@@ -275,3 +274,17 @@ class TestRuleResult(BaseModel):
         default=None,
         description="Human-readable trace of condition evaluation.",
     )
+
+
+# ---------------------------------------------------------------------------
+# Rebuild all models that use forward references or UUID so Pydantic can
+# fully resolve annotations for OpenAPI schema generation.
+# ---------------------------------------------------------------------------
+ReorderItem.model_rebuild()
+ReorderRequest.model_rebuild()
+RuleResponse.model_rebuild()
+RuleListResponse.model_rebuild()
+RuleCreate.model_rebuild()
+RuleUpdate.model_rebuild()
+NLRuleRequest.model_rebuild()
+NLRuleResponse.model_rebuild()
