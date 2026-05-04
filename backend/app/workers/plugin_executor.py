@@ -246,7 +246,12 @@ async def execute_plugin(
     # Only mark as "executed" if the plugin produced actionable results.
     # No-op results (e.g. spam_check_passed, no_reply_needed) should NOT
     # count as executed — they would incorrectly trigger notifications.
-    outcome.executed = has_actionable_results(action_result.actions_taken)
+    # Plugins that support approval always produce meaningful results when
+    # they return actions (e.g. OTP codes, summaries) even though their
+    # action strings are not IMAP commands.
+    outcome.executed = bool(action_result.actions_taken) and (
+        plugin.supports_approval or has_actionable_results(action_result.actions_taken)
+    )
 
     if not action_result.success and action_result.error:
         outcome.failed = True
@@ -270,7 +275,11 @@ async def execute_plugin(
         if approval_mode == ApprovalMode.AUTO:
             needs_approval = False
         elif approval_mode == ApprovalMode.APPROVAL:
-            needs_approval = has_actionable_results(action_result.actions_taken)
+            # Data-only plugins (OTP, summary, etc.) have no IMAP actions,
+            # so has_actionable_results() would return False.  For these
+            # plugins any non-empty action list means there is work to
+            # approve (e.g. extracted codes to persist).
+            needs_approval = bool(action_result.actions_taken)
 
     outcome.needs_approval = needs_approval
 
