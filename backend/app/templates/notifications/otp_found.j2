@@ -1,0 +1,12 @@
+OTP Code Found
+
+From: {{ sender_name | default("") }} <{{ sender | default("unknown") }}>
+Subject: {{ subject | default("No subject") }}
+Account: {{ account_email | default("") }}
+
+{% if otps %}
+Extracted codes:
+{% for otp in otps %}
+- {{ otp.code }} ({{ otp.code_type }}{% if otp.service %}, {{ otp.service }}{% endif %}{% if otp.description %}: {{ otp.description }}{% endif %})
+{% endfor %}
+{% endif %}

@@ -296,6 +296,7 @@ async def list_variables(user_id: CurrentUserId) -> list[TemplateVariable]:
 _TEMPLATE_FILE_MAP: dict[str, str] = {
     "reply_needed": "notifications/reply_needed.j2",
     "coupon_found": "notifications/coupon_found.j2",
+    "otp_found": "notifications/otp_found.j2",
     "calendar_event_created": "notifications/calendar_created.j2",
     "email_summary": "notifications/email_summary.j2",
     "contact_assigned": "notifications/contact_assigned.j2",
@@ -336,6 +337,8 @@ async def preview_notification(
         "action_taken": "Moved to Work/Projects",
         "ai_summary": "Meeting confirmation for tomorrow at 2pm with discussion of Q2 report.",
         "coupon_codes": ["SAVE20", "FREESHIP"],
+        "otp_codes": ["482937"],
+        "otps": [{"code": "482937", "description": "Login verification code", "service": "GitHub", "code_type": "2fa"}],
         "calendar_event": {"title": "Team Meeting", "start": "2026-03-31T14:00:00Z"},
         "spam_score": 0.15,
         "labels_applied": ["work", "meeting"],

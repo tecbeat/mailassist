@@ -8,6 +8,7 @@ Mapping from plugin names to notification event types:
     auto_reply        -> reply_needed
     spam_detection    -> spam_detected
     coupon_extraction -> coupon_found
+    otp_extraction    -> otp_found
     calendar_extraction -> calendar_event_created
     rules             -> rule_executed
     newsletter_detection -> newsletter_detected
@@ -35,6 +36,7 @@ from app.models.mail import (
     ContactAssignment,
     EmailSummary,
     ExtractedCoupon,
+    ExtractedOtpCode,
     MailAccount,
     TrackedEmail,
 )
@@ -53,6 +55,7 @@ _PLUGIN_TO_EVENT_TYPE: dict[str, str] = {
     "auto_reply": "reply_needed",
     "spam_detection": "spam_detected",
     "coupon_extraction": "coupon_found",
+    "otp_extraction": "otp_found",
     "calendar_extraction": "calendar_event_created",
     "rules": "rule_executed",
     "newsletter_detection": "newsletter_detected",
@@ -100,6 +103,20 @@ async def _load_plugin_context(
             coupons = coupon_result.scalars().all()
             extra["coupon_codes"] = [c.code for c in coupons]
             extra["coupons"] = [{"code": c.code, "description": c.description, "store": c.store} for c in coupons]
+
+        elif event_type == "otp_found":
+            otp_result = await db.execute(
+                select(ExtractedOtpCode).where(
+                    ExtractedOtpCode.mail_account_id == account_id,
+                    ExtractedOtpCode.mail_uid == mail_uid,
+                )
+            )
+            otp_codes = otp_result.scalars().all()
+            extra["otp_codes"] = [c.code for c in otp_codes]
+            extra["otps"] = [
+                {"code": c.code, "description": c.description, "service": c.service, "code_type": c.code_type}
+                for c in otp_codes
+            ]
 
         elif event_type == "calendar_event_created":
             cal_result = await db.execute(

@@ -15,6 +15,7 @@ class NotifyOnConfig(BaseModel):
     reply_needed: bool = False
     spam_detected: bool = False
     coupon_found: bool = False
+    otp_found: bool = False
     calendar_event_created: bool = False
     rule_executed: bool = False
     newsletter_detected: bool = False
