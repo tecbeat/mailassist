@@ -17,6 +17,7 @@ from sqlalchemy import select, update
 from app.core.config import get_settings
 from app.models import Rule
 from app.schemas.rules import (
+    ActionType,
     ConditionGroup,
     ConditionRule,
     FieldOperator,
@@ -41,6 +42,38 @@ _REGEX_TIMEOUT_SECONDS = 0.1
 
 
 # ---------------------------------------------------------------------------
+# RuleAction → IMAP action string conversion
+# ---------------------------------------------------------------------------
+
+_ACTION_TYPE_TO_IMAP: dict[ActionType, str | None] = {
+    ActionType.MOVE: "move_to:",
+    ActionType.LABEL: "label:",
+    ActionType.REMOVE_LABEL: None,
+    ActionType.MARK_READ: "mark_as_read",
+    ActionType.MARK_UNREAD: None,
+    ActionType.FLAG: None,
+    ActionType.DELETE: "move_to_spam",
+    ActionType.COPY: None,
+    ActionType.NOTIFY: None,
+    ActionType.CREATE_DRAFT: None,
+    ActionType.CREATE_CALENDAR_EVENT: None,
+}
+
+
+def _rule_action_to_imap(action: RuleAction) -> str | None:
+    """Convert a rule action to an IMAP action string, or ``None`` if unsupported."""
+    mapping = _ACTION_TYPE_TO_IMAP.get(action.type)
+    if mapping is None:
+        return None
+    if not mapping.endswith(":"):
+        return mapping
+    param = action.target or action.value
+    if not param:
+        return None
+    return f"{mapping}{param}"
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -50,6 +83,7 @@ class RuleEvaluationResult:
 
     def __init__(self) -> None:
         self.actions_taken: list[str] = []
+        self.imap_actions: list[str] = []
         self.matched_rule_ids: list[UUID] = []
 
     def __repr__(self) -> str:
@@ -100,6 +134,9 @@ async def evaluate_rules(
 
         for action in actions:
             result.actions_taken.append(f"{rule.name}: {action.type.value}")
+            imap_str = _rule_action_to_imap(action)
+            if imap_str:
+                result.imap_actions.append(imap_str)
 
         result.matched_rule_ids.append(rule.id)
 

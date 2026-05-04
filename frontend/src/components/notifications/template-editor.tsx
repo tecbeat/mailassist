@@ -49,6 +49,7 @@ const TEMPLATE_TYPES = [
   { value: "reply_needed", label: "Reply Needed" },
   { value: "spam_detected", label: "Spam Detected" },
   { value: "coupon_found", label: "Coupon Found" },
+  { value: "otp_found", label: "OTP Code Found" },
   { value: "calendar_event_created", label: "Calendar Event Created" },
   { value: "rule_executed", label: "Rule Executed" },
   { value: "newsletter_detected", label: "Newsletter Detected" },

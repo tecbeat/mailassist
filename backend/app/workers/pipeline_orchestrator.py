@@ -539,7 +539,7 @@ async def run_ai_pipeline(
     )
 
     # --- Rule evaluation ---
-    await _evaluate_rules(db, user_id, account_id, mail_uid, context, event_bus, log)
+    await _evaluate_rules(db, user_id, account_id, mail_uid, context, event_bus, log, result)
 
     # --- Resolve providers ---
     default_provider = await get_default_provider(db, UUID(user_id))
@@ -841,6 +841,7 @@ async def _evaluate_rules(
     context: MailContext,
     event_bus: object,
     log: structlog.stdlib.BoundLogger,
+    result: PipelineResult,
 ) -> None:
     """Evaluate user rules before the AI pipeline."""
     from app.services.rules import evaluate_rules
@@ -853,9 +854,13 @@ async def _evaluate_rules(
                 "rules_evaluated",
                 matched=len(rule_result.matched_rule_ids),
                 actions=rule_result.actions_taken,
+                imap_actions=rule_result.imap_actions,
             )
     except Exception:
         log.exception("rule_evaluation_failed")
+
+    if rule_result and rule_result.imap_actions:
+        result.auto_actions.extend(rule_result.imap_actions)
 
     await event_bus.emit(  # type: ignore[attr-defined]
         RulesEvaluatedEvent(

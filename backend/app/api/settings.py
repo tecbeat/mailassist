@@ -28,6 +28,7 @@ _APPROVAL_MODE_COLUMNS = {
     "rules": "approval_mode_rules",
     "contacts": "approval_mode_contacts",
     "notifications": "approval_mode_notifications",
+    "otp": "approval_mode_otp",
 }
 
 logger = structlog.get_logger()
@@ -57,6 +58,7 @@ def _to_response(settings: UserSettings) -> SettingsResponse:
             rules=settings.approval_mode_rules,
             contacts=settings.approval_mode_contacts,
             notifications=settings.approval_mode_notifications,
+            otp=settings.approval_mode_otp,
         ),
         plugin_order=settings.plugin_order,
         plugin_provider_map=settings.plugin_provider_map,

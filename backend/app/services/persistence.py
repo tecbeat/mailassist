@@ -9,7 +9,7 @@ coupons) to the database.  Provides a single implementation used by both
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
@@ -28,6 +28,7 @@ from app.models import (
     DetectedNewsletter,
     EmailSummary,
     ExtractedCoupon,
+    ExtractedOtpCode,
     SpamDetectionResult,
 )
 from app.models.mail import UrgencyLevel
@@ -54,6 +55,11 @@ _LEN_LOCATION = 500
 _LEN_TONE = 50
 _LEN_CONTACT_NAME = 255
 _LEN_REASONING = 500
+_LEN_OTP_CODE = 2000
+_LEN_OTP_DESCRIPTION = 500
+_LEN_OTP_SERVICE = 100
+_LEN_OTP_CODE_TYPE = 30
+_LEN_OTP_URL = 2000
 
 
 def _trunc(value: str | None, max_len: int) -> str | None:
@@ -652,3 +658,72 @@ async def save_spam_detection(
         await session.execute(stmt)
 
     logger.info("spam_detection_saved", mail_uid=mail_uid, is_spam=is_spam, source=source)
+
+
+async def save_otp(
+    *,
+    user_id: UUID,
+    account_id: UUID,
+    mail_uid: str,
+    has_codes: bool,
+    codes: list[dict[str, Any]],
+    sender_email: str | None = None,
+    mail_subject: str | None = None,
+    own_session: bool = False,
+    db: AsyncSession | None = None,
+) -> None:
+    """Persist extracted OTP codes.
+
+    If ``has_codes`` is False or ``codes`` is empty, this is a no-op.
+
+    Each code dict should have keys: ``code``, and optionally
+    ``service``, ``code_type``, ``expires_in_minutes``.
+    """
+    if not has_codes or not codes:
+        return
+
+    now = datetime.now(UTC)
+    records = []
+    for code_item in codes:
+        code = code_item.get("code", "") if isinstance(code_item, dict) else getattr(code_item, "code", "")
+        service = code_item.get("service") if isinstance(code_item, dict) else getattr(code_item, "service", None)
+        description = (
+            code_item.get("description") if isinstance(code_item, dict) else getattr(code_item, "description", None)
+        )
+        code_type = (
+            code_item.get("code_type", "other")
+            if isinstance(code_item, dict)
+            else getattr(code_item, "code_type", "other")
+        )
+        expires_in = (
+            code_item.get("expires_in_minutes")
+            if isinstance(code_item, dict)
+            else getattr(code_item, "expires_in_minutes", None)
+        )
+        url = code_item.get("url") if isinstance(code_item, dict) else getattr(code_item, "url", None)
+
+        expires_at = None
+        if isinstance(expires_in, int) and expires_in > 0:
+            expires_at = now + timedelta(minutes=min(expires_in, 1440))
+
+        records.append(
+            ExtractedOtpCode(
+                user_id=user_id,
+                mail_account_id=account_id,
+                mail_uid=mail_uid,
+                sender_email=_trunc(sender_email, _LEN_EMAIL_ADDRESS),
+                mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
+                code=_trunc_required(code, _LEN_OTP_CODE),
+                description=_trunc(description, _LEN_OTP_DESCRIPTION),
+                service=_trunc(service, _LEN_OTP_SERVICE),
+                code_type=code_type[:_LEN_OTP_CODE_TYPE] if code_type else "other",
+                url=_trunc(url, _LEN_OTP_URL),
+                expires_at=expires_at,
+            )
+        )
+
+    async with _persist(own_session, db) as session:
+        for record in records:
+            session.add(record)
+
+    logger.info("otp_codes_saved", mail_uid=mail_uid, count=len(records))

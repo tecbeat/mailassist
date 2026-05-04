@@ -59,6 +59,7 @@ ACTIONABLE_PREFIXES = (
     "save_to_drafts",
     "create_calendar_event:",
     "store_coupon:",
+    "store_otp:",
     "store_summary",
     "store_unsubscribe_url:",
 )
@@ -89,6 +90,7 @@ class ActionKind(enum.Enum):
     SAVE_TO_DRAFTS = "save_to_drafts"
     CREATE_CALENDAR_EVENT = "create_calendar_event"
     STORE_COUPON = "store_coupon"
+    STORE_OTP = "store_otp"
     STORE_SUMMARY = "store_summary"
     STORE_UNSUBSCRIBE_URL = "store_unsubscribe_url"
     UNKNOWN = "unknown"
@@ -105,6 +107,7 @@ _PREFIX_MAP: list[tuple[str, ActionKind]] = [
     (LOG_NEW_FOLDER_PREFIX, ActionKind.LOG_NEW_FOLDER),
     ("create_calendar_event:", ActionKind.CREATE_CALENDAR_EVENT),
     ("store_coupon:", ActionKind.STORE_COUPON),
+    ("store_otp:", ActionKind.STORE_OTP),
     ("store_unsubscribe_url:", ActionKind.STORE_UNSUBSCRIBE_URL),
 ]
 

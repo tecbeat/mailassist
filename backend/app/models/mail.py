@@ -144,6 +144,9 @@ class MailAccount(Base):
     contact_assignments: Mapped[list["ContactAssignment"]] = relationship(
         back_populates="mail_account", cascade="all, delete-orphan"
     )
+    extracted_otp_codes: Mapped[list["ExtractedOtpCode"]] = relationship(
+        back_populates="mail_account", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (Index("ix_mail_accounts_user_id", "user_id"),)
 
@@ -284,6 +287,41 @@ class ExtractedCoupon(Base):
         Index("ix_extracted_coupons_expires_at", "expires_at"),
         Index("ix_extracted_coupons_mail_account_id", "mail_account_id"),
         Index("ix_extracted_coupons_active", "is_used", postgresql_where=text("is_used = false")),
+    )
+
+
+class ExtractedOtpCode(Base):
+    """OTP/2FA/verification codes extracted from emails by AI."""
+
+    __tablename__ = "extracted_otp_codes"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
+    mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
+    sender_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
+    code: Mapped[str] = mapped_column(String(2000), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    service: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    code_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_expired: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
+    )
+
+    # Relationships
+    user: Mapped["User"] = relationship(back_populates="extracted_otp_codes")
+    mail_account: Mapped["MailAccount"] = relationship(back_populates="extracted_otp_codes")
+
+    __table_args__ = (
+        Index("ix_extracted_otp_codes_user_id", "user_id"),
+        Index("ix_extracted_otp_codes_mail_account_id", "mail_account_id"),
+        Index("ix_extracted_otp_codes_expires_at", "expires_at"),
+        Index("ix_extracted_otp_codes_active", "is_expired", postgresql_where=text("is_expired = false")),
     )
 
 

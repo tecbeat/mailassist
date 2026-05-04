@@ -33,6 +33,7 @@ from app.services.persistence import (
     save_coupons,
     save_email_summary,
     save_newsletter,
+    save_otp,
 )
 
 logger = structlog.get_logger()
@@ -114,7 +115,12 @@ async def execute_approved_actions(ctx: dict[str, Any], approval_id: str) -> Non
             raw_actions = _rebuild_actions(approval.function_type, source)
 
         if not raw_actions:
-            log.info("no_actions_to_execute")
+            # Data-only plugins (otp_extraction, email_summary, newsletter_detection,
+            # coupon_extraction, calendar_extraction, auto_reply, contacts) have no
+            # IMAP actions.  Persist plugin data and mark complete.
+            log.info("no_imap_actions", function_type=approval.function_type)
+            await _persist_plugin_data(approval)
+            log.info("approved_actions_complete", mail_uid=approval.mail_uid)
             return
 
         # parse_action (used inside execute_imap_actions and change_logger)
@@ -284,6 +290,17 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 mail_uid=approval.mail_uid,
                 has_coupons=data.get("has_coupons", False),
                 coupons=data.get("coupons", []),
+                sender_email=approval.mail_from,
+                mail_subject=approval.mail_subject,
+                own_session=True,
+            )
+        elif fn == "otp_extraction":
+            await save_otp(
+                user_id=approval.user_id,
+                account_id=approval.mail_account_id,
+                mail_uid=approval.mail_uid,
+                has_codes=data.get("has_codes", False),
+                codes=data.get("codes", []),
                 sender_email=approval.mail_from,
                 mail_subject=approval.mail_subject,
                 own_session=True,

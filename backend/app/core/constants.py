@@ -11,6 +11,7 @@ PIPELINE_PLUGIN_NAMES: list[str] = [
     "newsletter_detection",
     "labeling",
     "smart_folder",
+    "otp_extraction",
     "coupon_extraction",
     "calendar_extraction",
     "auto_reply",
@@ -33,6 +34,7 @@ PLUGIN_TO_APPROVAL_COLUMN: dict[str, str] = {
     "email_summary": "approval_mode_summary",
     "contacts": "approval_mode_contacts",
     "notifications": "approval_mode_notifications",
+    "otp_extraction": "approval_mode_otp",
 }
 
 # ISO 639-1 language code to full English name.

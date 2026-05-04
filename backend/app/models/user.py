@@ -25,6 +25,7 @@ if TYPE_CHECKING:
         DetectedNewsletter,
         EmailSummary,
         ExtractedCoupon,
+        ExtractedOtpCode,
         MailAccount,
     )
     from app.models.rules import Approval, Rule
@@ -84,6 +85,9 @@ class User(Base):
     contact_assignments: Mapped[list["ContactAssignment"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    extracted_otp_codes: Mapped[list["ExtractedOtpCode"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class UserSettings(Base):
@@ -137,6 +141,9 @@ class UserSettings(Base):
     )
     approval_mode_notifications: Mapped[ApprovalMode] = mapped_column(
         _approval_enum, default=ApprovalMode.AUTO, nullable=False
+    )
+    approval_mode_otp: Mapped[ApprovalMode] = mapped_column(
+        _approval_enum, default=ApprovalMode.APPROVAL, nullable=False
     )
     plugin_order: Mapped[list[str] | None] = mapped_column(JSON, nullable=True, default=None)
     plugin_provider_map: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True, default=None)

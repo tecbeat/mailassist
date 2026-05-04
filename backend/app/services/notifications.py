@@ -17,6 +17,7 @@ logger = structlog.get_logger()
 _DEFAULT_TEMPLATES: dict[str, str] = {
     "reply_needed": "notifications/reply_needed.j2",
     "coupon_found": "notifications/coupon_found.j2",
+    "otp_found": "notifications/otp_found.j2",
     "calendar_created": "notifications/calendar_created.j2",
     "email_summary": "notifications/email_summary.j2",
     "contact_assigned": "notifications/contact_assigned.j2",

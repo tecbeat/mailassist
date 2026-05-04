@@ -24,6 +24,7 @@ from app.models.mail import (
     EmailSummary,
     ErrorType,
     ExtractedCoupon,
+    ExtractedOtpCode,
     MailAccount,
     SpamDetectionResult,
     TrackedEmail,
@@ -66,6 +67,7 @@ __all__ = [
     "EmailSummary",
     "ErrorType",
     "ExtractedCoupon",
+    "ExtractedOtpCode",
     "FolderChangeLog",
     # change logs
     "LabelChangeLog",

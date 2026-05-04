@@ -20,6 +20,7 @@ export const pluginRoutes: Record<
   labeling: lazy(() => import("@/pages/labeling")),
   "smart-folders": lazy(() => import("@/pages/smart-folders")),
   coupons: lazy(() => import("@/pages/coupons")),
+  "otp-codes": lazy(() => import("@/pages/otp-codes")),
   calendar: lazy(() => import("@/pages/calendar")),
   "auto-reply": lazy(() => import("@/pages/auto-reply")),
   summaries: lazy(() => import("@/pages/summaries")),
