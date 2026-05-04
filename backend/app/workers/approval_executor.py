@@ -33,6 +33,7 @@ from app.services.persistence import (
     save_coupons,
     save_email_summary,
     save_newsletter,
+    save_otp,
 )
 
 logger = structlog.get_logger()
@@ -284,6 +285,17 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 mail_uid=approval.mail_uid,
                 has_coupons=data.get("has_coupons", False),
                 coupons=data.get("coupons", []),
+                sender_email=approval.mail_from,
+                mail_subject=approval.mail_subject,
+                own_session=True,
+            )
+        elif fn == "otp_extraction":
+            await save_otp(
+                user_id=approval.user_id,
+                account_id=approval.mail_account_id,
+                mail_uid=approval.mail_uid,
+                has_codes=data.get("has_codes", False),
+                codes=data.get("codes", []),
                 sender_email=approval.mail_from,
                 mail_subject=approval.mail_subject,
                 own_session=True,
