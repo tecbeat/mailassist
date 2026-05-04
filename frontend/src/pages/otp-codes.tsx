@@ -6,7 +6,8 @@ import {
   Copy,
   Check,
   Clock,
-  Building2,
+  ExternalLink,
+  Store,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -42,7 +43,7 @@ import type {
   ExtractedOtpCodeResponse,
   ExtractedOtpCodeListResponse,
   ListOtpCodesApiOtpCodesGetSort,
-} from "@/types/api/otp";
+} from "@/types/api";
 
 // ---------------------------------------------------------------------------
 // Countdown hook
@@ -84,20 +85,11 @@ function isExpired(expiresAt: string | null | undefined): boolean {
   return new Date(expiresAt) < new Date();
 }
 
-const CODE_TYPE_COLORS: Record<string, string> = {
-  otp: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  "2fa": "bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
-  verification: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  login: "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300",
-  magic_link: "bg-cyan-50 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300",
-  other: "bg-muted text-muted-foreground",
-};
-
 // ---------------------------------------------------------------------------
 // Countdown item
 // ---------------------------------------------------------------------------
 
-function CountdownBadge({ expiresAt }: { expiresAt: string | null }) {
+function CountdownBadge({ expiresAt }: { expiresAt: string | null | undefined }) {
   const remaining = useCountdown(expiresAt);
   const expired = expiresAt ? isExpired(expiresAt) : false;
 
@@ -241,33 +233,58 @@ export default function OtpCodesPage() {
             emptyIcon={<KeyRound className="mb-3 h-10 w-10 text-muted-foreground" />}
             emptyMessage="No OTP codes found. Security codes will appear here as they are extracted from your emails."
             renderItem={(otp: ExtractedOtpCodeResponse) => {
+              const isMagicLink = otp.code_type === "magic_link" && otp.url;
+              const copyValue = otp.url || otp.code;
+              const displayCode = isMagicLink
+                ? otp.service ? `${otp.service} login link` : "Magic link"
+                : otp.code;
+
               return (
                 <FilterListItem
                   key={otp.id}
                   className={otp.is_expired ? "opacity-60" : undefined}
                   icon={<KeyRound />}
                   title={
-                    <code className="rounded bg-muted px-2 py-0.5 text-sm font-mono font-bold tracking-wider">
-                      {otp.code}
-                    </code>
+                    isMagicLink ? (
+                      <span className="text-sm font-semibold">{displayCode}</span>
+                    ) : (
+                      <code className="rounded bg-muted px-2 py-0.5 text-sm font-mono font-bold tracking-wider">
+                        {displayCode}
+                      </code>
+                    )
                   }
                   badges={
-                    <>
-                      <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium ${CODE_TYPE_COLORS[otp.code_type] ?? CODE_TYPE_COLORS.other}`}>
-                        {otp.code_type.replace("_", " ")}
-                      </span>
-                    </>
+                    <CountdownBadge expiresAt={otp.expires_at} />
                   }
                   subtitle={
-                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                      {otp.service && (
-                        <span className="flex items-center gap-1">
-                          <Building2 className="h-3 w-3" />
-                          {otp.service}
-                        </span>
+                    <>
+                      {otp.description && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {otp.description}
+                        </p>
                       )}
-                      <CountdownBadge expiresAt={otp.expires_at} />
-                    </div>
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="capitalize">{otp.code_type.replace("_", " ")}</span>
+                        {otp.service && (
+                          <>
+                            <span className="text-muted-foreground/50">·</span>
+                            <span className="flex items-center gap-1">
+                              <Store className="h-3 w-3" />
+                              {otp.service}
+                            </span>
+                          </>
+                        )}
+                        {otp.expires_at && (
+                          <>
+                            <span className="text-muted-foreground/50">·</span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {new Date(otp.expires_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </>
                   }
                   date={formatDate(otp.created_at)}
                   actions={
@@ -282,11 +299,19 @@ export default function OtpCodesPage() {
                           onSuccess={invalidateList}
                         />
                       )}
+                      {isMagicLink && (
+                        <AppButton
+                          icon={<ExternalLink />}
+                          label="Open link"
+                          variant="ghost"
+                          onClick={() => window.open(otp.url!, "_blank", "noopener,noreferrer")}
+                        />
+                      )}
                       <AppButton
                         icon={copiedId === otp.id ? <Check /> : <Copy />}
-                        label="Copy code"
+                        label={isMagicLink ? "Copy link" : "Copy code"}
                         variant="ghost"
-                        onClick={() => handleCopyCode(otp.id, otp.code)}
+                        onClick={() => handleCopyCode(otp.id, copyValue)}
                       />
                       <AppButton
                         icon={<Trash2 />}
