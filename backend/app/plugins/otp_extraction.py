@@ -58,7 +58,6 @@ class OtpExtractionPlugin(AIFunctionPlugin[OtpExtractionResponse]):
     execution_order = 45
     icon = "KeyRound"
     approval_key = "otp"
-    supports_approval = True
     has_view_page = True
     view_route = "/otp-codes"
 
@@ -69,7 +68,7 @@ class OtpExtractionPlugin(AIFunctionPlugin[OtpExtractionResponse]):
         actions: list[str] = []
         for code in ai_response.codes:
             svc = code.service or "Unknown"
-            actions.append(f"extract_otp:{code.code_type} ({svc})")
+            actions.append(f"store_otp:{code.code} ({svc})")
 
         self.logger.info(
             "otp_extracted",
