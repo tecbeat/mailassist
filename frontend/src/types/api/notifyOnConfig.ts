@@ -12,6 +12,7 @@ export interface NotifyOnConfig {
   reply_needed?: boolean;
   spam_detected?: boolean;
   coupon_found?: boolean;
+  otp_found?: boolean;
   calendar_event_created?: boolean;
   rule_executed?: boolean;
   newsletter_detected?: boolean;

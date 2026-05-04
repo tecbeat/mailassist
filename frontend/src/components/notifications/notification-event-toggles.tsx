@@ -14,6 +14,7 @@ const NOTIFY_EVENT_LABELS: Record<keyof NotifyOnConfig, string> = {
   reply_needed: "Reply Needed",
   spam_detected: "Spam Detected",
   coupon_found: "Coupon Found",
+  otp_found: "OTP Code Found",
   calendar_event_created: "Calendar Event Created",
   rule_executed: "Rule Executed",
   newsletter_detected: "Newsletter Detected",
