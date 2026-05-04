@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 
 ### 🐛 Bug Fixes
 
+- *(deps)* Update dependency orval to v8.9.1 - ([364a318](https://git.teccave.de/tecbeat/mailassist/commit/364a31814db207a1a8b27bedd40cda2ba4cf0f95))
 - OTP plugin follows coupon pattern for approval/actionable detection - ([fe6af0b](https://git.teccave.de/tecbeat/mailassist/commit/fe6af0b1f55b9f0744e3f3a5bdb96099cb8dfdd0))
 - OTP plugin respects approval mode setting - ([2eff781](https://git.teccave.de/tecbeat/mailassist/commit/2eff781b41cb0c5ff6c2e31c318f4b4aeed8181f))
 - Add OTP Code Found to notification template editor - ([00a99d5](https://git.teccave.de/tecbeat/mailassist/commit/00a99d5fad9a1bda92cac5a3777705a2935c2a6a))
