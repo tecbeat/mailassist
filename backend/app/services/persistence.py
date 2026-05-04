@@ -687,7 +687,9 @@ async def save_otp(
     for code_item in codes:
         code = code_item.get("code", "") if isinstance(code_item, dict) else getattr(code_item, "code", "")
         service = code_item.get("service") if isinstance(code_item, dict) else getattr(code_item, "service", None)
-        description = code_item.get("description") if isinstance(code_item, dict) else getattr(code_item, "description", None)
+        description = (
+            code_item.get("description") if isinstance(code_item, dict) else getattr(code_item, "description", None)
+        )
         code_type = (
             code_item.get("code_type", "other")
             if isinstance(code_item, dict)
