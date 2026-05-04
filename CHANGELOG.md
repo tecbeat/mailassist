@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.4.0-beta) - 2026-05-04
+
+### ⛰️  Features
+
+- Add OTP code notification support - ([b2a424e](https://git.teccave.de/tecbeat/mailassist/commit/b2a424e9df876e1543a43282cbf4091d05c8b6ab))
+- Redesign OTP codes page to match coupon card layout - ([dabd1a2](https://git.teccave.de/tecbeat/mailassist/commit/dabd1a2a90e6999baef376a3c489c28076781661))
+- Add description field to OTP codes and remove moved_externally enum - ([c484054](https://git.teccave.de/tecbeat/mailassist/commit/c4840544903c1ca96e267c3e14df6be65e2eacd1))
+- Add OTP code extraction plugin with auto-expiry - ([e8459cb](https://git.teccave.de/tecbeat/mailassist/commit/e8459cb1ebba09b4cb8643cd160e25476e563447))
+
+### 🐛 Bug Fixes
+
+- OTP plugin follows coupon pattern for approval/actionable detection - ([fe6af0b](https://git.teccave.de/tecbeat/mailassist/commit/fe6af0b1f55b9f0744e3f3a5bdb96099cb8dfdd0))
+- OTP plugin respects approval mode setting - ([2eff781](https://git.teccave.de/tecbeat/mailassist/commit/2eff781b41cb0c5ff6c2e31c318f4b4aeed8181f))
+- Add OTP Code Found to notification template editor - ([00a99d5](https://git.teccave.de/tecbeat/mailassist/commit/00a99d5fad9a1bda92cac5a3777705a2935c2a6a))
+- Rules page crash, rules IMAP execution, approval data persistence - ([aeef620](https://git.teccave.de/tecbeat/mailassist/commit/aeef620df35a576b5093c553daf52c503df74a0b))
+- Add otp_found toggle to notification settings UI - ([2ea2392](https://git.teccave.de/tecbeat/mailassist/commit/2ea239284625f5440092e50d70ff7c5e63d01f8e))
+- Apply ruff formatting to persistence.py - ([2fb2ee4](https://git.teccave.de/tecbeat/mailassist/commit/2fb2ee4225fd5a0ecd8b3efa0189cccfe73b5837))
+- Split OTP frontend types into individual files - ([1b29a89](https://git.teccave.de/tecbeat/mailassist/commit/1b29a89417373d67503535651f5efc3a108f5879))
+- Call save_otp in approval executor for otp_extraction - ([319ecdc](https://git.teccave.de/tecbeat/mailassist/commit/319ecdce6caf1796037f62cc3c015c054036572f))
+
 ## [2.3.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.3.0-beta) - 2026-05-02
 
 ### ⛰️  Features
