@@ -698,6 +698,10 @@ async def fetch_raw_message(
 
     Raises:
         ValueError: If the message body is not found in the response.
+            - ``"uid_not_found_in_folder"`` — UID no longer exists
+              (moved by server-side filter).
+            - ``"no_message_body_in_response"`` — structural parse failure.
+            - ``"imap_fetch_failed: <status>"`` — non-OK IMAP response.
     """
 
     def _fetch() -> bytes:
@@ -705,6 +709,10 @@ async def fetch_raw_message(
         status, data = conn.mailbox.client.uid("FETCH", mail_uid, "(RFC822)")
         if status != "OK":
             raise ValueError(f"imap_fetch_failed: {status}")
+        # imaplib returns [None] when the UID no longer exists in the folder
+        # (e.g. moved by a server-side Sieve filter before we could fetch it).
+        if data == [None]:
+            raise ValueError("uid_not_found_in_folder")
         # imaplib response: [(b'UID FETCH ...', b'raw message bytes'), b')']
         for item in data:
             if isinstance(item, tuple) and len(item) == 2:
@@ -778,3 +786,106 @@ async def fetch_envelopes(
         return envelopes
 
     return await asyncio.to_thread(_fetch)
+
+
+# ---------------------------------------------------------------------------
+# Mail relocation (UID moved by server-side filter)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class RelocatedMail:
+    """Result of a successful mail relocation search.
+
+    Attributes:
+        folder: The folder where the mail was found.
+        uid: The UID of the mail in the new folder.
+        raw_bytes: The raw RFC822 bytes of the message.
+    """
+
+    folder: str
+    uid: str
+    raw_bytes: bytes
+
+
+async def relocate_mail_across_folders(
+    conn: ImapConnection,
+    subject: str,
+    original_folder: str,
+    *,
+    excluded_folders: list[str] | None = None,
+) -> RelocatedMail | None:
+    """Search all IMAP folders for a mail matching the given subject.
+
+    Used when a UID is no longer found in the expected folder (e.g.
+    moved by a server-side Sieve filter). Searches all selectable
+    folders except the original folder and any explicitly excluded ones.
+
+    Args:
+        conn: Active IMAP connection.
+        subject: The subject to search for (exact IMAP SUBJECT match).
+        original_folder: Folder to skip (the one where the UID was lost).
+        excluded_folders: Additional folders to skip.
+
+    Returns:
+        A ``RelocatedMail`` if found, otherwise ``None``.
+    """
+    if not subject:
+        return None
+
+    folders = await list_folders(conn)
+    skip = {original_folder}
+    if excluded_folders:
+        skip.update(excluded_folders)
+
+    def _search_folder(folder: str) -> tuple[str, str] | None:
+        """Search a single folder for the subject, return (folder, uid) or None."""
+        try:
+            conn.mailbox.folder.set(folder)
+            # Use IMAP SUBJECT search — not exact but good enough for relocation
+            uids = conn.mailbox.uids(AND(subject=subject))
+            if uids:
+                return (folder, uids[0])
+        except Exception:
+            pass
+        return None
+
+    def _search_all() -> tuple[str, str] | None:
+        for folder in folders:
+            if folder in skip:
+                continue
+            result = _search_folder(folder)
+            if result:
+                return result
+        return None
+
+    found = await asyncio.to_thread(_search_all)
+    if found is None:
+        logger.info(
+            "mail_relocation_not_found",
+            subject=subject[:80],
+            searched_folders=len(folders) - len(skip),
+        )
+        return None
+
+    new_folder, new_uid = found
+    logger.info(
+        "mail_relocated",
+        subject=subject[:80],
+        new_folder=new_folder,
+        new_uid=new_uid,
+        original_folder=original_folder,
+    )
+
+    # Fetch the raw message from the new location
+    try:
+        raw_bytes = await fetch_raw_message(conn, new_uid, folder=new_folder)
+    except ValueError:
+        logger.warning(
+            "relocated_mail_fetch_failed",
+            new_folder=new_folder,
+            new_uid=new_uid,
+        )
+        return None
+
+    return RelocatedMail(folder=new_folder, uid=new_uid, raw_bytes=raw_bytes)

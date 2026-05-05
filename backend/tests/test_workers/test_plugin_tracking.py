@@ -290,7 +290,14 @@ class TestProcessMailStatusTransitions:
             ),
             patch(
                 "app.workers.mail_processor.fetch_raw_mail",
-                return_value=(b"raw email bytes", ["INBOX", "Sent"], "/"),
+                return_value=MagicMock(
+                    raw_bytes=b"raw email bytes",
+                    imap_folders=["INBOX", "Sent"],
+                    folder_separator="/",
+                    relocated=False,
+                    new_folder=None,
+                    new_uid=None,
+                ),
             ),
             patch(
                 "app.workers.mail_processor.parse_raw_mail",
@@ -413,7 +420,14 @@ class TestProcessMailStatusTransitions:
             ),
             patch(
                 "app.workers.mail_processor.fetch_raw_mail",
-                return_value=(b"raw email bytes", ["INBOX"], "/"),
+                return_value=MagicMock(
+                    raw_bytes=b"raw email bytes",
+                    imap_folders=["INBOX"],
+                    folder_separator="/",
+                    relocated=False,
+                    new_folder=None,
+                    new_uid=None,
+                ),
             ),
             patch(
                 "app.workers.mail_processor.parse_raw_mail",
@@ -539,7 +553,14 @@ class TestProcessMailStatusTransitions:
             ),
             patch(
                 "app.workers.mail_processor.fetch_raw_mail",
-                return_value=(b"raw email bytes", ["INBOX"], "/"),
+                return_value=MagicMock(
+                    raw_bytes=b"raw email bytes",
+                    imap_folders=["INBOX"],
+                    folder_separator="/",
+                    relocated=False,
+                    new_folder=None,
+                    new_uid=None,
+                ),
             ),
             patch(
                 "app.workers.mail_processor.parse_raw_mail",
@@ -875,7 +896,14 @@ class TestSavepointRollback:
             ),
             patch(
                 "app.workers.mail_processor.fetch_raw_mail",
-                return_value=(b"raw email bytes", ["INBOX"], "/"),
+                return_value=MagicMock(
+                    raw_bytes=b"raw email bytes",
+                    imap_folders=["INBOX"],
+                    folder_separator="/",
+                    relocated=False,
+                    new_folder=None,
+                    new_uid=None,
+                ),
             ),
             patch(
                 "app.workers.mail_processor.parse_raw_mail",
@@ -955,7 +983,14 @@ class TestSavepointRollback:
             ),
             patch(
                 "app.workers.mail_processor.fetch_raw_mail",
-                return_value=(b"raw email bytes", ["INBOX"], "/"),
+                return_value=MagicMock(
+                    raw_bytes=b"raw email bytes",
+                    imap_folders=["INBOX"],
+                    folder_separator="/",
+                    relocated=False,
+                    new_folder=None,
+                    new_uid=None,
+                ),
             ),
             patch(
                 "app.workers.mail_processor.parse_raw_mail",
@@ -1036,7 +1071,14 @@ class TestSavepointRollback:
             ),
             patch(
                 "app.workers.mail_processor.fetch_raw_mail",
-                return_value=(b"raw email bytes", ["INBOX"], "/"),
+                return_value=MagicMock(
+                    raw_bytes=b"raw email bytes",
+                    imap_folders=["INBOX"],
+                    folder_separator="/",
+                    relocated=False,
+                    new_folder=None,
+                    new_uid=None,
+                ),
             ),
             patch(
                 "app.workers.mail_processor.parse_raw_mail",
