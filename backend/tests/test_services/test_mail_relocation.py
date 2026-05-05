@@ -6,6 +6,8 @@ Covers:
 - FetchResult dataclass and fetch_raw_mail relocation flow
 """
 
+from __future__ import annotations
+
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -86,7 +88,7 @@ async def test_relocate_mail_found() -> None:
 
     # Mock list_folders
     folder_infos = [MagicMock(name=f, flags=("\\HasNoChildren",)) for f in ["INBOX", "Server/Backups", "Trash"]]
-    for fi, name in zip(folder_infos, ["INBOX", "Server/Backups", "Trash"]):
+    for fi, name in zip(folder_infos, ["INBOX", "Server/Backups", "Trash"], strict=True):
         fi.name = name
     conn.mailbox.folder.list.return_value = iter(folder_infos)
 
