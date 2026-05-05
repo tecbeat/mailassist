@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { X, Save } from "lucide-react";
+import { X, Save, Trash2 } from "lucide-react";
 
 import {
   Dialog,
@@ -50,7 +50,7 @@ export function AppDialog({
   onCancel,
   cancelLabel = "Cancel",
   primaryLabel,
-  primaryIcon = <Save />,
+  primaryIcon,
   loading = false,
   primaryDisabled,
   form,
@@ -58,6 +58,9 @@ export function AppDialog({
   primaryVariant = "primary",
   contentClassName,
 }: AppDialogProps) {
+  // Pick a sensible default icon based on variant when none is provided
+  const resolvedIcon = primaryIcon ?? (primaryVariant === "destructive" ? <Trash2 /> : <Save />);
+
   const preventProps = preventClose
     ? {
         onPointerDownOutside: (e: Event) => e.preventDefault(),
@@ -103,7 +106,7 @@ export function AppDialog({
                 )}
                 {showPrimary && (
                   <AppButton
-                    icon={primaryIcon}
+                    icon={resolvedIcon}
                     label={primaryLabel!}
                     variant="primary"
                     color={primaryVariant === "destructive" ? "destructive" : "default"}

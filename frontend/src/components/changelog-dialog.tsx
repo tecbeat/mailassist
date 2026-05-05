@@ -117,10 +117,10 @@ export function ChangelogDialog() {
       open={open}
       onOpenChange={(v) => !v && handleDismiss()}
       title={
-        <>
-          <Sparkles className="h-5 w-5" />
+        <span className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5" aria-hidden />
           What&apos;s New
-        </>
+        </span>
       }
       description={
         data.version.startsWith("v") ? data.version : `v${data.version}`
