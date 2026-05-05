@@ -48,10 +48,12 @@ from app.services.header_analysis import analyze_headers
 from app.services.imap_actions import execute_imap_actions
 from app.services.mail import (
     ParsedEmail,
+    RelocatedMail,
     fetch_raw_message,
     get_cached_folders,
     imap_connection,
     list_folders,
+    relocate_mail_across_folders,
     set_cached_folders,
 )
 from app.services.provider_resolver import get_default_provider
@@ -252,6 +254,15 @@ class IMAPFolderError(Exception):
     """Raised when an IMAP folder cannot be selected (deleted/renamed)."""
 
 
+class UIDNotFoundError(Exception):
+    """Raised when a UID no longer exists in its folder.
+
+    This typically happens when a server-side Sieve filter moves the
+    mail before the worker can fetch it.  The caller should attempt
+    relocation via :func:`~app.services.mail.relocate_mail_across_folders`.
+    """
+
+
 class EmailParseError(Exception):
     """Raised when the raw email bytes cannot be parsed.
 
@@ -259,28 +270,82 @@ class EmailParseError(Exception):
     """
 
 
+@dataclass(frozen=True, slots=True)
+class FetchResult:
+    """Result of IMAP fetch with optional relocation info.
+
+    When a UID is not found in the expected folder and the mail is
+    successfully relocated, ``relocated`` is ``True`` and ``new_folder``
+    / ``new_uid`` contain the updated coordinates.
+    """
+
+    raw_bytes: bytes
+    imap_folders: list[str]
+    folder_separator: str
+    relocated: bool = False
+    new_folder: str | None = None
+    new_uid: str | None = None
+
+
 async def fetch_raw_mail(
     account: MailAccount,
     mail_uid: str,
     current_folder: str,
     log: structlog.stdlib.BoundLogger,
-) -> tuple[bytes, list[str], str]:
+    *,
+    subject_hint: str | None = None,
+) -> FetchResult:
     """Connect to IMAP, download the raw message, list folders.
 
+    When the UID is not found (moved by server-side filter), attempts
+    to relocate the mail across all folders using the subject hint.
+
+    Args:
+        subject_hint: Subject of the mail (from TrackedEmail) used for
+            relocation search when the UID no longer exists.
+
     Returns:
-        Tuple of (raw_bytes, imap_folders, folder_separator).
+        A ``FetchResult`` containing raw bytes, folder list, and
+        optional relocation info.
 
     Raises:
         IMAPFetchError: Non-OK IMAP response or missing message body.
+        UIDNotFoundError: UID not found and relocation failed/not attempted.
+        IMAPFolderError: Folder cannot be selected.
         Exception: IMAP connection failures (transient).
     """
     async with imap_connection(account) as conn:
+        relocated: RelocatedMail | None = None
+        raw_bytes: bytes | None = None
+
         try:
             raw_bytes = await fetch_raw_message(conn, mail_uid, folder=current_folder)
         except ValueError as e:
-            if "imap_fetch_failed" in str(e):
-                raise IMAPFetchError(str(e)) from e
-            raise IMAPFetchError("no_message_body_in_response") from e
+            error_msg = str(e)
+            if "uid_not_found_in_folder" in error_msg:
+                # UID vanished — attempt relocation by subject search
+                if subject_hint:
+                    log.info(
+                        "uid_not_found_attempting_relocation",
+                        mail_uid=mail_uid,
+                        folder=current_folder,
+                        subject=subject_hint[:80],
+                    )
+                    relocated = await relocate_mail_across_folders(
+                        conn,
+                        subject_hint,
+                        current_folder,
+                    )
+                if relocated is None:
+                    raise UIDNotFoundError(
+                        f"uid_not_found_in_folder: UID {mail_uid} no longer in '{current_folder}'"
+                        + (" and relocation failed" if subject_hint else " (no subject for relocation)")
+                    ) from e
+                raw_bytes = relocated.raw_bytes
+            elif "imap_fetch_failed" in error_msg:
+                raise IMAPFetchError(error_msg) from e
+            else:
+                raise IMAPFetchError("no_message_body_in_response") from e
         except Exception as e:
             # folder.set() failures indicate missing/deleted folder
             err_msg = str(e).lower()
@@ -289,6 +354,8 @@ async def fetch_raw_mail(
                     f"imap_select_failed: folder '{current_folder}' may have been deleted ({e})"
                 ) from e
             raise
+
+        assert raw_bytes is not None
 
         try:
             imap_folders = await get_cached_folders(account.id)
@@ -301,7 +368,21 @@ async def fetch_raw_mail(
 
         folder_sep = conn.separator or "/"
 
-    return raw_bytes, imap_folders, folder_sep
+    if relocated:
+        return FetchResult(
+            raw_bytes=raw_bytes,
+            imap_folders=imap_folders,
+            folder_separator=folder_sep,
+            relocated=True,
+            new_folder=relocated.folder,
+            new_uid=relocated.uid,
+        )
+
+    return FetchResult(
+        raw_bytes=raw_bytes,
+        imap_folders=imap_folders,
+        folder_separator=folder_sep,
+    )
 
 
 def parse_raw_mail(

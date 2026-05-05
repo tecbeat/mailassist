@@ -232,16 +232,16 @@ class TestFetchRawMailResponse:
             from app.workers.pipeline_orchestrator import fetch_raw_mail
 
             log = structlog.get_logger()
-            raw, folders, sep = await fetch_raw_mail(
+            result = await fetch_raw_mail(
                 mock_account,
                 "123",
                 "INBOX",
                 log,
             )
 
-        assert raw == small_msg
-        assert folders == ["INBOX"]
-        assert sep == "/"
+        assert result.raw_bytes == small_msg
+        assert result.imap_folders == ["INBOX"]
+        assert result.folder_separator == "/"
 
     @pytest.mark.asyncio
     async def test_normal_email_returned(self):
@@ -280,14 +280,14 @@ class TestFetchRawMailResponse:
             from app.workers.pipeline_orchestrator import fetch_raw_mail
 
             log = structlog.get_logger()
-            raw, _folders, _sep = await fetch_raw_mail(
+            result = await fetch_raw_mail(
                 mock_account,
                 "123",
                 "INBOX",
                 log,
             )
 
-        assert raw == email_body
+        assert result.raw_bytes == email_body
 
     @pytest.mark.asyncio
     async def test_deleted_uid_raises(self):

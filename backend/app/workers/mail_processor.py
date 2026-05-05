@@ -51,10 +51,12 @@ from app.models.mail import CompletionReason, ErrorType
 from app.services.mail import connect_imap, safe_imap_logout, store_flags
 from app.workers.pipeline_orchestrator import (
     EmailParseError,
+    FetchResult,
     FetchedMail,
     IMAPFetchError,
     IMAPFolderError,
     PipelineResult,
+    UIDNotFoundError,
     _clear_pipeline_progress,
     _set_pipeline_progress,
     execute_post_pipeline,
@@ -453,12 +455,30 @@ async def _process_mail_inner(
         current_folder=current_folder,
         phase="imap_fetch",
     )
+
+    # Load subject hint from TrackedEmail for relocation search
+    subject_hint: str | None = None
     try:
-        raw_bytes, imap_folders, folder_sep = await fetch_raw_mail(
+        async with get_session_ctx() as db:
+            stmt = select(TrackedEmail).where(
+                TrackedEmail.mail_account_id == UUID(account_id),
+                TrackedEmail.mail_uid == mail_uid,
+                TrackedEmail.current_folder == current_folder,
+            )
+            result = await db.execute(stmt)
+            tracked = result.scalar_one_or_none()
+            if tracked:
+                subject_hint = tracked.subject
+    except Exception:
+        pass
+
+    try:
+        fetch_result = await fetch_raw_mail(
             account,
             mail_uid,
             current_folder,
             log,
+            subject_hint=subject_hint,
         )
     except IMAPFolderError as e:
         # Folder was deleted or renamed on the server — this is permanent
@@ -476,6 +496,20 @@ async def _process_mail_inner(
         )
         # Also fail all other queued mails for this folder in bulk
         await _fail_queued_mails_for_folder(account_id, current_folder, error_msg, log)
+        return
+    except UIDNotFoundError as e:
+        # UID vanished and relocation failed — permanent for this mail.
+        error_msg = str(e)
+        log.warning("uid_not_found_relocation_failed", error=error_msg)
+        await _update_tracked_status(
+            account_id,
+            mail_uid,
+            TrackedEmailStatus.FAILED,
+            log,
+            current_folder=current_folder,
+            error=error_msg,
+            error_type=ErrorType.MAIL,
+        )
         return
     except IMAPFetchError as e:
         error_msg = str(e)
@@ -522,6 +556,32 @@ async def _process_mail_inner(
             error_type=ErrorType.PROVIDER_IMAP,
         )
         return
+
+    # Handle relocation: update tracked email with new folder/UID
+    if fetch_result.relocated:
+        assert fetch_result.new_folder is not None
+        assert fetch_result.new_uid is not None
+        log.info(
+            "mail_relocated_updating_tracked",
+            old_folder=current_folder,
+            old_uid=mail_uid,
+            new_folder=fetch_result.new_folder,
+            new_uid=fetch_result.new_uid,
+        )
+        await _update_current_folder(
+            account_id,
+            mail_uid,
+            current_folder,
+            fetch_result.new_folder,
+            log,
+            new_mail_uid=fetch_result.new_uid,
+        )
+        current_folder = fetch_result.new_folder
+        mail_uid = fetch_result.new_uid
+
+    raw_bytes = fetch_result.raw_bytes
+    imap_folders = fetch_result.imap_folders
+    folder_sep = fetch_result.folder_separator
 
     try:
         parsed = parse_raw_mail(raw_bytes, mail_uid, log)
