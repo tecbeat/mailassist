@@ -137,12 +137,13 @@ backend_migration_test:
     - uv sync --frozen --no-dev
     - |
       for i in $(seq 1 30); do
-        if .venv/bin/alembic upgrade head; then
+        if .venv/bin/python -c "import asyncio, asyncpg; asyncio.run(asyncpg.connect('postgresql://mailassist:mailassist@postgres:5432/mailassist'))"; then
           break
         fi
         echo "Waiting for Postgres... ($i/30)"
         sleep 2
       done
+    - .venv/bin/alembic upgrade head
     - .venv/bin/alembic downgrade base
     - .venv/bin/alembic upgrade head
     - .venv/bin/alembic check
