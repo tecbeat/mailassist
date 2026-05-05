@@ -51,7 +51,6 @@ from app.models.mail import CompletionReason, ErrorType
 from app.services.mail import connect_imap, safe_imap_logout, store_flags
 from app.workers.pipeline_orchestrator import (
     EmailParseError,
-    FetchResult,
     FetchedMail,
     IMAPFetchError,
     IMAPFolderError,

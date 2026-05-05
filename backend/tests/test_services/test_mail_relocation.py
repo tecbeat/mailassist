@@ -6,8 +6,6 @@ Covers:
 - FetchResult dataclass and fetch_raw_mail relocation flow
 """
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -19,7 +17,6 @@ from app.services.mail import (
     fetch_raw_message,
     relocate_mail_across_folders,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
