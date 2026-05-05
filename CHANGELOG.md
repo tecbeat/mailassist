@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 ### 🐛 Bug Fixes
 
 - *(app-dialog)* Smart default icon based on variant, fix changelog a11y - ([a209a7e](https://git.teccave.de/tecbeat/mailassist/commit/a209a7ee333b0addfe064297f8afc9e93eb18886))
+- *(deps)* Update ghcr.io/astral-sh/uv docker tag to v0.11.9 - ([f2f8521](https://git.teccave.de/tecbeat/mailassist/commit/f2f8521441505ce59ca075f7298915e5f91cef6b))
 - *(tests)* Mock localStorage in changelog-dialog tests - ([84c36f8](https://git.teccave.de/tecbeat/mailassist/commit/84c36f85826d310de5e7607836635e0fa9d54df3))
 - *(ui/dialog)* Remove hardcoded max-w-lg from DialogContent base - ([44baf16](https://git.teccave.de/tecbeat/mailassist/commit/44baf163726cbec556a6d631371dd4ec6d709c2f))
 
