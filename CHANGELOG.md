@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.5.1-beta) - 2026-05-05
+
+### 🐛 Bug Fixes
+
+- Remove unused FetchResult import, drop future annotations from test - ([ef3d359](https://git.teccave.de/tecbeat/mailassist/commit/ef3d359fd6efdfa108bcd54ee6aa6008261c97cb))
+- Lint issues in test_mail_relocation (zip strict, future annotations) - ([077213f](https://git.teccave.de/tecbeat/mailassist/commit/077213f9f2bd65c42b3b2439d3f51bf94262b839))
+- Distinguish uid_not_found from no_body and relocate moved mails - ([9f9ccee](https://git.teccave.de/tecbeat/mailassist/commit/9f9cceeb776d427c13e3edb883da9946f2aacff4))
+
 ## [2.5.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.5.0-beta) - 2026-05-05
 
 ### ⛰️  Features
