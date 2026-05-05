@@ -64,13 +64,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/app-dialog";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import {
   Select,
@@ -935,16 +931,22 @@ export default function RulesPage() {
       {/* ---------------------------------------------------------------- */}
       {/* Add/Edit Rule Dialog                                             */}
       {/* ---------------------------------------------------------------- */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingRuleId ? "Edit Rule" : "Add Rule"}</DialogTitle>
-            <DialogDescription>
-              {editingRuleId
-                ? "Update rule conditions and actions."
-                : "Define conditions to match emails and actions to execute."}
-            </DialogDescription>
-          </DialogHeader>
+      <AppDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        title={editingRuleId ? "Edit Rule" : "Add Rule"}
+        description={
+          editingRuleId
+            ? "Update rule conditions and actions."
+            : "Define conditions to match emails and actions to execute."
+        }
+        footer={
+          <DialogFooter>
+            <AppButton icon={<X />} label="Cancel" onClick={() => setEditDialogOpen(false)}>Cancel</AppButton>
+            <AppButton icon={<Save />} label={editingRuleId ? "Update Rule" : "Create Rule"} type="submit" form="rule-form" variant="primary" loading={isSaving} disabled={isSaving || !isConditionGroupValid(conditions) || !areActionsValid(actions)}>{isSaving ? "Saving..." : editingRuleId ? "Update Rule" : "Create Rule"}</AppButton>
+          </DialogFooter>
+        }
+      >
 
           <form id="rule-form" onSubmit={handleSaveRule} className="space-y-4">
             {/* Name & Description */}
@@ -1016,13 +1018,7 @@ export default function RulesPage() {
               />
             </div>
           </form>
-
-          <DialogFooter>
-            <AppButton icon={<X />} label="Cancel" onClick={() => setEditDialogOpen(false)}>Cancel</AppButton>
-            <AppButton icon={<Save />} label={editingRuleId ? "Update Rule" : "Create Rule"} type="submit" form="rule-form" variant="primary" loading={isSaving} disabled={isSaving || !isConditionGroupValid(conditions) || !areActionsValid(actions)}>{isSaving ? "Saving..." : editingRuleId ? "Update Rule" : "Create Rule"}</AppButton>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </AppDialog>
 
       {/* ---------------------------------------------------------------- */}
       {/* Delete Confirmation                                              */}
@@ -1039,14 +1035,18 @@ export default function RulesPage() {
       {/* ---------------------------------------------------------------- */}
       {/* Test Rule Dialog                                                 */}
       {/* ---------------------------------------------------------------- */}
-      <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Test Rule</DialogTitle>
-            <DialogDescription>
-              Enter sample email data to test if this rule would match.
-            </DialogDescription>
-          </DialogHeader>
+      <AppDialog
+        open={testDialogOpen}
+        onOpenChange={setTestDialogOpen}
+        title="Test Rule"
+        description="Enter sample email data to test if this rule would match."
+        footer={
+          <DialogFooter>
+            <AppButton icon={<X />} label="Close" onClick={() => setTestDialogOpen(false)}>Close</AppButton>
+            <AppButton icon={<FlaskConical />} label="Run Test" variant="primary" loading={testMutation.isPending} disabled={testMutation.isPending} onClick={handleTest}>{testMutation.isPending ? "Testing..." : "Run Test"}</AppButton>
+          </DialogFooter>
+        }
+      >
 
           <div className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
@@ -1179,25 +1179,25 @@ export default function RulesPage() {
             </>
           )}
 
-          <DialogFooter>
-            <AppButton icon={<X />} label="Close" onClick={() => setTestDialogOpen(false)}>Close</AppButton>
-            <AppButton icon={<FlaskConical />} label="Run Test" variant="primary" loading={testMutation.isPending} disabled={testMutation.isPending} onClick={handleTest}>{testMutation.isPending ? "Testing..." : "Run Test"}</AppButton>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </AppDialog>
 
       {/* ---------------------------------------------------------------- */}
       {/* Natural Language Dialog                                          */}
       {/* ---------------------------------------------------------------- */}
-      <Dialog open={nlDialogOpen} onOpenChange={setNlDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Create Rule from Natural Language</DialogTitle>
-            <DialogDescription>
-              Describe what you want in plain English and AI will generate a structured rule for you.
-            </DialogDescription>
-          </DialogHeader>
-
+      <AppDialog
+        open={nlDialogOpen}
+        onOpenChange={setNlDialogOpen}
+        title="Create Rule from Natural Language"
+        description="Describe what you want in plain English and AI will generate a structured rule for you."
+        footer={
+          nlResult ? (
+            <DialogFooter>
+              <AppButton icon={<X />} label="Cancel" onClick={() => setNlDialogOpen(false)}>Cancel</AppButton>
+              <AppButton icon={<Check />} label="Edit & Save" variant="primary" onClick={handleNlConfirm}>Edit & Save</AppButton>
+            </DialogFooter>
+          ) : null
+        }
+      >
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label className="text-xs">Describe your rule</Label>
@@ -1249,15 +1249,7 @@ export default function RulesPage() {
               </>
             )}
           </div>
-
-          {nlResult && (
-            <DialogFooter>
-              <AppButton icon={<X />} label="Cancel" onClick={() => setNlDialogOpen(false)}>Cancel</AppButton>
-              <AppButton icon={<Check />} label="Edit & Save" variant="primary" onClick={handleNlConfirm}>Edit & Save</AppButton>
-            </DialogFooter>
-          )}
-        </DialogContent>
-      </Dialog>
+      </AppDialog>
     </div>
   );
 }

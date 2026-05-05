@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { Mail, Plus, RotateCcw, ShieldAlert, Trash2, X } from "lucide-react";
+import { Mail, Plus, RotateCcw, ShieldAlert, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod/v4";
 
@@ -39,14 +39,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { AppDialog } from "@/components/app-dialog";
 import {
   Select,
   SelectContent,
@@ -377,14 +370,18 @@ export default function SpamPage() {
       />
 
       {/* Add entry dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Blocklist Entry</DialogTitle>
-            <DialogDescription>
-              Manually block an email address, domain, or subject pattern.
-            </DialogDescription>
-          </DialogHeader>
+      <AppDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        title="Add Blocklist Entry"
+        description="Manually block an email address, domain, or subject pattern."
+        onCancel={() => setAddDialogOpen(false)}
+        primaryLabel="Add to Blocklist"
+        primaryIcon={<Plus />}
+        onPrimaryClick={handleAdd}
+        primaryDisabled={!newValue.trim()}
+        loading={createMutation.isPending}
+      >
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Type</Label>
@@ -426,28 +423,7 @@ export default function SpamPage() {
               {addError && <p className="text-xs text-destructive">{addError}</p>}
             </div>
           </div>
-          <DialogFooter>
-            <AppButton
-              icon={<X />}
-              label="Cancel"
-              onClick={() => setAddDialogOpen(false)}
-              disabled={createMutation.isPending}
-            >
-              Cancel
-            </AppButton>
-            <AppButton
-              icon={<Plus />}
-              label="Add to Blocklist"
-              variant="primary"
-              onClick={handleAdd}
-              disabled={!newValue.trim() || createMutation.isPending}
-              loading={createMutation.isPending}
-            >
-              Add to Blocklist
-            </AppButton>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </AppDialog>
     </div>
   );
 }
