@@ -12,18 +12,12 @@ import {
 import { AppButton } from "@/components/app-button";
 import { cn } from "@/lib/utils";
 
-const SIZE_CLASSES = {
-  default: "",
-  wide: "sm:max-w-2xl",
-} as const;
-
 export interface AppDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: ReactNode;
   description?: ReactNode;
   children?: ReactNode;
-  size?: keyof typeof SIZE_CLASSES;
   preventClose?: boolean;
   footer?: ReactNode;
   onCancel?: () => void;
@@ -44,7 +38,6 @@ export function AppDialog({
   title,
   description,
   children,
-  size = "default",
   preventClose,
   footer,
   onCancel,
@@ -77,8 +70,7 @@ export function AppDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "max-h-[90vh] overflow-y-auto",
-          SIZE_CLASSES[size],
+          "w-[calc(100vw-2rem)] max-w-lg sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto",
           contentClassName,
         )}
         {...preventProps}

@@ -60,7 +60,6 @@ export function RuleEditDialog({
           ? "Update rule conditions and actions."
           : "Define conditions to match emails and actions to execute."
       }
-      size="wide"
       onCancel={() => onOpenChange(false)}
       cancelLabel="Cancel"
       primaryLabel={isSaving ? "Saving..." : editingRuleId ? "Update Rule" : "Create Rule"}

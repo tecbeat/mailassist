@@ -30,7 +30,6 @@ export function PluginSettingsDialog({
       onOpenChange={onOpenChange}
       title={title}
       description={description}
-      size="wide"
       preventClose
       contentClassName="max-h-[85vh]"
     >

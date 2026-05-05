@@ -128,7 +128,7 @@ export function ChangelogDialog() {
       primaryLabel="Got it"
       primaryIcon={<Check />}
       onPrimaryClick={handleDismiss}
-      contentClassName="sm:max-w-lg min-h-[360px] flex flex-col"
+      contentClassName="min-h-[360px] flex flex-col"
     >
       <div className="overflow-y-auto flex-1 pr-2">
         {Object.entries(entriesToShow).map(([version, content]) => (
