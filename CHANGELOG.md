@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.2-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.4.2-beta) - 2026-05-05
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update dependency cryptography to v48 - ([58d0492](https://git.teccave.de/tecbeat/mailassist/commit/58d0492f2ff47ac40506f73de68a102ef60bc6e3))
+
+## [2.4.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.4.1-beta) - 2026-05-04
+
 ## [2.4.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.4.0-beta) - 2026-05-04
 
 ### ⛰️  Features
