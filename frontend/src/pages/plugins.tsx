@@ -26,6 +26,7 @@ import { ApprovalMode } from "@/types/api";
 import { PageHeader } from "@/components/layout/page-header";
 import { QueryError } from "@/components/query-error";
 import { AppButton } from "@/components/app-button";
+import { AppDialog } from "@/components/app-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   TooltipProvider,
@@ -37,13 +38,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -374,18 +368,19 @@ function TestPipelineDialog({
   const hasResults = steps.length > 0;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FlaskConical className="h-5 w-5" />
-            Test Pipeline
-          </DialogTitle>
-          <DialogDescription>
-            Run a dry-run of the AI processing pipeline with sample email data.
-            No actions will be persisted.
-          </DialogDescription>
-        </DialogHeader>
+    <AppDialog
+      open={open}
+      onOpenChange={handleClose}
+      title={
+        <span className="flex items-center gap-2">
+          <FlaskConical className="h-5 w-5" aria-hidden />
+          Test Pipeline
+        </span>
+      }
+      description="Run a dry-run of the AI processing pipeline with sample email data. No actions will be persisted."
+      preventClose={loading}
+      footer={null}
+    >
 
         {/* Form */}
         <div className="space-y-4">
@@ -634,8 +629,7 @@ function TestPipelineDialog({
             </div>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+    </AppDialog>
   );
 }
 

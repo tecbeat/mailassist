@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import {
-  X,
   Save,
   Sparkles,
   Loader2,
@@ -13,18 +12,10 @@ import {
   getListContactsApiContactsGetQueryKey,
 } from "@/services/api/contacts/contacts";
 
-import { AppButton } from "@/components/app-button";
+import { AppDialog } from "@/components/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { unwrapResponse } from "@/lib/utils";
 
@@ -144,141 +135,120 @@ export function CreateContactDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent
-        className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-      >
-        <DialogHeader>
-          <DialogTitle>Create Contact</DialogTitle>
-          <DialogDescription>
-            Create a new contact for {senderEmail}.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {/* AI fill hint */}
-          {extractMutation.isIdle && (
-            <button
-              type="button"
-              className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-              onClick={() => extractMutation.mutate()}
-            >
-              <Sparkles className="h-3 w-3" />
-              Fill from emails with AI
-            </button>
-          )}
-          {extractMutation.isPending && (
-            <div className="flex items-center justify-center gap-1.5 py-1.5 text-xs text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              Extracting contact data...
-            </div>
-          )}
-          {extractMutation.isSuccess && (
-            <p className="text-center text-xs text-green-600">
-              AI data merged into empty fields.
-            </p>
-          )}
-          {extractMutation.isError && (
-            <p className="text-center text-xs text-destructive">
-              AI extraction failed — fill in manually.
-            </p>
-          )}
-
-          {/* Name row */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">First Name</Label>
-              <Input
-                value={form.first_name}
-                onChange={(e) => updateField("first_name", e.target.value)}
-                placeholder="John"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Last Name</Label>
-              <Input
-                value={form.last_name}
-                onChange={(e) => updateField("last_name", e.target.value)}
-                placeholder="Doe"
-              />
-            </div>
+    <AppDialog
+      open={open}
+      onOpenChange={(v) => { if (!v) onClose(); }}
+      title="Create Contact"
+      description={`Create a new contact for ${senderEmail}.`}
+      onCancel={onClose}
+      cancelLabel="Cancel"
+      primaryLabel="Save Contact"
+      primaryIcon={<Save />}
+      loading={createMutation.isPending}
+      onPrimaryClick={handleSave}
+      preventClose
+    >
+      <div className="space-y-4">
+        {/* AI fill hint */}
+        {extractMutation.isIdle && (
+          <button
+            type="button"
+            className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            onClick={() => extractMutation.mutate()}
+          >
+            <Sparkles className="h-3 w-3" />
+            Fill from emails with AI
+          </button>
+        )}
+        {extractMutation.isPending && (
+          <div className="flex items-center justify-center gap-1.5 py-1.5 text-xs text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Extracting contact data...
           </div>
+        )}
+        {extractMutation.isSuccess && (
+          <p className="text-center text-xs text-green-600">
+            AI data merged into empty fields.
+          </p>
+        )}
+        {extractMutation.isError && (
+          <p className="text-center text-xs text-destructive">
+            AI extraction failed — fill in manually.
+          </p>
+        )}
 
-          {/* Display name */}
+        {/* Name row */}
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label className="text-xs">Display Name</Label>
-              <Input
-                value={form.display_name}
-                onChange={(e) => updateField("display_name", e.target.value)}
-                placeholder="John Doe"
-              />
-              {errors.display_name && <p className="text-xs text-destructive">{errors.display_name}</p>}
-          </div>
-
-          <Separator />
-
-          {/* Organization + Title row */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Organization</Label>
-              <Input
-                value={form.organization}
-                onChange={(e) => updateField("organization", e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Title</Label>
-              <Input
-                value={form.title}
-                onChange={(e) => updateField("title", e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Emails */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">Emails</Label>
+            <Label className="text-xs">First Name</Label>
             <Input
-              value={form.emails.join(", ")}
-              onChange={(e) => updateField("emails", e.target.value)}
+              value={form.first_name}
+              onChange={(e) => updateField("first_name", e.target.value)}
+              placeholder="John"
             />
-            {errors.emails && <p className="text-xs text-destructive">{errors.emails}</p>}
-            <p className="text-[10px] text-muted-foreground">Comma-separated</p>
           </div>
-
-          {/* Phones */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Phones</Label>
+            <Label className="text-xs">Last Name</Label>
             <Input
-              value={form.phones.join(", ")}
-              onChange={(e) => updateField("phones", e.target.value)}
+              value={form.last_name}
+              onChange={(e) => updateField("last_name", e.target.value)}
+              placeholder="Doe"
             />
-            <p className="text-[10px] text-muted-foreground">Comma-separated</p>
           </div>
         </div>
 
-        <DialogFooter>
-          <AppButton
-            icon={<X />}
-            label="Cancel"
-            onClick={onClose}
-          >
-            Cancel
-          </AppButton>
-          <AppButton
-            icon={<Save />}
-            label="Save Contact"
-            variant="primary"
-            onClick={handleSave}
-            loading={createMutation.isPending}
-            disabled={createMutation.isPending}
-          >
-            Save Contact
-          </AppButton>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {/* Display name */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">Display Name</Label>
+            <Input
+              value={form.display_name}
+              onChange={(e) => updateField("display_name", e.target.value)}
+              placeholder="John Doe"
+            />
+            {errors.display_name && <p className="text-xs text-destructive">{errors.display_name}</p>}
+        </div>
+
+        <Separator />
+
+        {/* Organization + Title row */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Organization</Label>
+            <Input
+              value={form.organization}
+              onChange={(e) => updateField("organization", e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Title</Label>
+            <Input
+              value={form.title}
+              onChange={(e) => updateField("title", e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Emails */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">Emails</Label>
+          <Input
+            value={form.emails.join(", ")}
+            onChange={(e) => updateField("emails", e.target.value)}
+          />
+          {errors.emails && <p className="text-xs text-destructive">{errors.emails}</p>}
+          <p className="text-[10px] text-muted-foreground">Comma-separated</p>
+        </div>
+
+        {/* Phones */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">Phones</Label>
+          <Input
+            value={form.phones.join(", ")}
+            onChange={(e) => updateField("phones", e.target.value)}
+          />
+          <p className="text-[10px] text-muted-foreground">Comma-separated</p>
+        </div>
+      </div>
+    </AppDialog>
   );
 }

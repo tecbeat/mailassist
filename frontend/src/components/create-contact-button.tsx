@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { UserPlus, Save, X, Sparkles, Loader2 } from "lucide-react";
+import { UserPlus, Save, Sparkles, Loader2 } from "lucide-react";
 import { z } from "zod/v4";
 
 import {
@@ -8,17 +8,10 @@ import {
 } from "@/services/api/contacts/contacts";
 import { unwrapResponse } from "@/lib/utils";
 import { AppButton } from "@/components/app-button";
+import { AppDialog } from "@/components/app-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 
 // ---------------------------------------------------------------------------
@@ -149,19 +142,18 @@ export function CreateContactButton({ senderEmail }: { senderEmail: string }) {
         }}
       />
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent
-          className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
-        >
-          <DialogHeader>
-            <DialogTitle>Create Contact</DialogTitle>
-            <DialogDescription>
-              Create a new contact for {senderEmail}.
-            </DialogDescription>
-          </DialogHeader>
-
+      <AppDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title="Create Contact"
+        description={`Create a new contact for ${senderEmail}.`}
+        preventClose
+        onCancel={() => setDialogOpen(false)}
+        primaryLabel="Save Contact"
+        primaryIcon={<Save />}
+        onPrimaryClick={handleSave}
+        loading={createMutation.isPending}
+      >
           <div className="space-y-4">
             {extractMutation.isIdle && (
               <button
@@ -257,28 +249,7 @@ export function CreateContactButton({ senderEmail }: { senderEmail: string }) {
               <p className="text-[10px] text-muted-foreground">Comma-separated</p>
             </div>
           </div>
-
-          <DialogFooter>
-            <AppButton
-              icon={<X />}
-              label="Cancel"
-              onClick={() => setDialogOpen(false)}
-            >
-              Cancel
-            </AppButton>
-            <AppButton
-              icon={<Save />}
-              label="Save Contact"
-              variant="primary"
-              onClick={handleSave}
-              loading={createMutation.isPending}
-              disabled={createMutation.isPending}
-            >
-              Save Contact
-            </AppButton>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </AppDialog>
     </>
   );
 }

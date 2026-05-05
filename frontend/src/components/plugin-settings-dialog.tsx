@@ -1,13 +1,7 @@
 import { type ReactNode } from "react";
 import { Settings } from "lucide-react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { AppDialog } from "@/components/app-dialog";
 import { AppButton } from "@/components/app-button";
 
 interface PluginSettingsDialogProps {
@@ -31,21 +25,16 @@ export function PluginSettingsDialog({
   children,
 }: PluginSettingsDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-h-[85vh] overflow-y-auto sm:max-w-2xl"
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-      >
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description && (
-            <DialogDescription>{description}</DialogDescription>
-          )}
-        </DialogHeader>
-        {children}
-      </DialogContent>
-    </Dialog>
+    <AppDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description={description}
+      preventClose
+      contentClassName="max-h-[85vh]"
+    >
+      {children}
+    </AppDialog>
   );
 }
 

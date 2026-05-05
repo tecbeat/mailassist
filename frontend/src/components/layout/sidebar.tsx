@@ -33,19 +33,13 @@ import { useToast } from "@/components/ui/toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AppDialog } from "@/components/app-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useVersion } from "@/hooks/use-version";
 import {
@@ -395,15 +389,12 @@ export function Sidebar() {
           </div>
         </button>
 
-        <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-          <DialogContent className="sm:max-w-lg min-h-[360px]">
-            <DialogHeader>
-              <DialogTitle>User Settings</DialogTitle>
-              {user?.email && (
-                <DialogDescription>{user.email}</DialogDescription>
-              )}
-            </DialogHeader>
-
+        <AppDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          title="User Settings"
+          description={user?.email && user.display_name ? user.email : undefined}
+        >
             <div className="space-y-4">
               {/* Timezone selector */}
               <div className="space-y-1.5">
@@ -479,8 +470,7 @@ export function Sidebar() {
                 </p>
               )}
             </div>
-          </DialogContent>
-        </Dialog>
+        </AppDialog>
       </div>
     </div>
   );
