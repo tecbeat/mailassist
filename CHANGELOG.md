@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [3.0.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v3.0.0-beta) - 2026-05-05
+## [2.5.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.5.0-beta) - 2026-05-05
 
 ### ⛰️  Features
 
