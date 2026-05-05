@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.6.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.6.0-beta) - 2026-05-05
+
+### ⛰️  Features
+
+- Add Alembic migration verification to CI - ([1214321](https://git.teccave.de/tecbeat/mailassist/commit/1214321f524df089c1c41d99206d97f628588007))
+
+### 🐛 Bug Fixes
+
+- *(ci)* Move backend_migration_test to systemtest stage - ([f279937](https://git.teccave.de/tecbeat/mailassist/commit/f279937d86e0d276ced21553c5ff2cf85431471b))
+- *(ci)* Separate Postgres readiness check from migration execution - ([10e5068](https://git.teccave.de/tecbeat/mailassist/commit/10e50681233070dd15a0c59296f1e27e78227559))
+- *(migrations)* Guard against duplicate columns from create_all baseline - ([e748adc](https://git.teccave.de/tecbeat/mailassist/commit/e748adcb93b16bdaf32ee12d26601a28ac438409))
+
 ## [2.5.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.5.1-beta) - 2026-05-05
 
 ### 🐛 Bug Fixes
