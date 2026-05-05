@@ -6,9 +6,13 @@ Create Date: 2026-05-02
 
 Stores per-plugin execution results (status, display_name, summary,
 details) so the queue UI can show detailed plugin outcomes.
+
+Note: The initial migration uses Base.metadata.create_all() which
+creates all columns from the current model state. This column may
+already exist — the guard prevents a DuplicateColumnError.
 """
 
-from sqlalchemy import JSON, Column
+from sqlalchemy import inspect, text
 
 from alembic import op
 
@@ -19,10 +23,11 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "tracked_emails",
-        Column("plugin_results", JSON(), nullable=True),
-    )
+    conn = op.get_bind()
+    insp = inspect(conn)
+    columns = [c["name"] for c in insp.get_columns("tracked_emails")]
+    if "plugin_results" not in columns:
+        op.execute(text("ALTER TABLE tracked_emails ADD COLUMN plugin_results JSON"))
 
 
 def downgrade() -> None:
