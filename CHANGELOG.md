@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v3.0.0-beta) - 2026-05-05
+
+### ⛰️  Features
+
+- Add AppDialog component and migrate all feature dialogs - ([2ecf489](https://git.teccave.de/tecbeat/mailassist/commit/2ecf48916ce24deb1e518045da6bf0e12a00833d))
+
+### 🐛 Bug Fixes
+
+- *(app-dialog)* Smart default icon based on variant, fix changelog a11y - ([a209a7e](https://git.teccave.de/tecbeat/mailassist/commit/a209a7ee333b0addfe064297f8afc9e93eb18886))
+- *(tests)* Mock localStorage in changelog-dialog tests - ([84c36f8](https://git.teccave.de/tecbeat/mailassist/commit/84c36f85826d310de5e7607836635e0fa9d54df3))
+- *(ui/dialog)* Remove hardcoded max-w-lg from DialogContent base - ([44baf16](https://git.teccave.de/tecbeat/mailassist/commit/44baf163726cbec556a6d631371dd4ec6d709c2f))
+
+### 🚜 Refactor
+
+- *(app-dialog)* Remove size prop, use unified responsive width - ([3a9deb6](https://git.teccave.de/tecbeat/mailassist/commit/3a9deb6dd9159ca2c749ae97a2f3c9cb2ba62b26))
+- Migrate remaining 5 dialogs to AppDialog - ([8b0b013](https://git.teccave.de/tecbeat/mailassist/commit/8b0b013a499028108710543534416d3bfccdb57b))
+
 ## [2.4.2-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.4.2-beta) - 2026-05-05
 
 ### 🐛 Bug Fixes
