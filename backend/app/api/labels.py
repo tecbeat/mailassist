@@ -4,17 +4,22 @@ Provides listing, label summary, and delete views for labels
 applied by the AI labeling plugin.
 """
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Literal
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import func, select
 
-if TYPE_CHECKING:
-    from sqlalchemy.sql.elements import UnaryExpression
-
-from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
+from app.api.deps import (
+    CurrentUserId,
+    DbSession,
+    build_paginated_response,
+    get_or_404,
+    paginate,
+    resolve_sort_order,
+    sanitize_like,
+)
 from app.models import AppliedLabel
 from app.schemas.applied_label import (
     AppliedLabelListResponse,
@@ -45,13 +50,14 @@ async def list_applied_labels(
     if label:
         base_stmt = base_stmt.where(AppliedLabel.label.ilike(f"%{sanitize_like(label)}%"))
 
-    order_col: UnaryExpression[Any]
-    if sort == "oldest":
-        order_col = AppliedLabel.created_at.asc()
-    elif sort == "label":
-        order_col = AppliedLabel.label.asc()
-    else:
-        order_col = AppliedLabel.created_at.desc()
+    order_col = resolve_sort_order(
+        sort,
+        {
+            "newest": AppliedLabel.created_at.desc(),
+            "oldest": AppliedLabel.created_at.asc(),
+            "label": AppliedLabel.label.asc(),
+        },
+    )
 
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)

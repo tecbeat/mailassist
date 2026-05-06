@@ -3,17 +3,22 @@
 Provides listing, detail, update, and delete views for AI-extracted coupons.
 """
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Literal
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import select
 
-if TYPE_CHECKING:
-    from sqlalchemy.sql.elements import UnaryExpression
-
-from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
+from app.api.deps import (
+    CurrentUserId,
+    DbSession,
+    build_paginated_response,
+    get_or_404,
+    paginate,
+    resolve_sort_order,
+    sanitize_like,
+)
 from app.models import ExtractedCoupon
 from app.schemas.coupon import (
     CouponUpdate,
@@ -46,15 +51,15 @@ async def list_coupons(
     if active_only:
         base_stmt = base_stmt.where(ExtractedCoupon.is_used.is_(False))
 
-    order_col: UnaryExpression[Any]
-    if sort == "oldest":
-        order_col = ExtractedCoupon.created_at.asc()
-    elif sort == "store":
-        order_col = ExtractedCoupon.store.asc()
-    elif sort == "expiry":
-        order_col = ExtractedCoupon.expires_at.asc().nullslast()
-    else:
-        order_col = ExtractedCoupon.created_at.desc()
+    order_col = resolve_sort_order(
+        sort,
+        {
+            "newest": ExtractedCoupon.created_at.desc(),
+            "oldest": ExtractedCoupon.created_at.asc(),
+            "store": ExtractedCoupon.store.asc(),
+            "expiry": ExtractedCoupon.expires_at.asc().nullslast(),
+        },
+    )
 
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)

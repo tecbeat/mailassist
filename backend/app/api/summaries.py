@@ -11,7 +11,15 @@ import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import case, select
 
-from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
+from app.api.deps import (
+    CurrentUserId,
+    DbSession,
+    build_paginated_response,
+    get_or_404,
+    paginate,
+    resolve_sort_order,
+    sanitize_like,
+)
 from app.models import EmailSummary
 from app.schemas.summary import (
     EmailSummaryListResponse,
@@ -57,7 +65,13 @@ async def list_summaries(
         (EmailSummary.mail_date.is_not(None), EmailSummary.mail_date),
         else_=EmailSummary.created_at,
     )
-    order_col = sort_col.asc() if sort == "oldest" else sort_col.desc()
+    order_col = resolve_sort_order(
+        sort,
+        {
+            "newest": sort_col.desc(),
+            "oldest": sort_col.asc(),
+        },
+    )
     base_stmt = base_stmt.order_by(order_col)
 
     result = await paginate(db, base_stmt, page, per_page)

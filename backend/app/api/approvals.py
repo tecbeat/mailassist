@@ -18,7 +18,15 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
+from app.api.deps import (
+    CurrentUserId,
+    DbSession,
+    build_paginated_response,
+    get_or_404,
+    paginate,
+    resolve_sort_order,
+    sanitize_like,
+)
 from app.core.redis import get_arq_client
 from app.models import Approval, ApprovalStatus
 from app.schemas.approval import (
@@ -62,7 +70,13 @@ async def list_approvals(
             )
         )
 
-    order_col = Approval.created_at.asc() if sort == "oldest" else Approval.created_at.desc()
+    order_col = resolve_sort_order(
+        sort,
+        {
+            "newest": Approval.created_at.desc(),
+            "oldest": Approval.created_at.asc(),
+        },
+    )
     base_stmt = base_stmt.order_by(order_col)
 
     result = await paginate(db, base_stmt, page, per_page)

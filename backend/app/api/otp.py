@@ -3,17 +3,22 @@
 Provides listing, detail, and delete views for AI-extracted OTP codes.
 """
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Literal
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import select
 
-if TYPE_CHECKING:
-    from sqlalchemy.sql.elements import UnaryExpression
-
-from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
+from app.api.deps import (
+    CurrentUserId,
+    DbSession,
+    build_paginated_response,
+    get_or_404,
+    paginate,
+    resolve_sort_order,
+    sanitize_like,
+)
 from app.models import ExtractedOtpCode
 from app.schemas.otp import (
     ExtractedOtpCodeListResponse,
@@ -48,15 +53,15 @@ async def list_otp_codes(
     if active_only:
         base_stmt = base_stmt.where(ExtractedOtpCode.is_expired.is_(False))
 
-    order_col: UnaryExpression[Any]
-    if sort == "oldest":
-        order_col = ExtractedOtpCode.created_at.asc()
-    elif sort == "service":
-        order_col = ExtractedOtpCode.service.asc()
-    elif sort == "expiry":
-        order_col = ExtractedOtpCode.expires_at.asc().nullslast()
-    else:
-        order_col = ExtractedOtpCode.created_at.desc()
+    order_col = resolve_sort_order(
+        sort,
+        {
+            "newest": ExtractedOtpCode.created_at.desc(),
+            "oldest": ExtractedOtpCode.created_at.asc(),
+            "service": ExtractedOtpCode.service.asc(),
+            "expiry": ExtractedOtpCode.expires_at.asc().nullslast(),
+        },
+    )
 
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)

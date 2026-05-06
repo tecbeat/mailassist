@@ -5,7 +5,7 @@ views for folders assigned by the AI smart folder plugin.
 """
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Literal
 from uuid import UUID
 
 import structlog
@@ -14,10 +14,15 @@ from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select
 from sqlalchemy import update as sa_update
 
-if TYPE_CHECKING:
-    from sqlalchemy.sql.elements import UnaryExpression
-
-from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
+from app.api.deps import (
+    CurrentUserId,
+    DbSession,
+    build_paginated_response,
+    get_or_404,
+    paginate,
+    resolve_sort_order,
+    sanitize_like,
+)
 from app.models import AssignedFolder, FolderChangeLog, MailAccount, TrackedEmail, TrackedEmailStatus
 from app.schemas.assigned_folder import (
     AssignedFolderListResponse,
@@ -52,13 +57,14 @@ async def list_assigned_folders(
     if folder:
         base_stmt = base_stmt.where(AssignedFolder.folder.ilike(f"%{sanitize_like(folder)}%"))
 
-    order_col: UnaryExpression[Any]
-    if sort == "oldest":
-        order_col = AssignedFolder.created_at.asc()
-    elif sort == "folder":
-        order_col = AssignedFolder.folder.asc()
-    else:
-        order_col = AssignedFolder.created_at.desc()
+    order_col = resolve_sort_order(
+        sort,
+        {
+            "newest": AssignedFolder.created_at.desc(),
+            "oldest": AssignedFolder.created_at.asc(),
+            "folder": AssignedFolder.folder.asc(),
+        },
+    )
 
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)
