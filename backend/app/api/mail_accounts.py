@@ -354,10 +354,9 @@ async def list_folders(
     message and unseen counts (slower due to IMAP STATUS per folder).
     """
     from app.services.mail import (
-        connect_imap,
         get_cached_folders,
+        imap_connection,
         list_folders_with_counts,
-        safe_imap_logout,
         set_cached_folders,
     )
     from app.services.mail import list_folders as svc_list_folders
@@ -365,8 +364,7 @@ async def list_folders(
     account = await get_or_404(db, MailAccount, account_id, user_id, "Mail account not found")
 
     try:
-        conn = await connect_imap(account)
-        try:
+        async with imap_connection(account) as conn:
             if counts:
                 folder_data = await list_folders_with_counts(conn)
                 # Update folder name cache from the counts data
@@ -386,9 +384,6 @@ async def list_folders(
                     separator=conn.separator,
                     excluded_folders=account.excluded_folders or [],
                 )
-        finally:
-            with contextlib.suppress(Exception):
-                await safe_imap_logout(conn.mailbox)
     except Exception as e:
         logger.error("list_folders_failed", account_id=str(account_id), error=str(e))
         raise HTTPException(status_code=502, detail="Failed to list folders") from None
@@ -470,18 +465,16 @@ async def delete_imap_folder(
     the folder may be lost.
     """
     from app.services.mail import (
-        connect_imap,
         delete_folder,
+        imap_connection,
         invalidate_folder_cache,
         move_all_to_inbox,
-        safe_imap_logout,
     )
 
     account = await get_or_404(db, MailAccount, account_id, user_id, "Mail account not found")
 
     try:
-        conn = await connect_imap(account)
-        try:
+        async with imap_connection(account) as conn:
             if move_to_inbox:
                 await move_all_to_inbox(conn, folder_path)
             success = await delete_folder(conn, folder_path)
@@ -489,9 +482,6 @@ async def delete_imap_folder(
                 raise HTTPException(status_code=400, detail=f"Failed to delete folder: {folder_path}")
             await invalidate_folder_cache(account_id)
             return FolderDeletedResponse(status="deleted", folder=folder_path)
-        finally:
-            with contextlib.suppress(Exception):
-                await safe_imap_logout(conn.mailbox)
     except HTTPException:
         raise
     except Exception as e:
@@ -507,13 +497,12 @@ async def rename_imap_folder(
     user_id: CurrentUserId,
 ) -> FolderRenamedResponse:
     """Rename/move an IMAP folder on the mail server."""
-    from app.services.mail import connect_imap, invalidate_folder_cache, rename_folder, safe_imap_logout
+    from app.services.mail import imap_connection, invalidate_folder_cache, rename_folder
 
     account = await get_or_404(db, MailAccount, account_id, user_id, "Mail account not found")
 
     try:
-        conn = await connect_imap(account)
-        try:
+        async with imap_connection(account) as conn:
             success = await rename_folder(conn, data.old_name, data.new_name)
             if not success:
                 raise HTTPException(
@@ -521,9 +510,6 @@ async def rename_imap_folder(
                 )
             await invalidate_folder_cache(account_id)
             return FolderRenamedResponse(status="renamed", old_name=data.old_name, new_name=data.new_name)
-        finally:
-            with contextlib.suppress(Exception):
-                await safe_imap_logout(conn.mailbox)
     except HTTPException:
         raise
     except Exception as e:
