@@ -38,6 +38,9 @@ async def send_notification(
     Renders the appropriate template for the event type, then sends
     via Apprise to all URLs. Returns True if at least one notification
     was sent successfully.
+
+    Template format: The first line of the rendered template is used as the
+    notification title.  Everything after the first blank line becomes the body.
     """
     if not apprise_urls:
         logger.debug("notification_skip", reason="no_apprise_urls")
@@ -46,12 +49,10 @@ async def send_notification(
     engine = get_template_engine()
 
     # Render notification body
-    body = _render_notification(engine, event_type, context, custom_template)
+    rendered = _render_notification(engine, event_type, context, custom_template)
 
-    # Build title from context
-    subject = context.get("subject", "")
-    account_name = context.get("account_name", "")
-    title = f"[{account_name}] {event_type.replace('_', ' ').title()}: {subject[:60]}"
+    # Parse title from first line, body from rest (after first blank line)
+    title, body = _split_title_body(rendered)
 
     # Send via Apprise
     ap = apprise.Apprise()
@@ -70,6 +71,20 @@ async def send_notification(
     except Exception:
         logger.exception("notification_send_failed", event_type=event_type)
         return False
+
+
+def _split_title_body(rendered: str) -> tuple[str, str]:
+    """Split rendered template into title (first line) and body (rest after blank line)."""
+    lines = rendered.split("\n")
+    title = lines[0].strip() if lines else "Notification"
+    # Find first blank line to separate title from body
+    body_start = 1
+    for i, line in enumerate(lines[1:], start=1):
+        if not line.strip():
+            body_start = i + 1
+            break
+    body = "\n".join(lines[body_start:]).strip()
+    return title, body
 
 
 async def send_test_notification(apprise_urls: list[str], message: str) -> bool:
