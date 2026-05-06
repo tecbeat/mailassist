@@ -6,7 +6,6 @@ import {
   useDeleteSummaryApiSummariesSummaryIdDelete,
   getListSummariesApiSummariesGetQueryKey,
 } from "@/services/api/summaries/summaries";
-import { useQueryClient } from "@tanstack/react-query";
 
 import { SpamButton } from "@/components/spam-button";
 import { CreateContactButton } from "@/components/create-contact-button";
@@ -16,9 +15,9 @@ import { ListSkeleton } from "@/components/list-skeleton";
 import { SearchableCardList } from "@/components/searchable-card-list";
 import { FilterListItem } from "@/components/filter-list-item";
 import { useSearchableList } from "@/hooks/use-searchable-list";
+import { useDeleteHandler } from "@/hooks/use-delete-handler";
 import { AppButton } from "@/components/app-button";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/toast";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import {
   Card,
@@ -66,9 +65,19 @@ export default function SummariesPage() {
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<EmailSummaryResponse | null>(null);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+
+  const deleteMutation = useDeleteSummaryApiSummariesSummaryIdDelete();
+
+  const { deleteTarget, setDeleteTarget, handleDelete, isPending: deleteIsPending } =
+    useDeleteHandler<EmailSummaryResponse>({
+      onDelete: (item) => deleteMutation.mutateAsync({ summaryId: item.id }),
+      queryKeys: [getListSummariesApiSummariesGetQueryKey()],
+      isPending: deleteMutation.isPending,
+      successTitle: "Summary deleted",
+      successDescription: "The email summary has been removed.",
+      errorTitle: "Failed to delete summary",
+      errorDescription: "Could not delete the summary. Please try again.",
+    });
 
   const params = {
     page: list.page,
@@ -86,25 +95,10 @@ export default function SummariesPage() {
   const items = listData?.items ?? [];
   const totalPages = listData?.pages ?? 1;
 
-  const deleteMutation = useDeleteSummaryApiSummariesSummaryIdDelete();
-
   const hasActiveFilters = urgencyFilter !== "all" || actionFilter !== "all" || sortOrder !== "newest" || !!list.searchFilter;
 
   function toggleExpand(id: string) {
     setExpandedId((prev) => (prev === id ? null : id));
-  }
-
-  async function handleDelete(id: string) {
-    try {
-      await deleteMutation.mutateAsync({ summaryId: id });
-      queryClient.invalidateQueries({
-        queryKey: getListSummariesApiSummariesGetQueryKey(params),
-      });
-      setDeleteTarget(null);
-      toast({ title: "Summary deleted", description: "The email summary has been removed." });
-    } catch {
-      toast({ title: "Failed to delete summary", description: "Could not delete the summary. Please try again.", variant: "destructive" });
-    }
   }
 
   return (
@@ -310,10 +304,8 @@ export default function SummariesPage() {
             This action cannot be undone.
           </>
         }
-        onConfirm={() => {
-          if (deleteTarget) handleDelete(deleteTarget.id);
-        }}
-        isPending={deleteMutation.isPending}
+        onConfirm={handleDelete}
+        isPending={deleteIsPending}
       />
     </div>
   );

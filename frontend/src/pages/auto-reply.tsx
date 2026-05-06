@@ -26,6 +26,7 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { SearchableCardList } from "@/components/searchable-card-list";
 import { FilterListItem } from "@/components/filter-list-item";
 import { useSearchableList } from "@/hooks/use-searchable-list";
+import { useDeleteHandler } from "@/hooks/use-delete-handler";
 import { AppButton } from "@/components/app-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,7 +55,6 @@ export default function AutoReplyPage() {
   usePageTitle("Auto Reply");
   const list = useSearchableList();
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
-  const [deleteTarget, setDeleteTarget] = useState<AutoReplyRecordResponse | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraftBody, setEditDraftBody] = useState("");
   const [editTone, setEditTone] = useState("");
@@ -86,20 +86,18 @@ export default function AutoReplyPage() {
   const updateMutation = useUpdateAutoReplyApiAutoRepliesReplyIdPatch();
   const deleteMutation = useDeleteAutoReplyApiAutoRepliesReplyIdDelete();
 
-  const hasActiveFilters = sortOrder !== "newest";
+  const { deleteTarget, setDeleteTarget, handleDelete, isPending: deleteIsPending } =
+    useDeleteHandler<AutoReplyRecordResponse>({
+      onDelete: (item) => deleteMutation.mutateAsync({ replyId: item.id }),
+      queryKeys: [getListAutoRepliesApiAutoRepliesGetQueryKey()],
+      isPending: deleteMutation.isPending,
+      successTitle: "Auto-reply record removed",
+      successDescription: "The auto-reply entry has been deleted.",
+      errorTitle: "Failed to remove auto-reply record",
+      errorDescription: "Could not delete the auto-reply record. Please try again.",
+    });
 
-  async function handleDelete(id: string) {
-    try {
-      await deleteMutation.mutateAsync({ replyId: id });
-      queryClient.invalidateQueries({
-        queryKey: getListAutoRepliesApiAutoRepliesGetQueryKey(),
-      });
-      setDeleteTarget(null);
-      toast({ title: "Auto-reply record removed", description: "The auto-reply entry has been deleted." });
-    } catch {
-      toast({ title: "Failed to remove auto-reply record", description: "Could not delete the auto-reply record. Please try again.", variant: "destructive" });
-    }
-  }
+  const hasActiveFilters = sortOrder !== "newest";
 
   function handleStartEdit(item: AutoReplyRecordResponse) {
     setEditingId(item.id);
@@ -341,10 +339,8 @@ export default function AutoReplyPage() {
             This action cannot be undone.
           </>
         }
-        onConfirm={() => {
-          if (deleteTarget) handleDelete(deleteTarget.id);
-        }}
-        isPending={deleteMutation.isPending}
+        onConfirm={handleDelete}
+        isPending={deleteIsPending}
       />
     </div>
   );
