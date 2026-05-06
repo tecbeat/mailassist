@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.11.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.11.0-beta) - 2026-05-06
+
+### 🚜 Refactor
+
+- Extract contact scoring logic to services/contacts/matching.py - ([0411bdf](https://git.teccave.de/tecbeat/mailassist/commit/0411bdf3197a04424a04b190bbd03c5d3b468e3f))
+
 ## [2.10.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.10.0-beta) - 2026-05-06
 
 ### 🚜 Refactor
