@@ -467,25 +467,28 @@ def _parse_job_id(job_id: str) -> tuple[str, str | None, str | None]:
     return (fn, mail_uid, account_id)
 
 
-async def _collect_in_progress_jobs(
-    keys: list[str],
-    out: list[InProgressJob],
+async def _collect_jobs[T: (InProgressJob, QueuedJob)](
+    job_ids: list[str],
+    out: list[T],
+    model: type[T],
+    *,
+    key_prefix: str = "arq:job:",
 ) -> None:
-    """Decode in-progress ARQ jobs to extract function name and mail UID.
+    """Decode ARQ jobs to extract function name and mail UID.
 
+    Shared implementation for both in-progress and queued job collection.
     Tries to read the pickle-serialized job payload from Valkey using the
     persistent binary-mode client.  Falls back to parsing the job ID
     when the payload is missing or cannot be safely deserialized.
     """
     raw_client = get_task_binary_client()
 
-    for key in keys:
-        job_id = key.removeprefix("arq:in-progress:")
-        raw = await raw_client.get(f"arq:job:{job_id}".encode())
+    for job_id in job_ids:
+        raw = await raw_client.get(f"{key_prefix}{job_id}".encode())
         if not raw:
             fn, mail_uid, account_id = _parse_job_id(job_id)
             out.append(
-                InProgressJob(
+                model(
                     job_id=job_id,
                     function=fn,
                     mail_uid=mail_uid,
@@ -497,7 +500,7 @@ async def _collect_in_progress_jobs(
             data = _RestrictedUnpickler(io.BytesIO(raw)).load()
             fn = data.get("f", "")
             args = data.get("a", ())
-            entry = InProgressJob(
+            entry = model(
                 job_id=job_id,
                 function=fn,
                 mail_uid=str(args[2]) if fn == "process_mail" and len(args) >= 3 else None,
@@ -508,13 +511,30 @@ async def _collect_in_progress_jobs(
             # Deserialization failed — fall back to job ID parsing
             fn, mail_uid, account_id = _parse_job_id(job_id)
             out.append(
-                InProgressJob(
+                model(
                     job_id=job_id,
                     function=fn,
                     mail_uid=mail_uid,
                     account_id=account_id,
                 )
             )
+
+
+async def _collect_in_progress_jobs(
+    keys: list[str],
+    out: list[InProgressJob],
+) -> None:
+    """Decode in-progress ARQ jobs to extract function name and mail UID."""
+    job_ids = [key.removeprefix("arq:in-progress:") for key in keys]
+    await _collect_jobs(job_ids, out, InProgressJob)
+
+
+async def _collect_queued_jobs(
+    job_ids: list[str],
+    out: list[QueuedJob],
+) -> None:
+    """Decode queued ARQ jobs to extract function name and mail UID."""
+    await _collect_jobs(job_ids, out, QueuedJob)
 
 
 async def _enrich_with_pipeline_progress(jobs: list[InProgressJob]) -> None:
@@ -550,56 +570,6 @@ async def _enrich_with_pipeline_progress(jobs: list[InProgressJob]) -> None:
     except Exception:
         # Progress enrichment is best-effort
         pass
-
-
-async def _collect_queued_jobs(
-    job_ids: list[str],
-    out: list[QueuedJob],
-) -> None:
-    """Decode queued ARQ jobs to extract function name and mail UID.
-
-    The arq:queue sorted set stores job IDs as members.  The actual job
-    payload lives in the ``arq:job:<job_id>`` key (pickle-serialized).
-    Uses the persistent binary-mode Valkey client with a restricted
-    unpickler to avoid RCE from tampered data.
-    """
-    raw_client = get_task_binary_client()
-
-    for job_id in job_ids:
-        raw = await raw_client.get(f"arq:job:{job_id}".encode())
-        if not raw:
-            fn, mail_uid, account_id = _parse_job_id(job_id)
-            out.append(
-                QueuedJob(
-                    job_id=job_id,
-                    function=fn,
-                    mail_uid=mail_uid,
-                    account_id=account_id,
-                )
-            )
-            continue
-        try:
-            data = _RestrictedUnpickler(io.BytesIO(raw)).load()
-            fn = data.get("f", "")
-            args = data.get("a", ())
-            entry = QueuedJob(
-                job_id=job_id,
-                function=fn,
-                mail_uid=str(args[2]) if fn == "process_mail" and len(args) >= 3 else None,
-                account_id=str(args[1]) if fn == "process_mail" and len(args) >= 3 else None,
-            )
-            out.append(entry)
-        except Exception:
-            # Deserialization failed — fall back to job ID parsing
-            fn, mail_uid, account_id = _parse_job_id(job_id)
-            out.append(
-                QueuedJob(
-                    job_id=job_id,
-                    function=fn,
-                    mail_uid=mail_uid,
-                    account_id=account_id,
-                )
-            )
 
 
 async def _count_actions_since(db: AsyncSession, user_id: UUID, since: datetime) -> int:
