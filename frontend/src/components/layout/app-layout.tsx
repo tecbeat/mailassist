@@ -23,7 +23,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   if (!isAuthenticated) {
     login();
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen flex-col items-center justify-center gap-4">
+        <img src="/logo.svg" alt="mailassist" className="h-16 w-16" />
         <p className="text-sm text-muted-foreground">Redirecting to login...</p>
       </div>
     );
