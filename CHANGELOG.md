@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.9.0-beta) - 2026-05-06
+
+### 🚜 Refactor
+
+- Deduplicate _collect_in_progress_jobs and _collect_queued_jobs - ([ee2f971](https://git.teccave.de/tecbeat/mailassist/commit/ee2f971f27befadd1c521fa89159852bfff301b0))
+
 ## [2.8.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.8.0-beta) - 2026-05-06
 
 ### 🚜 Refactor
