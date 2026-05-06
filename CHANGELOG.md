@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.10.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.10.0-beta) - 2026-05-06
+
+### 🚜 Refactor
+
+- Unify _pause_account and _pause_provider into shared _pause_entity - ([ddb3275](https://git.teccave.de/tecbeat/mailassist/commit/ddb3275b982f3c4d90a004d520ba11937e528cee))
+
 ## [2.9.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.9.0-beta) - 2026-05-06
 
 ### 🚜 Refactor
