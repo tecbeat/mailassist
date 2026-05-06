@@ -6,6 +6,7 @@ Runs fifth in the pipeline (execution_order=50).
 """
 
 import re
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -55,6 +56,8 @@ class CouponExtractionPlugin(AIFunctionPlugin[CouponExtractionResponse]):
     approval_key = "coupon"
     has_view_page = True
     view_route = "/coupons"
+    notification_event_type = "coupon_found"
+    notification_template = "notifications/coupon_found.j2"
 
     async def execute(self, context: MailContext, ai_response: CouponExtractionResponse) -> ActionResult:
         if not ai_response.has_coupons or not ai_response.coupons:
@@ -81,3 +84,49 @@ class CouponExtractionPlugin(AIFunctionPlugin[CouponExtractionResponse]):
     def get_approval_summary(self, ai_response: CouponExtractionResponse) -> str:
         labels = [c.code or c.description or "Promotion" for c in ai_response.coupons]
         return f"Found {len(labels)} coupon(s): {', '.join(labels)}"
+
+    @classmethod
+    def get_notification_context(cls, result_data: dict[str, Any]) -> dict[str, Any]:
+        coupons = result_data.get("coupons", [])
+        return {
+            "coupon_codes": [c.get("code") for c in coupons],
+            "coupons": coupons,
+        }
+
+    @classmethod
+    async def load_notification_context(
+        cls,
+        db: Any,
+        account_id: Any,
+        mail_uid: str,
+    ) -> dict[str, Any]:
+        """Load coupon data from the database for notification context."""
+        from sqlalchemy import select
+
+        from app.models.mail import ExtractedCoupon
+
+        result = await db.execute(
+            select(ExtractedCoupon).where(
+                ExtractedCoupon.mail_account_id == account_id,
+                ExtractedCoupon.mail_uid == mail_uid,
+            )
+        )
+        coupons = result.scalars().all()
+        return {
+            "coupon_codes": [c.code for c in coupons],
+            "coupons": [{"code": c.code, "description": c.description, "store": c.store} for c in coupons],
+        }
+
+    @classmethod
+    def get_notification_variables(cls) -> list[dict[str, Any]]:
+        return [
+            {"name": "coupon_codes", "var_type": "List", "description": "Extracted coupon/discount codes", "example": '["SAVE20", "FREESHIP"]'},
+            {"name": "coupons", "var_type": "List", "description": "Full coupon objects with code, description, store", "example": '[{"code": "SAVE20", "description": "20% off", "store": "Amazon"}]'},
+        ]
+
+    @classmethod
+    def get_preview_context(cls) -> dict[str, Any]:
+        return {
+            "coupon_codes": ["SAVE20", "FREESHIP"],
+            "coupons": [{"code": "SAVE20", "description": "20% off everything", "store": "Amazon"}],
+        }

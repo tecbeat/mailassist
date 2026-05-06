@@ -35,6 +35,8 @@ class SpamDetectionPlugin(AIFunctionPlugin[SpamDetectionResponse]):
     has_view_page = True
     view_route = "/spam"
     default_config: ClassVar[dict[str, Any]] = {"confidence_threshold": 0.8}
+    notification_event_type = "spam_detected"
+    notification_template = "notifications/default.j2"
 
     async def execute(self, context: MailContext, ai_response: SpamDetectionResponse) -> ActionResult:
         if not ai_response.is_spam:

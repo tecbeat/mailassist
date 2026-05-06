@@ -228,6 +228,66 @@ class AIFunctionPlugin[ResponseT: BaseModel](ABC):
     # ``self.get_config(key)`` which also checks Settings overrides.
     default_config: ClassVar[dict[str, Any]] = {}
 
+    # Notification metadata.
+    # Plugins that emit notifications set ``notification_event_type``
+    # to the event key (e.g. ``"coupon_found"``).  The handler uses this
+    # to route events and load context dynamically.
+    notification_event_type: str | None = None
+    notification_template: str | None = None  # e.g. "notifications/coupon_found.j2"
+
+    @classmethod
+    def get_notification_context(
+        cls,
+        result_data: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Return template variables for notification rendering.
+
+        Override in subclasses to provide plugin-specific context from
+        the stored result data.  Base implementation returns empty dict.
+
+        The ``result_data`` dict is loaded by the notification handler
+        from the plugin's result table via ``load_notification_context()``.
+        """
+        return {}
+
+    @classmethod
+    async def load_notification_context(
+        cls,
+        db: Any,
+        account_id: Any,
+        mail_uid: str,
+    ) -> dict[str, Any]:
+        """Load notification context directly from the database.
+
+        Override in subclasses to query the plugin's result table and
+        return template variables.  Base implementation returns empty dict.
+
+        Args:
+            db: AsyncSession
+            account_id: UUID of the mail account
+            mail_uid: UID of the processed email
+        """
+        return {}
+
+    @classmethod
+    def get_notification_variables(cls) -> list[dict[str, Any]]:
+        """Declare notification template variables with descriptions and examples.
+
+        Override in subclasses to advertise which variables are available.
+        Each dict should have: name, var_type, description, example.
+        Used by the API to document and preview templates.
+        """
+        return []
+
+    @classmethod
+    def get_preview_context(cls) -> dict[str, Any]:
+        """Return sample data for template preview rendering.
+
+        Override in subclasses to provide realistic example values
+        for each notification variable the plugin exposes.
+        """
+        return {}
+
     # Resolved concrete response type (set by __init_subclass__)
     _response_type: type[BaseModel]
 

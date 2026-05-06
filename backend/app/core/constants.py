@@ -33,7 +33,6 @@ PLUGIN_TO_APPROVAL_COLUMN: dict[str, str] = {
     "calendar_extraction": "approval_mode_calendar",
     "email_summary": "approval_mode_summary",
     "contacts": "approval_mode_contacts",
-    "notifications": "approval_mode_notifications",
     "otp_extraction": "approval_mode_otp",
 }
 

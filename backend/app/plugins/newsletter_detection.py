@@ -49,6 +49,8 @@ class NewsletterDetectionPlugin(AIFunctionPlugin[NewsletterDetectionResponse]):
     approval_key = "newsletter"
     has_view_page = True
     view_route = "/newsletters"
+    notification_event_type = "newsletter_detected"
+    notification_template = "notifications/default.j2"
 
     async def execute(self, context: MailContext, ai_response: NewsletterDetectionResponse) -> ActionResult:
         if not ai_response.is_newsletter:

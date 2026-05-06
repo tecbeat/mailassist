@@ -16,6 +16,7 @@ const Plugins = lazy(() => import("@/pages/plugins"));
 const Prompts = lazy(() => import("@/pages/prompts"));
 const Approvals = lazy(() => import("@/pages/approvals"));
 const Queue = lazy(() => import("@/pages/queue"));
+const Notifications = lazy(() => import("@/pages/notifications"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -76,6 +77,7 @@ export default function App() {
                         <Route path="prompts" element={<RouteErrorBoundary><Prompts /></RouteErrorBoundary>} />
                         <Route path="mail-accounts" element={<RouteErrorBoundary><MailAccounts /></RouteErrorBoundary>} />
                         <Route path="ai-providers" element={<RouteErrorBoundary><AIProviders /></RouteErrorBoundary>} />
+                        <Route path="notifications" element={<RouteErrorBoundary><Notifications /></RouteErrorBoundary>} />
 
                         {/* Plugin pages (dynamic from registry) */}
                         {Object.entries(pluginRoutes).map(

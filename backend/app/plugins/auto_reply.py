@@ -6,6 +6,8 @@ context gathered by prior plugins. Never auto-sends -- always creates
 a draft in the IMAP Drafts folder.
 """
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
@@ -34,6 +36,8 @@ class AutoReplyPlugin(AIFunctionPlugin[AutoReplyResponse]):
     approval_key = "auto_reply"
     has_view_page = True
     view_route = "/auto-reply"
+    notification_event_type = "reply_needed"
+    notification_template = "notifications/reply_needed.j2"
 
     async def execute(self, context: MailContext, ai_response: AutoReplyResponse) -> ActionResult:
         if not ai_response.should_reply:
@@ -72,3 +76,54 @@ class AutoReplyPlugin(AIFunctionPlugin[AutoReplyResponse]):
 
     def get_approval_summary(self, ai_response: AutoReplyResponse) -> str:
         return f"Draft reply ({ai_response.tone or 'neutral'}): {ai_response.reasoning}"
+
+    @classmethod
+    def get_notification_context(cls, result_data: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "draft_body": result_data.get("draft_body", ""),
+            "tone": result_data.get("tone", ""),
+            "action_taken": f"Draft reply created (tone: {result_data.get('tone', 'default')})",
+        }
+
+    @classmethod
+    async def load_notification_context(
+        cls,
+        db: Any,
+        account_id: Any,
+        mail_uid: str,
+    ) -> dict[str, Any]:
+        """Load auto-reply data from the database for notification context."""
+        from sqlalchemy import select
+
+        from app.models.mail import AutoReplyRecord
+
+        result = await db.execute(
+            select(AutoReplyRecord).where(
+                AutoReplyRecord.mail_account_id == account_id,
+                AutoReplyRecord.mail_uid == mail_uid,
+            )
+        )
+        reply = result.scalar_one_or_none()
+        if reply:
+            return {
+                "draft_body": reply.draft_body,
+                "tone": reply.tone,
+                "action_taken": f"Draft reply created (tone: {reply.tone or 'default'})",
+            }
+        return {}
+
+    @classmethod
+    def get_notification_variables(cls) -> list[dict[str, Any]]:
+        return [
+            {"name": "draft_body", "var_type": "String", "description": "The generated reply draft text", "example": "Thank you for your email..."},
+            {"name": "tone", "var_type": "String", "description": "Tone of the generated reply", "example": "professional"},
+            {"name": "action_taken", "var_type": "String", "description": "Summary of the action performed", "example": "Draft reply created (tone: professional)"},
+        ]
+
+    @classmethod
+    def get_preview_context(cls) -> dict[str, Any]:
+        return {
+            "draft_body": "Thank you for your email. I will review the documents and get back to you by Friday.",
+            "tone": "professional",
+            "action_taken": "Draft reply created (tone: professional)",
+        }

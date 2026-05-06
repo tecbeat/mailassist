@@ -7,6 +7,7 @@ Runs sixth in the pipeline (execution_order=60).
 """
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -53,6 +54,8 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
     approval_key = "calendar"
     has_view_page = True
     view_route = "/calendar"
+    notification_event_type = "calendar_event_created"
+    notification_template = "notifications/calendar_created.j2"
 
     async def execute(self, context: MailContext, ai_response: CalendarEventResponse) -> ActionResult:
         if not ai_response.has_event:
@@ -89,3 +92,50 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
 
     def get_approval_summary(self, ai_response: CalendarEventResponse) -> str:
         return f"Calendar event: '{ai_response.title}' on {ai_response.start}"
+
+    @classmethod
+    def get_notification_context(cls, result_data: dict[str, Any]) -> dict[str, Any]:
+        return {"calendar_event": result_data.get("calendar_event", {})}
+
+    @classmethod
+    async def load_notification_context(
+        cls,
+        db: Any,
+        account_id: Any,
+        mail_uid: str,
+    ) -> dict[str, Any]:
+        """Load calendar event data from the database for notification context."""
+        from sqlalchemy import select
+
+        from app.models.mail import CalendarEvent
+
+        result = await db.execute(
+            select(CalendarEvent).where(
+                CalendarEvent.mail_account_id == account_id,
+                CalendarEvent.mail_uid == mail_uid,
+            )
+        )
+        cal = result.scalar_one_or_none()
+        if cal:
+            return {
+                "calendar_event": {
+                    "title": cal.title,
+                    "start": cal.start,
+                    "end": cal.end,
+                    "location": cal.location,
+                    "description": cal.description,
+                },
+            }
+        return {}
+
+    @classmethod
+    def get_notification_variables(cls) -> list[dict[str, Any]]:
+        return [
+            {"name": "calendar_event", "var_type": "Dict", "description": "Extracted calendar event (title, start, end, location, description)", "example": '{"title": "Team Meeting", "start": "2026-03-31T14:00:00Z", "location": "Room 5"}'},
+        ]
+
+    @classmethod
+    def get_preview_context(cls) -> dict[str, Any]:
+        return {
+            "calendar_event": {"title": "Team Meeting", "start": "2026-03-31T14:00:00Z", "end": "2026-03-31T15:00:00Z", "location": "Room 5", "description": "Quarterly review"},
+        }
