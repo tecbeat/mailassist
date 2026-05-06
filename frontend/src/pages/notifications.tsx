@@ -45,8 +45,32 @@ interface NotificationEventInfo {
 
 const API_BASE = "/api/notifications";
 
+/** Read CSRF token from cookie. */
+function getCsrfToken(): string | undefined {
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("csrf_token="));
+  return match?.split("=")[1];
+}
+
+/** Fetch wrapper that includes credentials and CSRF token. */
+async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
+  const method = (options?.method ?? "GET").toUpperCase();
+  const headers: Record<string, string> = {
+    ...(options?.headers as Record<string, string> | undefined),
+  };
+  if (options?.body && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    const csrf = getCsrfToken();
+    if (csrf) headers["X-CSRF-Token"] = csrf;
+  }
+  return fetch(url, { ...options, headers, credentials: "include" });
+}
+
 async function fetchChannels(): Promise<NotificationChannel[]> {
-  const res = await fetch(`${API_BASE}/channels`);
+  const res = await apiFetch(`${API_BASE}/channels`);
   if (!res.ok) throw new Error("Failed to load channels");
   return res.json();
 }
@@ -56,9 +80,8 @@ async function createChannel(data: {
   mail_account_ids: string[] | null;
   event_types: string[] | null;
 }): Promise<NotificationChannel> {
-  const res = await fetch(`${API_BASE}/channels`, {
+  const res = await apiFetch(`${API_BASE}/channels`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("Failed to create channel");
@@ -69,9 +92,8 @@ async function updateChannel(
   id: string,
   data: { mail_account_ids: string[] | null; event_types: string[] | null },
 ): Promise<NotificationChannel> {
-  const res = await fetch(`${API_BASE}/channels/${id}`, {
+  const res = await apiFetch(`${API_BASE}/channels/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) {
@@ -82,14 +104,13 @@ async function updateChannel(
 }
 
 async function deleteChannel(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/channels/${id}`, { method: "DELETE" });
+  const res = await apiFetch(`${API_BASE}/channels/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete channel");
 }
 
 async function testChannel(id: string): Promise<{ success: boolean; message: string }> {
-  const res = await fetch(`${API_BASE}/channels/${id}/test`, {
+  const res = await apiFetch(`${API_BASE}/channels/${id}/test`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: "Test notification from mailassist" }),
   });
   if (!res.ok) throw new Error("Failed to send test");
@@ -97,7 +118,7 @@ async function testChannel(id: string): Promise<{ success: boolean; message: str
 }
 
 async function fetchEvents(): Promise<NotificationEventInfo[]> {
-  const res = await fetch(`${API_BASE}/events`);
+  const res = await apiFetch(`${API_BASE}/events`);
   if (!res.ok) throw new Error("Failed to load events");
   return res.json();
 }
