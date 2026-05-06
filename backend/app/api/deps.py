@@ -220,3 +220,28 @@ def sanitize_like(value: str) -> str:
     Returns a pattern suitable for ``column.ilike(f"%{escaped}%")``.
     """
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def resolve_sort_order(
+    sort: str,
+    sort_map: dict[str, Any],
+    *,
+    default_column: Any | None = None,
+) -> Any:
+    """Resolve a sort parameter string to a SQLAlchemy order_by clause.
+
+    Args:
+        sort: The sort parameter value (e.g. "newest", "oldest", "name").
+        sort_map: Mapping from sort parameter values to SQLAlchemy column
+            expressions (already with .asc()/.desc() applied).
+        default_column: Fallback if sort value is not in sort_map.
+            If None, uses ``sort_map["newest"]`` as default.
+
+    Returns:
+        A SQLAlchemy UnaryExpression suitable for ``.order_by()``.
+    """
+    if sort in sort_map:
+        return sort_map[sort]
+    if default_column is not None:
+        return default_column
+    return sort_map["newest"]

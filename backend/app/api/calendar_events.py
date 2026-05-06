@@ -4,17 +4,22 @@ Provides listing, update, and delete views for calendar events
 extracted by the AI calendar plugin.
 """
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Literal
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import select
 
-if TYPE_CHECKING:
-    from sqlalchemy.sql.elements import UnaryExpression
-
-from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
+from app.api.deps import (
+    CurrentUserId,
+    DbSession,
+    build_paginated_response,
+    get_or_404,
+    paginate,
+    resolve_sort_order,
+    sanitize_like,
+)
 from app.models import CalendarEvent
 from app.schemas.calendar_event import (
     CalendarEventListResponse,
@@ -44,13 +49,11 @@ async def list_calendar_events(
     if search:
         base_stmt = base_stmt.where(CalendarEvent.title.ilike(f"%{sanitize_like(search)}%"))
 
-    order_col: UnaryExpression[Any]
-    if sort == "oldest":
-        order_col = CalendarEvent.created_at.asc()
-    elif sort == "title":
-        order_col = CalendarEvent.title.asc()
-    else:
-        order_col = CalendarEvent.created_at.desc()
+    order_col = resolve_sort_order(sort, {
+        "newest": CalendarEvent.created_at.desc(),
+        "oldest": CalendarEvent.created_at.asc(),
+        "title": CalendarEvent.title.asc(),
+    })
 
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)

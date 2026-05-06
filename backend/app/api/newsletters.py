@@ -4,17 +4,22 @@ Provides listing and detail views for AI-detected newsletters,
 including unsubscribe URL access.
 """
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Literal
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import select
 
-if TYPE_CHECKING:
-    from sqlalchemy.sql.elements import UnaryExpression
-
-from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
+from app.api.deps import (
+    CurrentUserId,
+    DbSession,
+    build_paginated_response,
+    get_or_404,
+    paginate,
+    resolve_sort_order,
+    sanitize_like,
+)
 from app.models import DetectedNewsletter
 from app.schemas.newsletter import (
     DetectedNewsletterListResponse,
@@ -43,13 +48,11 @@ async def list_newsletters(
     if sender:
         base_stmt = base_stmt.where(DetectedNewsletter.sender_address.ilike(f"%{sanitize_like(sender)}%"))
 
-    order_col: UnaryExpression[Any]
-    if sort == "oldest":
-        order_col = DetectedNewsletter.created_at.asc()
-    elif sort == "name":
-        order_col = DetectedNewsletter.newsletter_name.asc()
-    else:
-        order_col = DetectedNewsletter.created_at.desc()
+    order_col = resolve_sort_order(sort, {
+        "newest": DetectedNewsletter.created_at.desc(),
+        "oldest": DetectedNewsletter.created_at.asc(),
+        "name": DetectedNewsletter.newsletter_name.asc(),
+    })
 
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)

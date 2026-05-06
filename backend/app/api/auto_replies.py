@@ -11,7 +11,15 @@ import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import select
 
-from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
+from app.api.deps import (
+    CurrentUserId,
+    DbSession,
+    build_paginated_response,
+    get_or_404,
+    paginate,
+    resolve_sort_order,
+    sanitize_like,
+)
 from app.models import AutoReplyRecord
 from app.schemas.auto_reply import (
     AutoReplyRecordListResponse,
@@ -41,7 +49,10 @@ async def list_auto_replies(
     if search:
         base_stmt = base_stmt.where(AutoReplyRecord.mail_subject.ilike(f"%{sanitize_like(search)}%"))
 
-    order_col = AutoReplyRecord.created_at.asc() if sort == "oldest" else AutoReplyRecord.created_at.desc()
+    order_col = resolve_sort_order(sort, {
+        "newest": AutoReplyRecord.created_at.desc(),
+        "oldest": AutoReplyRecord.created_at.asc(),
+    })
 
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)
