@@ -72,6 +72,7 @@ __all__ = [
     # change logs
     "LabelChangeLog",
     "MailAccount",
+    "NotificationChannel",
     "NotificationConfig",
     "Prompt",
     # ai

@@ -80,14 +80,12 @@ def _channel_matches(
 ) -> bool:
     """Check if a channel should receive a notification for this event."""
     # Check mail account filter
-    if channel.mail_account_ids is not None:
-        if str(account_id) not in channel.mail_account_ids:
-            return False
+    if channel.mail_account_ids is not None and str(account_id) not in channel.mail_account_ids:
+        return False
 
     # Check event type filter
-    if channel.event_types is not None:
-        if event_type not in channel.event_types:
-            return False
+    if channel.event_types is not None and event_type not in channel.event_types:
+        return False
 
     return True
 
