@@ -299,37 +299,54 @@ async def _fail_queued_mails_for_folder(
 # ---------------------------------------------------------------------------
 
 
+async def _pause_entity(
+    *,
+    model: type[MailAccount] | type[AIProvider],
+    entity_id: str,
+    values: dict[str, Any],
+    reason: str,
+    log: structlog.stdlib.BoundLogger,
+    log_success: str,
+    log_failure: str,
+) -> None:
+    """Set pause flags on a model entity using an independent DB session.
+
+    Non-fatal on failure — the scheduler will detect the issue via
+    health checks.
+    """
+    try:
+        async with get_session_ctx() as db:
+            stmt = update(model).where(model.id == UUID(entity_id)).values(**values)
+            await db.execute(stmt)
+            await db.commit()
+        log.warning(log_success, entity_id=entity_id, reason=reason)
+    except Exception:
+        log.warning(log_failure, entity_id=entity_id, exc_info=True)
+
+
 async def _pause_account(
     account_id: str,
     reason: str,
     log: structlog.stdlib.BoundLogger,
 ) -> None:
-    """Set ``is_paused=True`` on a MailAccount.
-
-    Uses an independent DB session.  Non-fatal on failure — the
-    scheduler will simply not dispatch new mails for this account
-    until the health worker detects the issue.
-    """
-    try:
-        now = datetime.now(UTC)
-        async with get_session_ctx() as db:
-            stmt = (
-                update(MailAccount)
-                .where(MailAccount.id == UUID(account_id))
-                .values(
-                    is_paused=True,
-                    paused_reason=reason[:200],
-                    paused_at=now,
-                    last_error=reason[:200],
-                    last_error_at=now,
-                    consecutive_errors=MailAccount.consecutive_errors + 1,
-                )
-            )
-            await db.execute(stmt)
-            await db.commit()
-        log.warning("account_paused", account_id=account_id, reason=reason)
-    except Exception:
-        log.warning("account_pause_failed", account_id=account_id, exc_info=True)
+    """Set ``is_paused=True`` on a MailAccount."""
+    now = datetime.now(UTC)
+    await _pause_entity(
+        model=MailAccount,
+        entity_id=account_id,
+        values={
+            "is_paused": True,
+            "paused_reason": reason[:200],
+            "paused_at": now,
+            "last_error": reason[:200],
+            "last_error_at": now,
+            "consecutive_errors": MailAccount.consecutive_errors + 1,
+        },
+        reason=reason,
+        log=log,
+        log_success="account_paused",
+        log_failure="account_pause_failed",
+    )
 
 
 async def _pause_provider(
@@ -337,27 +354,21 @@ async def _pause_provider(
     reason: str,
     log: structlog.stdlib.BoundLogger,
 ) -> None:
-    """Set ``is_paused=True`` on an AIProvider.
-
-    Uses an independent DB session.  Non-fatal on failure.
-    """
-    try:
-        now = datetime.now(UTC)
-        async with get_session_ctx() as db:
-            stmt = (
-                update(AIProvider)
-                .where(AIProvider.id == UUID(provider_id))
-                .values(
-                    is_paused=True,
-                    paused_reason=reason[:200],
-                    paused_at=now,
-                )
-            )
-            await db.execute(stmt)
-            await db.commit()
-        log.warning("provider_paused", provider_id=provider_id, reason=reason)
-    except Exception:
-        log.warning("provider_pause_failed", provider_id=provider_id, exc_info=True)
+    """Set ``is_paused=True`` on an AIProvider."""
+    now = datetime.now(UTC)
+    await _pause_entity(
+        model=AIProvider,
+        entity_id=provider_id,
+        values={
+            "is_paused": True,
+            "paused_reason": reason[:200],
+            "paused_at": now,
+        },
+        reason=reason,
+        log=log,
+        log_success="provider_paused",
+        log_failure="provider_pause_failed",
+    )
 
 
 # ---------------------------------------------------------------------------
