@@ -1,13 +1,27 @@
+import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useListVariablesApiNotificationsVariablesGet } from "@/services/api/notifications/notifications";
-import { unwrapResponse } from "@/lib/utils";
+import customInstance from "@/services/client";
 import type { TemplateVariable } from "@/types/api";
 
+interface TemplateVariablesProps {
+  /** When provided, only variables relevant to this event type are shown. */
+  eventType?: string;
+}
+
 /** Fetches and renders the template variables reference grid. */
-export function TemplateVariables() {
-  const variablesQuery = useListVariablesApiNotificationsVariablesGet();
-  const variables = unwrapResponse<TemplateVariable[]>(variablesQuery.data);
+export function TemplateVariables({ eventType }: TemplateVariablesProps) {
+  const url = eventType
+    ? `/api/notifications/variables?event_type=${encodeURIComponent(eventType)}`
+    : `/api/notifications/variables`;
+
+  const variablesQuery = useQuery({
+    queryKey: ["/api/notifications/variables", eventType ?? null],
+    queryFn: () =>
+      customInstance<{ data: TemplateVariable[]; status: number }>(url, { method: "GET" }),
+  });
+
+  const variables = (variablesQuery.data as { data: TemplateVariable[] } | undefined)?.data;
 
   if (variablesQuery.isError) {
     return <p className="text-sm text-destructive">Failed to load variables.</p>;

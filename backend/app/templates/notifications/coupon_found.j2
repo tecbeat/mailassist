@@ -1,12 +1,10 @@
-[{{ account_name | default("mailassist") }}] Coupon Found: {{ subject | default("No subject") }}
+[{{ account_name | default("mailassist") }}] Coupon: {{ coupon_code | default("?") }}{% if coupon_store %} from {{ coupon_store }}{% endif %}
 
 From: {{ sender_name | default("") }} <{{ sender | default("unknown") }}>
-Subject: {{ subject | default("No subject") }}
 Account: {{ account_email | default("") }}
 
-{% if coupon_codes %}
-Extracted coupon codes:
-{% for code in coupon_codes %}
-- {{ code }}
-{% endfor %}
-{% endif %}
+Code: {{ coupon_code | default("") }}
+{% if coupon_store %}Store: {{ coupon_store }}{% endif %}
+{% if coupon_description %}Offer: {{ coupon_description }}{% endif %}
+{% if coupon_expires_at %}Expires: {{ coupon_expires_at }}{% endif %}
+{% if coupon_valid_from %}Valid from: {{ coupon_valid_from }}{% endif %}

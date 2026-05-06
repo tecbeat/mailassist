@@ -86,21 +86,16 @@ class CouponExtractionPlugin(AIFunctionPlugin[CouponExtractionResponse]):
         return f"Found {len(labels)} coupon(s): {', '.join(labels)}"
 
     @classmethod
-    def get_notification_context(cls, result_data: dict[str, Any]) -> dict[str, Any]:
-        coupons = result_data.get("coupons", [])
-        return {
-            "coupon_codes": [c.get("code") for c in coupons],
-            "coupons": coupons,
-        }
-
-    @classmethod
     async def load_notification_context(
         cls,
         db: Any,
         account_id: Any,
         mail_uid: str,
     ) -> dict[str, Any]:
-        """Load coupon data from the database for notification context."""
+        """Load coupon data from the database for notification context.
+
+        Returns flat variables for the first coupon in the mail.
+        """
         from sqlalchemy import select
 
         from app.models.mail import ExtractedCoupon
@@ -112,31 +107,58 @@ class CouponExtractionPlugin(AIFunctionPlugin[CouponExtractionResponse]):
             )
         )
         coupons = result.scalars().all()
+        if not coupons:
+            return {}
+        coupon = coupons[0]
         return {
-            "coupon_codes": [c.code for c in coupons],
-            "coupons": [{"code": c.code, "description": c.description, "store": c.store} for c in coupons],
+            "coupon_code": coupon.code or "",
+            "coupon_store": coupon.store or "",
+            "coupon_description": coupon.description or "",
+            "coupon_expires_at": str(coupon.expires_at.date()) if coupon.expires_at else "",
+            "coupon_valid_from": str(coupon.valid_from.date()) if coupon.valid_from else "",
         }
 
     @classmethod
     def get_notification_variables(cls) -> list[dict[str, Any]]:
         return [
             {
-                "name": "coupon_codes",
-                "var_type": "List",
-                "description": "Extracted coupon/discount codes",
-                "example": '["SAVE20", "FREESHIP"]',
+                "name": "coupon_code",
+                "var_type": "String",
+                "description": "The discount / promo code",
+                "example": "SAVE20",
             },
             {
-                "name": "coupons",
-                "var_type": "List",
-                "description": "Full coupon objects with code, description, store",
-                "example": '[{"code": "SAVE20", "description": "20% off", "store": "Amazon"}]',
+                "name": "coupon_store",
+                "var_type": "String",
+                "description": "Store or brand the coupon belongs to",
+                "example": "Amazon",
+            },
+            {
+                "name": "coupon_description",
+                "var_type": "String",
+                "description": "Short description of the offer",
+                "example": "20% off everything",
+            },
+            {
+                "name": "coupon_expires_at",
+                "var_type": "String",
+                "description": "Expiry date (YYYY-MM-DD) or empty string",
+                "example": "2026-12-31",
+            },
+            {
+                "name": "coupon_valid_from",
+                "var_type": "String",
+                "description": "Valid-from date (YYYY-MM-DD) or empty string",
+                "example": "2026-11-01",
             },
         ]
 
     @classmethod
     def get_preview_context(cls) -> dict[str, Any]:
         return {
-            "coupon_codes": ["SAVE20", "FREESHIP"],
-            "coupons": [{"code": "SAVE20", "description": "20% off everything", "store": "Amazon"}],
+            "coupon_code": "SAVE20",
+            "coupon_store": "Amazon",
+            "coupon_description": "20% off everything",
+            "coupon_expires_at": "2026-12-31",
+            "coupon_valid_from": "",
         }

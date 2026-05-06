@@ -291,20 +291,34 @@ _BASE_NOTIFICATION_VARIABLES: list[dict[str, Any]] = [
 
 
 @router.get("/variables")
-async def list_variables(user_id: CurrentUserId) -> list[TemplateVariable]:
-    """List all available template variables (base + plugin-specific).
+async def list_variables(
+    user_id: CurrentUserId,
+    event_type: str | None = None,
+) -> list[TemplateVariable]:
+    """List available template variables.
 
-    Returns a flat list of all variables available across all event types.
+    If ``event_type`` is given, returns base variables plus only the variables
+    defined by the plugin that owns that event type.  Without ``event_type``,
+    returns every variable across all plugins (useful as a full reference).
     """
     base = [TemplateVariable(**v) for v in _BASE_NOTIFICATION_VARIABLES]
     seen_names: set[str] = {v.name for v in base}
     result: list[TemplateVariable] = list(base)
 
     events = _get_event_registry()
-    for _event_type, plugin in events.items():
-        plugin_vars = plugin.get_notification_variables()
-        if plugin_vars:
-            for v in plugin_vars:
+
+    if event_type is not None:
+        # Return base + only this event's plugin variables
+        plugin = events.get(event_type)
+        if plugin:
+            for v in (plugin.get_notification_variables() or []):
+                if v["name"] not in seen_names:
+                    seen_names.add(v["name"])
+                    result.append(TemplateVariable(**v))
+    else:
+        # Return all plugin variables (full reference)
+        for _et, plugin in events.items():
+            for v in (plugin.get_notification_variables() or []):
                 if v["name"] not in seen_names:
                     seen_names.add(v["name"])
                     result.append(TemplateVariable(**v))

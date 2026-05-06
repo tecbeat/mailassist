@@ -1,0 +1,8 @@
+[{{ account_name | default("mailassist") }}] Newsletter: {{ newsletter_name | default(subject | default("No subject")) }}
+
+From: {{ sender_name | default("") }} <{{ sender | default("unknown") }}>
+Account: {{ account_email | default("") }}
+
+Newsletter: {{ newsletter_name | default("Unknown") }}
+Sender: {{ newsletter_sender | default(sender | default("")) }}
+{% if has_unsubscribe %}Unsubscribe: {{ unsubscribe_url | default("link not available") }}{% else %}No unsubscribe link found.{% endif %}

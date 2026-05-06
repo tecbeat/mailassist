@@ -1,12 +1,10 @@
-[{{ account_name | default("mailassist") }}] OTP Code Found: {{ subject | default("No subject") }}
+[{{ account_name | default("mailassist") }}] OTP: {{ otp_code | default("?") }}{% if otp_service %} ({{ otp_service }}){% endif %}
 
 From: {{ sender_name | default("") }} <{{ sender | default("unknown") }}>
-Subject: {{ subject | default("No subject") }}
 Account: {{ account_email | default("") }}
 
-{% if otps %}
-Extracted codes:
-{% for otp in otps %}
-- {{ otp.code }} ({{ otp.code_type }}{% if otp.service %}, {{ otp.service }}{% endif %}{% if otp.description %}: {{ otp.description }}{% endif %})
-{% endfor %}
-{% endif %}
+Code: {{ otp_code | default("") }}
+{% if otp_service %}Service: {{ otp_service }}{% endif %}
+{% if otp_code_type %}Type: {{ otp_code_type }}{% endif %}
+{% if otp_description %}Info: {{ otp_description }}{% endif %}
+{% if otp_url %}Link: {{ otp_url }}{% endif %}

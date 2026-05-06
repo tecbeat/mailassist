@@ -82,6 +82,7 @@ class AutoReplyPlugin(AIFunctionPlugin[AutoReplyResponse]):
         return {
             "draft_body": result_data.get("draft_body", ""),
             "tone": result_data.get("tone", ""),
+            "reply_reasoning": result_data.get("reasoning", ""),
             "action_taken": f"Draft reply created (tone: {result_data.get('tone', 'default')})",
         }
 
@@ -107,7 +108,8 @@ class AutoReplyPlugin(AIFunctionPlugin[AutoReplyResponse]):
         if reply:
             return {
                 "draft_body": reply.draft_body,
-                "tone": reply.tone,
+                "tone": reply.tone or "",
+                "reply_reasoning": reply.reasoning or "",
                 "action_taken": f"Draft reply created (tone: {reply.tone or 'default'})",
             }
         return {}
@@ -128,6 +130,12 @@ class AutoReplyPlugin(AIFunctionPlugin[AutoReplyResponse]):
                 "example": "professional",
             },
             {
+                "name": "reply_reasoning",
+                "var_type": "String",
+                "description": "AI reasoning for why a reply was drafted",
+                "example": "Sender asked a direct question requiring a response",
+            },
+            {
                 "name": "action_taken",
                 "var_type": "String",
                 "description": "Summary of the action performed",
@@ -140,5 +148,6 @@ class AutoReplyPlugin(AIFunctionPlugin[AutoReplyResponse]):
         return {
             "draft_body": "Thank you for your email. I will review the documents and get back to you by Friday.",
             "tone": "professional",
+            "reply_reasoning": "Sender asked a direct question requiring a response",
             "action_taken": "Draft reply created (tone: professional)",
         }

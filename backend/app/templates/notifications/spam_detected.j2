@@ -1,0 +1,9 @@
+[{{ account_name | default("mailassist") }}] Spam Detected: {{ subject | default("No subject") }}
+
+From: {{ sender_name | default("") }} <{{ sender | default("unknown") }}>
+Subject: {{ subject | default("No subject") }}
+Account: {{ account_email | default("") }}
+
+Confidence: {{ (spam_confidence * 100) | round | int }}%
+Source: {{ spam_source | default("ai") }}
+{% if spam_reason %}Reason: {{ spam_reason }}{% endif %}

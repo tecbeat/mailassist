@@ -104,7 +104,11 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
         account_id: Any,
         mail_uid: str,
     ) -> dict[str, Any]:
-        """Load calendar event data from the database for notification context."""
+        """Load calendar event data from the database for notification context.
+
+        Returns both a flat set of variables and the legacy ``calendar_event`` dict
+        so existing custom templates continue to work.
+        """
         from sqlalchemy import select
 
         from app.models.mail import CalendarEvent
@@ -117,11 +121,21 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
         )
         cal = result.scalar_one_or_none()
         if cal:
+            start_str = cal.start.isoformat() if cal.start else ""
+            end_str = cal.end.isoformat() if cal.end else ""
             return {
+                # flat vars
+                "event_title": cal.title,
+                "event_start": start_str,
+                "event_end": end_str,
+                "event_location": cal.location or "",
+                "event_description": cal.description or "",
+                "event_is_all_day": cal.is_all_day,
+                # legacy dict for backwards-compat with existing custom templates
                 "calendar_event": {
                     "title": cal.title,
-                    "start": cal.start,
-                    "end": cal.end,
+                    "start": start_str,
+                    "end": end_str,
                     "location": cal.location,
                     "description": cal.description,
                 },
@@ -132,20 +146,56 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
     def get_notification_variables(cls) -> list[dict[str, Any]]:
         return [
             {
-                "name": "calendar_event",
-                "var_type": "Dict",
-                "description": "Extracted calendar event (title, start, end, location, description)",
-                "example": '{"title": "Team Meeting", "start": "2026-03-31T14:00:00Z", "location": "Room 5"}',
+                "name": "event_title",
+                "var_type": "String",
+                "description": "Title of the calendar event",
+                "example": "Team Meeting",
+            },
+            {
+                "name": "event_start",
+                "var_type": "String",
+                "description": "Start date/time in ISO 8601 format",
+                "example": "2026-03-31T14:00:00+00:00",
+            },
+            {
+                "name": "event_end",
+                "var_type": "String",
+                "description": "End date/time in ISO 8601 format (empty if not set)",
+                "example": "2026-03-31T15:00:00+00:00",
+            },
+            {
+                "name": "event_location",
+                "var_type": "String",
+                "description": "Location of the event (empty string if not set)",
+                "example": "Room 5",
+            },
+            {
+                "name": "event_description",
+                "var_type": "String",
+                "description": "Description / notes for the event",
+                "example": "Quarterly review",
+            },
+            {
+                "name": "event_is_all_day",
+                "var_type": "Boolean",
+                "description": "True if this is an all-day event",
+                "example": "false",
             },
         ]
 
     @classmethod
     def get_preview_context(cls) -> dict[str, Any]:
         return {
+            "event_title": "Team Meeting",
+            "event_start": "2026-03-31T14:00:00+00:00",
+            "event_end": "2026-03-31T15:00:00+00:00",
+            "event_location": "Room 5",
+            "event_description": "Quarterly review",
+            "event_is_all_day": False,
             "calendar_event": {
                 "title": "Team Meeting",
-                "start": "2026-03-31T14:00:00Z",
-                "end": "2026-03-31T15:00:00Z",
+                "start": "2026-03-31T14:00:00+00:00",
+                "end": "2026-03-31T15:00:00+00:00",
                 "location": "Room 5",
                 "description": "Quarterly review",
             },

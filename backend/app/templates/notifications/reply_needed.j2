@@ -5,5 +5,5 @@ Subject: {{ subject | default("No subject") }}
 Account: {{ account_email | default("") }}
 
 A draft reply has been created and is waiting for your review in the Drafts folder.
-
-{{ action_taken | default("") }}
+{% if tone %}Tone: {{ tone }}{% endif %}
+{% if reply_reasoning %}Reason: {{ reply_reasoning }}{% endif %}

@@ -90,21 +90,16 @@ class OtpExtractionPlugin(AIFunctionPlugin[OtpExtractionResponse]):
         return f"Found {len(labels)} OTP code(s): {', '.join(labels)}"
 
     @classmethod
-    def get_notification_context(cls, result_data: dict[str, Any]) -> dict[str, Any]:
-        otps = result_data.get("otps", [])
-        return {
-            "otp_codes": [o.get("code") for o in otps],
-            "otps": otps,
-        }
-
-    @classmethod
     async def load_notification_context(
         cls,
         db: Any,
         account_id: Any,
         mail_uid: str,
     ) -> dict[str, Any]:
-        """Load OTP data from the database for notification context."""
+        """Load OTP data from the database for notification context.
+
+        Returns flat variables for the first (and typically only) OTP in the mail.
+        """
         from sqlalchemy import select
 
         from app.models.mail import ExtractedOtpCode
@@ -116,31 +111,58 @@ class OtpExtractionPlugin(AIFunctionPlugin[OtpExtractionResponse]):
             )
         )
         otp_codes = result.scalars().all()
+        if not otp_codes:
+            return {}
+        otp = otp_codes[0]
         return {
-            "otp_codes": [c.code for c in otp_codes],
-            "otps": [
-                {"code": c.code, "description": c.description, "service": c.service, "code_type": c.code_type}
-                for c in otp_codes
-            ],
+            "otp_code": otp.code,
+            "otp_service": otp.service or "",
+            "otp_description": otp.description or "",
+            "otp_code_type": otp.code_type,
+            "otp_url": otp.url or "",
         }
 
     @classmethod
     def get_notification_variables(cls) -> list[dict[str, Any]]:
         return [
-            {"name": "otp_codes", "var_type": "List", "description": "Extracted OTP codes", "example": '["482937"]'},
             {
-                "name": "otps",
-                "var_type": "List",
-                "description": "Full OTP objects with code, description, service, code_type",
-                "example": '[{"code": "482937", "description": "Login code", "service": "GitHub", "code_type": "2fa"}]',
+                "name": "otp_code",
+                "var_type": "String",
+                "description": "The extracted OTP / verification code",
+                "example": "482937",
+            },
+            {
+                "name": "otp_service",
+                "var_type": "String",
+                "description": "Service or app the code belongs to",
+                "example": "GitHub",
+            },
+            {
+                "name": "otp_description",
+                "var_type": "String",
+                "description": "Short description of the code purpose",
+                "example": "Login verification code",
+            },
+            {
+                "name": "otp_code_type",
+                "var_type": "String",
+                "description": "Code type (otp, 2fa, verification, login, magic_link, other)",
+                "example": "2fa",
+            },
+            {
+                "name": "otp_url",
+                "var_type": "String",
+                "description": "Magic link URL associated with the code (if any)",
+                "example": "https://example.com/verify?token=abc123",
             },
         ]
 
     @classmethod
     def get_preview_context(cls) -> dict[str, Any]:
         return {
-            "otp_codes": ["482937"],
-            "otps": [
-                {"code": "482937", "description": "Login verification code", "service": "GitHub", "code_type": "2fa"}
-            ],
+            "otp_code": "482937",
+            "otp_service": "GitHub",
+            "otp_description": "Login verification code",
+            "otp_code_type": "2fa",
+            "otp_url": "",
         }

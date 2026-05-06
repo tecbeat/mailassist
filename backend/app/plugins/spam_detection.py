@@ -36,7 +36,7 @@ class SpamDetectionPlugin(AIFunctionPlugin[SpamDetectionResponse]):
     view_route = "/spam"
     default_config: ClassVar[dict[str, Any]] = {"confidence_threshold": 0.8}
     notification_event_type = "spam_detected"
-    notification_template = "notifications/default.j2"
+    notification_template = "notifications/spam_detected.j2"
 
     async def execute(self, context: MailContext, ai_response: SpamDetectionResponse) -> ActionResult:
         if not ai_response.is_spam:
@@ -64,3 +64,70 @@ class SpamDetectionPlugin(AIFunctionPlugin[SpamDetectionResponse]):
 
     def get_approval_summary(self, ai_response: SpamDetectionResponse) -> str:
         return f"Spam detected (confidence: {ai_response.confidence:.0%}): {ai_response.reason}"
+
+    @classmethod
+    async def load_notification_context(
+        cls,
+        db: Any,
+        account_id: Any,
+        mail_uid: str,
+    ) -> dict[str, Any]:
+        """Load spam detection data from the database for notification context."""
+        from sqlalchemy import select
+
+        from app.models.mail import SpamDetectionResult
+
+        result = await db.execute(
+            select(SpamDetectionResult).where(
+                SpamDetectionResult.mail_account_id == account_id,
+                SpamDetectionResult.mail_uid == mail_uid,
+            )
+        )
+        spam = result.scalar_one_or_none()
+        if spam:
+            return {
+                "is_spam": spam.is_spam,
+                "spam_confidence": spam.confidence,
+                "spam_reason": spam.reason or "",
+                "spam_source": spam.source,
+            }
+        return {}
+
+    @classmethod
+    def get_notification_variables(cls) -> list[dict[str, Any]]:
+        return [
+            {
+                "name": "is_spam",
+                "var_type": "Boolean",
+                "description": "Whether the email was classified as spam",
+                "example": "true",
+            },
+            {
+                "name": "spam_confidence",
+                "var_type": "Float",
+                "description": "Confidence score between 0 and 1",
+                "example": "0.92",
+            },
+            {
+                "name": "spam_reason",
+                "var_type": "String",
+                "description": "Reason the email was flagged as spam",
+                "example": "Contains phishing link and urgency language",
+            },
+            {
+                "name": "spam_source",
+                "var_type": "String",
+                "description": "Detection source (ai or blocklist)",
+                "example": "ai",
+            },
+        ]
+
+    @classmethod
+    def get_preview_context(cls) -> dict[str, Any]:
+        return {
+            "is_spam": True,
+            "spam_confidence": 0.92,
+            "spam_reason": "Contains phishing link and urgency language",
+            "spam_source": "ai",
+        }
+
