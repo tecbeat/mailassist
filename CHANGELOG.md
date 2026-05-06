@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.12.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.12.0-beta) - 2026-05-06
+
+### 🚜 Refactor
+
+- Extract useDeleteHandler hook and PluginListPage component to reduce duplication - ([d2d6614](https://git.teccave.de/tecbeat/mailassist/commit/d2d66148ac55f9928446ce3534e7bc0ace6f9dc5))
+
 ## [2.11.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.11.0-beta) - 2026-05-06
 
 ### 🚜 Refactor
