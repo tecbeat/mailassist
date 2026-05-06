@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.7.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.7.0-beta) - 2026-05-06
+
+### ⛰️  Features
+
+- Extract shared resolve_sort_order helper and migrate all API routes - ([fe64dc8](https://git.teccave.de/tecbeat/mailassist/commit/fe64dc8e44e83348603d57ee93f11d80af8ac045))
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update ghcr.io/astral-sh/uv docker tag to v0.11.10 - ([9d55e73](https://git.teccave.de/tecbeat/mailassist/commit/9d55e735cbf7bb028f29b63d25ef4b9b7346ee28))
+
+### 🎨 Styling
+
+- Format sort_order migrations with ruff - ([f7028a8](https://git.teccave.de/tecbeat/mailassist/commit/f7028a805952b212eaadfc223dca98ddf008a480))
+
 ## [2.6.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.6.0-beta) - 2026-05-05
 
 ### ⛰️  Features
