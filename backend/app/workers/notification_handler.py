@@ -84,10 +84,7 @@ def _channel_matches(
         return False
 
     # Check event type filter
-    if channel.event_types is not None and event_type not in channel.event_types:
-        return False
-
-    return True
+    return channel.event_types is None or event_type in channel.event_types
 
 
 async def handle_ai_processing_complete(event: Event) -> None:
