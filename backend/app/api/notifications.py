@@ -131,6 +131,7 @@ async def update_channel(
     )
     channel.event_types = data.event_types
     await db.flush()
+    await db.refresh(channel)
     logger.info("notification_channel_updated", user_id=user_id, channel_id=str(channel_id))
     return _mask_channel(channel)
 

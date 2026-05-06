@@ -74,7 +74,10 @@ async function updateChannel(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error("Failed to update channel");
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(body || `Failed to update channel (${res.status})`);
+  }
   return res.json();
 }
 
@@ -138,8 +141,8 @@ function ChannelItem({ channel, accounts, events }: ChannelItemProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notification-channels"] });
     },
-    onError: () => {
-      toast({ title: "Failed to save", description: "Could not save channel settings.", variant: "destructive" });
+    onError: (err: Error) => {
+      toast({ title: "Failed to save", description: err.message || "Could not save channel settings.", variant: "destructive" });
     },
   });
 
