@@ -336,7 +336,8 @@ export function Sidebar() {
   const sidebarContent = (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex h-14 items-center px-4">
+      <div className="flex h-14 items-center gap-2 px-4">
+        <img src="/logo.svg" alt="" className="h-7 w-7" />
         <span className="text-lg font-semibold tracking-tight">
           mailassist
         </span>
