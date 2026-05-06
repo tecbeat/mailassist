@@ -23,6 +23,8 @@ import { useListMailAccountsApiMailAccountsGet } from "@/services/api/mail-accou
 import { unwrapResponse } from "@/lib/utils";
 import type { MailAccountResponse } from "@/types/api";
 
+import { TemplateEditor } from "@/components/notifications/template-editor";
+
 // ---------------------------------------------------------------------------
 // Types for the new channels API
 // ---------------------------------------------------------------------------
@@ -113,9 +115,33 @@ function ChannelCard({ channel, accounts, events }: ChannelCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
-  const [localAccountIds, setLocalAccountIds] = useState<string[] | null>(channel.mail_account_ids);
-  const [localEventTypes, setLocalEventTypes] = useState<string[] | null>(channel.event_types);
+
+  // null means "all selected" — represent as full list for UI toggles
+  const allAccountIds = accounts.map((a) => a.id);
+  const allEventTypes = events.map((e) => e.event_type);
+
+  const [localAccountIds, setLocalAccountIds] = useState<string[]>(
+    channel.mail_account_ids ?? allAccountIds,
+  );
+  const [localEventTypes, setLocalEventTypes] = useState<string[]>(
+    channel.event_types ?? allEventTypes,
+  );
   const [testing, setTesting] = useState(false);
+
+  // Determine what to send to the API: if all are selected, send null
+  function getAccountIdsForApi(): string[] | null {
+    if (localAccountIds.length === allAccountIds.length && allAccountIds.every((id) => localAccountIds.includes(id))) {
+      return null;
+    }
+    return localAccountIds;
+  }
+
+  function getEventTypesForApi(): string[] | null {
+    if (localEventTypes.length === allEventTypes.length && allEventTypes.every((t) => localEventTypes.includes(t))) {
+      return null;
+    }
+    return localEventTypes;
+  }
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteChannel(channel.id),
@@ -129,7 +155,11 @@ function ChannelCard({ channel, accounts, events }: ChannelCardProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: () => updateChannel(channel.id, { mail_account_ids: localAccountIds, event_types: localEventTypes }),
+    mutationFn: () =>
+      updateChannel(channel.id, {
+        mail_account_ids: getAccountIdsForApi(),
+        event_types: getEventTypesForApi(),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notification-channels"] });
       toast({ title: "Channel updated", description: "Routing configuration saved." });
@@ -155,30 +185,20 @@ function ChannelCard({ channel, accounts, events }: ChannelCardProps) {
     }
   }
 
-  const allAccounts = localAccountIds === null;
-  const allEvents = localEventTypes === null;
-
-  function toggleAllAccounts(checked: boolean) {
-    setLocalAccountIds(checked ? null : []);
-  }
-
   function toggleAccount(id: string, checked: boolean) {
-    const current = localAccountIds ?? [];
-    setLocalAccountIds(checked ? [...current, id] : current.filter((a) => a !== id));
-  }
-
-  function toggleAllEvents(checked: boolean) {
-    setLocalEventTypes(checked ? null : []);
+    setLocalAccountIds(checked ? [...localAccountIds, id] : localAccountIds.filter((a) => a !== id));
   }
 
   function toggleEvent(type: string, checked: boolean) {
-    const current = localEventTypes ?? [];
-    setLocalEventTypes(checked ? [...current, type] : current.filter((e) => e !== type));
+    setLocalEventTypes(checked ? [...localEventTypes, type] : localEventTypes.filter((e) => e !== type));
   }
 
+  // Check if state differs from server
+  const serverAccountIds = channel.mail_account_ids ?? allAccountIds;
+  const serverEventTypes = channel.event_types ?? allEventTypes;
   const hasChanges =
-    JSON.stringify(localAccountIds) !== JSON.stringify(channel.mail_account_ids) ||
-    JSON.stringify(localEventTypes) !== JSON.stringify(channel.event_types);
+    JSON.stringify([...localAccountIds].sort()) !== JSON.stringify([...serverAccountIds].sort()) ||
+    JSON.stringify([...localEventTypes].sort()) !== JSON.stringify([...serverEventTypes].sort());
 
   return (
     <div className="rounded-lg border">
@@ -214,21 +234,11 @@ function ChannelCard({ channel, accounts, events }: ChannelCardProps) {
           {/* Mail Accounts */}
           <div className="space-y-2">
             <Label className="text-xs font-medium">Mail Accounts</Label>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id={`all-accounts-${channel.id}`}
-                checked={allAccounts}
-                onCheckedChange={(checked) => toggleAllAccounts(!!checked)}
-              />
-              <Label htmlFor={`all-accounts-${channel.id}`} className="text-xs">
-                All accounts
-              </Label>
-            </div>
-            {!allAccounts && accounts.map((acc) => (
-              <div key={acc.id} className="flex items-center gap-2 ml-4">
+            {accounts.map((acc) => (
+              <div key={acc.id} className="flex items-center gap-2">
                 <Checkbox
                   id={`account-${channel.id}-${acc.id}`}
-                  checked={(localAccountIds ?? []).includes(acc.id)}
+                  checked={localAccountIds.includes(acc.id)}
                   onCheckedChange={(checked) => toggleAccount(acc.id, !!checked)}
                 />
                 <Label htmlFor={`account-${channel.id}-${acc.id}`} className="text-xs">
@@ -243,21 +253,11 @@ function ChannelCard({ channel, accounts, events }: ChannelCardProps) {
           {/* Event Types */}
           <div className="space-y-2">
             <Label className="text-xs font-medium">Events</Label>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id={`all-events-${channel.id}`}
-                checked={allEvents}
-                onCheckedChange={(checked) => toggleAllEvents(!!checked)}
-              />
-              <Label htmlFor={`all-events-${channel.id}`} className="text-xs">
-                All events
-              </Label>
-            </div>
-            {!allEvents && events.map((evt) => (
-              <div key={evt.event_type} className="flex items-center gap-2 ml-4">
+            {events.map((evt) => (
+              <div key={evt.event_type} className="flex items-center gap-2">
                 <Checkbox
                   id={`event-${channel.id}-${evt.event_type}`}
-                  checked={(localEventTypes ?? []).includes(evt.event_type)}
+                  checked={localEventTypes.includes(evt.event_type)}
                   onCheckedChange={(checked) => toggleEvent(evt.event_type, !!checked)}
                 />
                 <Label htmlFor={`event-${channel.id}-${evt.event_type}`} className="text-xs">
@@ -428,6 +428,9 @@ export default function NotificationsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Template Editor */}
+      <TemplateEditor />
     </div>
   );
 }

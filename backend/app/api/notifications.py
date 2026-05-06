@@ -126,7 +126,9 @@ async def update_channel(
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
 
-    channel.mail_account_ids = [str(aid) for aid in data.mail_account_ids] if data.mail_account_ids else None
+    channel.mail_account_ids = (
+        [str(aid) for aid in data.mail_account_ids] if data.mail_account_ids is not None else None
+    )
     channel.event_types = data.event_types
     await db.flush()
     logger.info("notification_channel_updated", user_id=user_id, channel_id=str(channel_id))
