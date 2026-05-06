@@ -144,4 +144,3 @@ class NewsletterDetectionPlugin(AIFunctionPlugin[NewsletterDetectionResponse]):
             "has_unsubscribe": True,
             "unsubscribe_url": "https://example.com/unsubscribe?token=abc",
         }
-

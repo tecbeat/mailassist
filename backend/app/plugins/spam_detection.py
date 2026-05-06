@@ -130,4 +130,3 @@ class SpamDetectionPlugin(AIFunctionPlugin[SpamDetectionResponse]):
             "spam_reason": "Contains phishing link and urgency language",
             "spam_source": "ai",
         }
-

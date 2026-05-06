@@ -311,14 +311,14 @@ async def list_variables(
         # Return base + only this event's plugin variables
         plugin = events.get(event_type)
         if plugin:
-            for v in (plugin.get_notification_variables() or []):
+            for v in plugin.get_notification_variables() or []:
                 if v["name"] not in seen_names:
                     seen_names.add(v["name"])
                     result.append(TemplateVariable(**v))
     else:
         # Return all plugin variables (full reference)
         for _et, plugin in events.items():
-            for v in (plugin.get_notification_variables() or []):
+            for v in plugin.get_notification_variables() or []:
                 if v["name"] not in seen_names:
                     seen_names.add(v["name"])
                     result.append(TemplateVariable(**v))
