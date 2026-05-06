@@ -33,7 +33,6 @@ from app.core.events import (
 )
 from app.models import (
     AIProvider,
-    Contact,
     LabelChangeLog,
     MailAccount,
     UserSettings,
@@ -43,6 +42,7 @@ from app.plugins.base import MailContext, PipelineContext
 from app.plugins.registry import get_plugin_registry
 from app.services.change_logger import save_new_folders, save_new_labels
 from app.services.contacts import match_sender_to_contact
+from app.services.contacts.matching import find_relevant_contacts_for_sender
 from app.services.email_parser import parse_email
 from app.services.header_analysis import analyze_headers
 from app.services.imap_actions import execute_imap_actions
@@ -450,117 +450,19 @@ async def run_ai_pipeline(
     contact_data = await _match_contact(db, user_id, account_id, mail_uid, parsed, event_bus, log)
 
     # --- Load relevant user contacts for AI contact assignment plugin ---
-    # Instead of sending ALL contacts (which can overflow the LLM context
-    # window), pre-filter to the most relevant candidates based on email
-    # domain and name similarity to the sender.
+    # Pre-filter and score contacts by relevance to the sender to avoid
+    # overflowing the LLM context window.
     user_contacts_data: list[dict[str, Any]] = []
     try:
-        sender_email = (parsed.sender or "").lower()
-        sender_domain = sender_email.split("@")[-1] if "@" in sender_email else ""
-        sender_name = (parsed.sender_name or "").lower().strip()
-
-        # Pre-filter contacts in SQL by email/domain match to avoid loading all contacts
-        from sqlalchemy import String as SAString
-        from sqlalchemy import cast, or_
-
-        contacts_stmt = select(Contact).where(Contact.user_id == UUID(user_id))
-        # Add SQL-level pre-filter: match on sender email or domain in the JSON emails array
-        sql_filters = []
-        if sender_email:
-            sql_filters.append(cast(Contact.emails, SAString).ilike(f"%{sender_email}%"))
-        if sender_domain:
-            sql_filters.append(cast(Contact.emails, SAString).ilike(f"%{sender_domain}%"))
-        if sender_name and len(sender_name) >= 3:
-            # Also match on display name for name-based scoring
-            sql_filters.append(Contact.display_name.ilike(f"%{sender_name}%"))
-        if sql_filters:
-            contacts_stmt = contacts_stmt.where(or_(*sql_filters))
-        contacts_stmt = contacts_stmt.limit(200)
-
-        contacts_result = await db.execute(contacts_stmt)
-        all_contacts = contacts_result.scalars().all()
-        # Filter out stopwords and short tokens for name matching
-        _NAME_STOPWORDS = {
-            "dr",
-            "mr",
-            "mrs",
-            "ms",
-            "prof",
-            "ing",
-            "mag",
-            "von",
-            "van",
-            "de",
-            "del",
-            "der",
-            "die",
-            "das",
-            "the",
-            "and",
-            "und",
-            "jr",
-            "sr",
-            "ii",
-            "iii",
-            "msc",
-            "bsc",
-            "phd",
-            "mba",
-        }
-        sender_name_parts = (
-            {t for t in sender_name.split() if len(t) >= 3 and t not in _NAME_STOPWORDS} if sender_name else set()
+        user_contacts_data = await find_relevant_contacts_for_sender(
+            db,
+            UUID(user_id),
+            parsed.sender or "",
+            parsed.sender_name,
         )
-
-        scored: list[tuple[float, Contact]] = []
-        for c in all_contacts:
-            score = 0.0
-            c_emails = [e.lower() for e in (c.emails or [])]
-            # Exact email match → highest score
-            if sender_email and sender_email in c_emails:
-                score += 100.0
-            # Same domain → exact domain comparison (not substring)
-            elif sender_domain:
-                c_domains = {e.split("@")[-1] for e in c_emails if "@" in e}
-                if sender_domain in c_domains:
-                    score += 10.0
-            # Name overlap → score per overlapping token (filtered)
-            c_name_parts = {
-                t for t in (c.display_name or "").lower().split() if len(t) >= 3 and t not in _NAME_STOPWORDS
-            }
-            if c.first_name and len(c.first_name) >= 3:
-                c_name_parts.add(c.first_name.lower())
-            if c.last_name and len(c.last_name) >= 3:
-                c_name_parts.add(c.last_name.lower())
-            overlap = sender_name_parts & c_name_parts
-            score += len(overlap) * 5.0
-            # Organization match → exact domain comparison
-            if c.organization and sender_domain:
-                org_domain = c.organization.lower().replace(" ", "")
-                if org_domain == sender_domain.split(".")[0]:
-                    score += 8.0
-            scored.append((score, c))
-
-        # Sort by score descending, take top 30 but only those with score > 0
-        scored.sort(key=lambda x: x[0], reverse=True)
-        max_contacts = 30
-        for _score, c in scored[:max_contacts]:
-            if _score <= 0.0:
-                break
-            user_contacts_data.append(
-                {
-                    "id": str(c.id),
-                    "display_name": c.display_name,
-                    "first_name": c.first_name,
-                    "last_name": c.last_name,
-                    "organization": c.organization,
-                    "title": c.title,
-                    "emails": c.emails,
-                }
-            )
-        if len(all_contacts) > max_contacts:
+        if len(user_contacts_data) > 0:
             log.info(
                 "contacts_filtered_for_prompt",
-                total=len(all_contacts),
                 included=len(user_contacts_data),
             )
     except Exception:
