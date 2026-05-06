@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { Bell, Plus, Send, Trash2, Save } from "lucide-react";
+import { Bell, ChevronDown, ChevronRight, Plus, Send, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -100,7 +100,7 @@ async function fetchEvents(): Promise<NotificationEventInfo[]> {
 }
 
 // ---------------------------------------------------------------------------
-// Channel Item (within the settings dialog)
+// Channel Item (expandable, autosave on toggle)
 // ---------------------------------------------------------------------------
 
 interface ChannelItemProps {
@@ -112,37 +112,14 @@ interface ChannelItemProps {
 function ChannelItem({ channel, accounts, events }: ChannelItemProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [expanded, setExpanded] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   const allAccountIds = accounts.map((a) => a.id);
   const allEventTypes = events.map((e) => e.event_type);
 
-  const [localAccountIds, setLocalAccountIds] = useState<string[]>(
-    channel.mail_account_ids ?? allAccountIds,
-  );
-  const [localEventTypes, setLocalEventTypes] = useState<string[]>(
-    channel.event_types ?? allEventTypes,
-  );
-  const [testing, setTesting] = useState(false);
-
-  function getAccountIdsForApi(): string[] | null {
-    if (
-      localAccountIds.length === allAccountIds.length &&
-      allAccountIds.every((id) => localAccountIds.includes(id))
-    ) {
-      return null;
-    }
-    return localAccountIds;
-  }
-
-  function getEventTypesForApi(): string[] | null {
-    if (
-      localEventTypes.length === allEventTypes.length &&
-      allEventTypes.every((t) => localEventTypes.includes(t))
-    ) {
-      return null;
-    }
-    return localEventTypes;
-  }
+  const currentAccountIds = channel.mail_account_ids ?? allAccountIds;
+  const currentEventTypes = channel.event_types ?? allEventTypes;
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteChannel(channel.id),
@@ -151,32 +128,46 @@ function ChannelItem({ channel, accounts, events }: ChannelItemProps) {
       toast({ title: "Channel deleted", description: "Notification channel has been removed." });
     },
     onError: () => {
-      toast({
-        title: "Failed to delete",
-        description: "Could not delete the channel.",
-        variant: "destructive",
-      });
+      toast({ title: "Failed to delete", description: "Could not delete the channel.", variant: "destructive" });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: () =>
-      updateChannel(channel.id, {
-        mail_account_ids: getAccountIdsForApi(),
-        event_types: getEventTypesForApi(),
-      }),
+    mutationFn: (data: { mail_account_ids: string[] | null; event_types: string[] | null }) =>
+      updateChannel(channel.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notification-channels"] });
-      toast({ title: "Channel updated", description: "Routing configuration saved." });
     },
     onError: () => {
-      toast({
-        title: "Failed to update",
-        description: "Could not save channel settings.",
-        variant: "destructive",
-      });
+      toast({ title: "Failed to save", description: "Could not save channel settings.", variant: "destructive" });
     },
   });
+
+  function saveAccountIds(newIds: string[]) {
+    const apiIds = newIds.length === allAccountIds.length && allAccountIds.every((id) => newIds.includes(id)) ? null : newIds;
+    const apiEvents = currentEventTypes.length === allEventTypes.length && allEventTypes.every((t) => currentEventTypes.includes(t)) ? null : currentEventTypes;
+    updateMutation.mutate({ mail_account_ids: apiIds, event_types: apiEvents });
+  }
+
+  function saveEventTypes(newTypes: string[]) {
+    const apiIds = currentAccountIds.length === allAccountIds.length && allAccountIds.every((id) => currentAccountIds.includes(id)) ? null : currentAccountIds;
+    const apiEvents = newTypes.length === allEventTypes.length && allEventTypes.every((t) => newTypes.includes(t)) ? null : newTypes;
+    updateMutation.mutate({ mail_account_ids: apiIds, event_types: apiEvents });
+  }
+
+  function toggleAccount(id: string, checked: boolean) {
+    const newIds = checked
+      ? [...currentAccountIds, id]
+      : currentAccountIds.filter((a) => a !== id);
+    saveAccountIds(newIds);
+  }
+
+  function toggleEvent(type: string, checked: boolean) {
+    const newTypes = checked
+      ? [...currentEventTypes, type]
+      : currentEventTypes.filter((e) => e !== type);
+    saveEventTypes(newTypes);
+  }
 
   async function onTest() {
     setTesting(true);
@@ -188,41 +179,22 @@ function ChannelItem({ channel, accounts, events }: ChannelItemProps) {
         toast({ title: "Test failed", description: result.message, variant: "destructive" });
       }
     } catch {
-      toast({
-        title: "Test failed",
-        description: "Could not reach the endpoint.",
-        variant: "destructive",
-      });
+      toast({ title: "Test failed", description: "Could not reach the endpoint.", variant: "destructive" });
     } finally {
       setTesting(false);
     }
   }
 
-  function toggleAccount(id: string, checked: boolean) {
-    setLocalAccountIds(
-      checked ? [...localAccountIds, id] : localAccountIds.filter((a) => a !== id),
-    );
-  }
-
-  function toggleEvent(type: string, checked: boolean) {
-    setLocalEventTypes(
-      checked ? [...localEventTypes, type] : localEventTypes.filter((e) => e !== type),
-    );
-  }
-
-  const serverAccountIds = channel.mail_account_ids ?? allAccountIds;
-  const serverEventTypes = channel.event_types ?? allEventTypes;
-  const hasChanges =
-    JSON.stringify([...localAccountIds].sort()) !==
-      JSON.stringify([...serverAccountIds].sort()) ||
-    JSON.stringify([...localEventTypes].sort()) !==
-      JSON.stringify([...serverEventTypes].sort());
-
   return (
-    <div className="space-y-4 rounded-lg border p-4">
-      {/* Header: URL + actions */}
-      <div className="flex items-center gap-2">
-        <code className="flex-1 truncate text-sm font-mono">{channel.url}</code>
+    <div className="rounded-lg border">
+      <div className="flex items-center gap-2 p-3">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-2 flex-1 text-left"
+        >
+          {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          <code className="text-sm font-mono truncate flex-1">{channel.url}</code>
+        </button>
         <AppButton
           icon={<Send />}
           label="Test"
@@ -242,115 +214,83 @@ function ChannelItem({ channel, accounts, events }: ChannelItemProps) {
         />
       </div>
 
-      {/* Mail Accounts */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-medium">Mail Accounts</h4>
-        {accounts.map((acc) => (
-          <div key={acc.id} className="flex items-center justify-between">
-            <Label
-              htmlFor={`account-${channel.id}-${acc.id}`}
-              className="cursor-pointer text-sm"
-            >
-              {acc.name} ({acc.email_address})
-            </Label>
-            <Switch
-              id={`account-${channel.id}-${acc.id}`}
-              checked={localAccountIds.includes(acc.id)}
-              onCheckedChange={(checked) => toggleAccount(acc.id, checked)}
-            />
+      {expanded && (
+        <div className="border-t px-4 pb-4 pt-4 space-y-4">
+          {/* Mail Accounts */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium">Mail Accounts</h4>
+            {accounts.map((acc) => (
+              <div key={acc.id} className="flex items-center justify-between">
+                <Label htmlFor={`account-${channel.id}-${acc.id}`} className="cursor-pointer text-sm">
+                  {acc.name} ({acc.email_address})
+                </Label>
+                <Switch
+                  id={`account-${channel.id}-${acc.id}`}
+                  checked={currentAccountIds.includes(acc.id)}
+                  onCheckedChange={(checked) => toggleAccount(acc.id, checked)}
+                  disabled={updateMutation.isPending}
+                />
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Event Types */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-medium">Notification Events</h4>
-        {events.map((evt) => (
-          <div key={evt.event_type} className="flex items-center justify-between">
-            <Label
-              htmlFor={`event-${channel.id}-${evt.event_type}`}
-              className="cursor-pointer text-sm"
-            >
-              {evt.display_name}
-            </Label>
-            <Switch
-              id={`event-${channel.id}-${evt.event_type}`}
-              checked={localEventTypes.includes(evt.event_type)}
-              onCheckedChange={(checked) => toggleEvent(evt.event_type, checked)}
-            />
+          <Separator />
+
+          {/* Event Types */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium">Notification Events</h4>
+            {events.map((evt) => (
+              <div key={evt.event_type} className="flex items-center justify-between">
+                <Label htmlFor={`event-${channel.id}-${evt.event_type}`} className="cursor-pointer text-sm">
+                  {evt.display_name}
+                </Label>
+                <Switch
+                  id={`event-${channel.id}-${evt.event_type}`}
+                  checked={currentEventTypes.includes(evt.event_type)}
+                  onCheckedChange={(checked) => toggleEvent(evt.event_type, checked)}
+                  disabled={updateMutation.isPending}
+                />
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-
-      {/* Save */}
-      <div className="flex justify-end">
-        <AppButton
-          icon={<Save />}
-          label="Save"
-          variant="primary"
-          loading={updateMutation.isPending}
-          disabled={!hasChanges || updateMutation.isPending}
-          onClick={() => updateMutation.mutate()}
-        >
-          Save
-        </AppButton>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Add Channel Form (within dialog)
+// Channels Dialog Content
 // ---------------------------------------------------------------------------
 
-interface AddChannelFormProps {
+interface ChannelsDialogContentProps {
+  channels: NotificationChannel[];
   accounts: MailAccountResponse[];
   events: NotificationEventInfo[];
-  onSuccess: () => void;
 }
 
-function AddChannelForm({ accounts, events, onSuccess }: AddChannelFormProps) {
+function ChannelsDialogContent({ channels, accounts, events }: ChannelsDialogContentProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  const [url, setUrl] = useState("");
+  const [newUrl, setNewUrl] = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
-  const allAccountIds = accounts.map((a) => a.id);
-  const allEventTypes = events.map((e) => e.event_type);
-  const [selectedAccounts, setSelectedAccounts] = useState<string[]>(allAccountIds);
-  const [selectedEvents, setSelectedEvents] = useState<string[]>(allEventTypes);
 
   const createMutation = useMutation({
-    mutationFn: () => {
-      const mailAccountIds =
-        selectedAccounts.length === allAccountIds.length &&
-        allAccountIds.every((id) => selectedAccounts.includes(id))
-          ? null
-          : selectedAccounts;
-      const eventTypes =
-        selectedEvents.length === allEventTypes.length &&
-        allEventTypes.every((t) => selectedEvents.includes(t))
-          ? null
-          : selectedEvents;
-      return createChannel({ url: url.trim(), mail_account_ids: mailAccountIds, event_types: eventTypes });
-    },
+    mutationFn: (url: string) =>
+      createChannel({ url, mail_account_ids: null, event_types: null }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notification-channels"] });
+      setNewUrl("");
       toast({ title: "Channel added", description: "New notification channel created." });
-      onSuccess();
     },
     onError: () => {
-      toast({
-        title: "Failed to add channel",
-        description: "Could not create the channel.",
-        variant: "destructive",
-      });
+      toast({ title: "Failed to add channel", description: "Could not create the channel.", variant: "destructive" });
     },
   });
 
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function onAddChannel(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const trimmed = url.trim();
+    const trimmed = newUrl.trim();
     if (!trimmed) {
       setUrlError("URL is required");
       return;
@@ -362,121 +302,7 @@ function AddChannelForm({ accounts, events, onSuccess }: AddChannelFormProps) {
       return;
     }
     setUrlError(null);
-    createMutation.mutate();
-  }
-
-  function toggleAccount(id: string, checked: boolean) {
-    setSelectedAccounts(
-      checked ? [...selectedAccounts, id] : selectedAccounts.filter((a) => a !== id),
-    );
-  }
-
-  function toggleEvent(type: string, checked: boolean) {
-    setSelectedEvents(
-      checked ? [...selectedEvents, type] : selectedEvents.filter((e) => e !== type),
-    );
-  }
-
-  return (
-    <form id="add-channel-form" onSubmit={onSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="channel-url">Notification URL</Label>
-        <Input
-          id="channel-url"
-          value={url}
-          onChange={(e) => {
-            setUrl(e.target.value);
-            setUrlError(null);
-          }}
-          placeholder="apprise://service/token..."
-          className="font-mono text-sm"
-          autoFocus
-        />
-        {urlError && <p className="text-xs text-destructive">{urlError}</p>}
-      </div>
-
-      <Separator />
-
-      <div className="space-y-3">
-        <h4 className="text-sm font-medium">Mail Accounts</h4>
-        <p className="text-xs text-muted-foreground">
-          Choose which accounts trigger notifications on this channel.
-        </p>
-        {accounts.map((acc) => (
-          <div key={acc.id} className="flex items-center justify-between">
-            <Label htmlFor={`add-account-${acc.id}`} className="cursor-pointer text-sm">
-              {acc.name} ({acc.email_address})
-            </Label>
-            <Switch
-              id={`add-account-${acc.id}`}
-              checked={selectedAccounts.includes(acc.id)}
-              onCheckedChange={(checked) => toggleAccount(acc.id, checked)}
-            />
-          </div>
-        ))}
-      </div>
-
-      <Separator />
-
-      <div className="space-y-3">
-        <h4 className="text-sm font-medium">Notification Events</h4>
-        <p className="text-xs text-muted-foreground">
-          Choose which events trigger a notification on this channel.
-        </p>
-        {events.map((evt) => (
-          <div key={evt.event_type} className="flex items-center justify-between">
-            <Label htmlFor={`add-event-${evt.event_type}`} className="cursor-pointer text-sm">
-              {evt.display_name}
-            </Label>
-            <Switch
-              id={`add-event-${evt.event_type}`}
-              checked={selectedEvents.includes(evt.event_type)}
-              onCheckedChange={(checked) => toggleEvent(evt.event_type, checked)}
-            />
-          </div>
-        ))}
-      </div>
-    </form>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Channels Dialog (opened via "Channels" button in header)
-// ---------------------------------------------------------------------------
-
-interface ChannelsDialogContentProps {
-  channels: NotificationChannel[];
-  accounts: MailAccountResponse[];
-  events: NotificationEventInfo[];
-}
-
-function ChannelsDialogContent({ channels, accounts, events }: ChannelsDialogContentProps) {
-  const [addOpen, setAddOpen] = useState(false);
-
-  if (addOpen) {
-    return (
-      <div className="space-y-4">
-        <AddChannelForm
-          accounts={accounts}
-          events={events}
-          onSuccess={() => setAddOpen(false)}
-        />
-        <div className="flex justify-end gap-2">
-          <AppButton icon={<Bell />} label="Back" onClick={() => setAddOpen(false)}>
-            Back
-          </AppButton>
-          <AppButton
-            icon={<Plus />}
-            label="Add Channel"
-            variant="primary"
-            type="submit"
-            form="add-channel-form"
-          >
-            Add Channel
-          </AppButton>
-        </div>
-      </div>
-    );
+    createMutation.mutate(trimmed);
   }
 
   return (
@@ -497,16 +323,30 @@ function ChannelsDialogContent({ channels, accounts, events }: ChannelsDialogCon
       ))}
 
       {channels.length < 10 && (
-        <div className="flex justify-end">
-          <AppButton
-            icon={<Plus />}
-            label="Add Channel"
-            variant="primary"
-            onClick={() => setAddOpen(true)}
-          >
-            Add Channel
-          </AppButton>
-        </div>
+        <>
+          <Separator />
+          <form onSubmit={onAddChannel} className="flex items-start gap-2">
+            <div className="flex-1">
+              <Input
+                value={newUrl}
+                onChange={(e) => { setNewUrl(e.target.value); setUrlError(null); }}
+                placeholder="apprise://service/token..."
+                className="font-mono text-sm"
+              />
+              {urlError && <p className="mt-1 text-xs text-destructive">{urlError}</p>}
+            </div>
+            <AppButton
+              icon={<Plus />}
+              label="Add"
+              type="submit"
+              variant="primary"
+              disabled={createMutation.isPending}
+              loading={createMutation.isPending}
+            >
+              Add
+            </AppButton>
+          </form>
+        </>
       )}
     </div>
   );
@@ -533,8 +373,7 @@ export default function NotificationsPage() {
   });
 
   const accountsQuery = useListMailAccountsApiMailAccountsGet();
-  const accounts = (unwrapResponse<MailAccountResponse[]>(accountsQuery.data) ??
-    []) as MailAccountResponse[];
+  const accounts = (unwrapResponse<MailAccountResponse[]>(accountsQuery.data) ?? []) as MailAccountResponse[];
 
   const channels = channelsQuery.data ?? [];
   const events = eventsQuery.data ?? [];
@@ -546,7 +385,7 @@ export default function NotificationsPage() {
           title="Notifications"
           description="Configure notification channels and event triggers."
           actions={
-            <AppButton icon={<Bell />} label="Channels" variant="outline" disabled>
+            <AppButton icon={<Bell />} label="Channels" variant="primary" disabled>
               Channels
             </AppButton>
           }
@@ -568,7 +407,7 @@ export default function NotificationsPage() {
           <AppButton
             icon={<Bell />}
             label="Channels"
-            variant="outline"
+            variant="primary"
             onClick={() => setChannelsOpen(true)}
           >
             Channels
@@ -576,15 +415,13 @@ export default function NotificationsPage() {
         }
       />
 
-      {/* Template Editor (original design with sidebar) */}
       <TemplateEditor />
 
-      {/* Channels management dialog */}
       <AppDialog
         open={channelsOpen}
         onOpenChange={setChannelsOpen}
         title="Notification Channels"
-        description="Manage Apprise-compatible notification URLs. Each channel can be scoped to specific mail accounts and event types."
+        description="Manage Apprise-compatible notification URLs. Expand a channel to configure which accounts and events it receives."
         preventClose
         contentClassName="max-h-[85vh]"
       >
