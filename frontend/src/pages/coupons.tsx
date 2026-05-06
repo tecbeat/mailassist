@@ -27,6 +27,7 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { SearchableCardList } from "@/components/searchable-card-list";
 import { FilterListItem } from "@/components/filter-list-item";
 import { useSearchableList } from "@/hooks/use-searchable-list";
+import { useDeleteHandler } from "@/hooks/use-delete-handler";
 import { AppButton } from "@/components/app-button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -81,7 +82,7 @@ export default function CouponsPage() {
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
     };
   }, []);
-  const [deleteTarget, setDeleteTarget] = useState<ExtractedCouponResponse | null>(null);
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -104,6 +105,17 @@ export default function CouponsPage() {
   const updateMutation = useUpdateCouponApiCouponsCouponIdPatch();
   const deleteMutation = useDeleteCouponApiCouponsCouponIdDelete();
 
+  const { deleteTarget, setDeleteTarget, handleDelete, isPending: deleteIsPending } =
+    useDeleteHandler<ExtractedCouponResponse>({
+      onDelete: (item) => deleteMutation.mutateAsync({ couponId: item.id }),
+      queryKeys: [getListCouponsApiCouponsGetQueryKey()],
+      isPending: deleteMutation.isPending,
+      successTitle: "Coupon removed",
+      successDescription: "The coupon has been permanently deleted.",
+      errorTitle: "Failed to remove coupon",
+      errorDescription: "Could not delete the coupon. Please try again.",
+    });
+
   const hasActiveFilters = activeOnly || sortOrder !== "newest";
 
   function invalidateList() {
@@ -122,17 +134,6 @@ export default function CouponsPage() {
       toast({ title: coupon.is_used ? "Coupon marked as unused" : "Coupon marked as used", description: `The coupon status has been updated.` });
     } catch {
       toast({ title: "Failed to update coupon", description: "Could not change the coupon status. Please try again.", variant: "destructive" });
-    }
-  }
-
-  async function handleDelete(id: string) {
-    try {
-      await deleteMutation.mutateAsync({ couponId: id });
-      invalidateList();
-      setDeleteTarget(null);
-      toast({ title: "Coupon removed", description: "The coupon has been permanently deleted." });
-    } catch {
-      toast({ title: "Failed to remove coupon", description: "Could not delete the coupon. Please try again.", variant: "destructive" });
     }
   }
 
@@ -310,10 +311,8 @@ export default function CouponsPage() {
             action cannot be undone.
           </>
         }
-        onConfirm={() => {
-          if (deleteTarget) handleDelete(deleteTarget.id);
-        }}
-        isPending={deleteMutation.isPending}
+        onConfirm={handleDelete}
+        isPending={deleteIsPending}
       />
     </div>
   );
