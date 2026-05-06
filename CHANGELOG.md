@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [2.12.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.12.0-beta) - 2026-05-06
 
+### ⛰️  Features
+
+- Add mailassist logo to sidebar, login screen, and favicon - ([abbbc35](https://git.teccave.de/tecbeat/mailassist/commit/abbbc35badc9e24d67b9b8c9f03158f274e58d89))
+
+### 🐛 Bug Fixes
+
+- Regenerate favicon from PNG source with linear (Lanczos) scaling - ([edf6b1b](https://git.teccave.de/tecbeat/mailassist/commit/edf6b1b90df6e38bdd9f117e13d742b68a868d7d))
+- Update logo and regenerate favicon with linear scaling - ([5a01b9c](https://git.teccave.de/tecbeat/mailassist/commit/5a01b9c6d2c9c1a48ccf4b5781c786be5f9f72d5))
+
 ### 🚜 Refactor
 
 - Extract useDeleteHandler hook and PluginListPage component to reduce duplication - ([d2d6614](https://git.teccave.de/tecbeat/mailassist/commit/d2d66148ac55f9928446ce3534e7bc0ace6f9dc5))
