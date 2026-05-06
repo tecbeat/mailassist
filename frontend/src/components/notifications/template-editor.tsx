@@ -8,8 +8,15 @@ import {
   Save,
   Variable,
 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 
+import {
+  useGetConfigApiNotificationsConfigGet,
+  useUpdateConfigApiNotificationsConfigPut,
+  usePreviewNotificationApiNotificationsPreviewPost,
+  getGetConfigApiNotificationsConfigGetQueryKey,
+  getDefaultTemplateApiNotificationsTemplatesDefaultEventTypeGet,
+} from "@/services/api/notifications/notifications";
 import { useToast } from "@/components/ui/toast";
 import { AppButton } from "@/components/app-button";
 import { Badge } from "@/components/ui/badge";
@@ -32,101 +39,43 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn, unwrapResponse } from "@/lib/utils";
+import type { NotificationConfigResponse, NotifyOnConfig } from "@/types/api";
 
 import { TemplatePreview } from "./template-preview";
 import { TemplateVariables } from "./template-variables";
 
-// ---------------------------------------------------------------------------
-// Types & API helpers
-// ---------------------------------------------------------------------------
-
-interface NotificationConfig {
-  id: string;
-  templates: Record<string, string>;
-  updated_at: string;
-}
-
-interface NotificationEventInfo {
-  event_type: string;
-  plugin_name: string;
-  display_name: string;
-  execution_order: number;
-}
-
-const API_BASE = "/api/notifications";
-
-async function fetchConfig(): Promise<NotificationConfig> {
-  const res = await fetch(`${API_BASE}/config`);
-  if (!res.ok) throw new Error("Failed to load config");
-  return res.json();
-}
-
-async function updateConfig(templates: Record<string, string>): Promise<NotificationConfig> {
-  const res = await fetch(`${API_BASE}/config`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ templates }),
-  });
-  if (!res.ok) throw new Error("Failed to save config");
-  return res.json();
-}
-
-async function fetchDefaultTemplate(eventType: string): Promise<string> {
-  const res = await fetch(`${API_BASE}/templates/default/${eventType}`);
-  if (!res.ok) throw new Error("Failed to load default template");
-  const data = await res.json();
-  return data.template;
-}
-
-async function previewTemplate(
-  template: string,
-  eventType: string,
-): Promise<{ rendered: string; errors: string[] }> {
-  const res = await fetch(`${API_BASE}/preview`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ template, event_type: eventType }),
-  });
-  if (!res.ok) throw new Error("Failed to preview");
-  return res.json();
-}
-
-async function fetchEvents(): Promise<NotificationEventInfo[]> {
-  const res = await fetch(`${API_BASE}/events`);
-  if (!res.ok) throw new Error("Failed to load events");
-  return res.json();
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+const TEMPLATE_TYPES = [
+  { value: "reply_needed", label: "Reply Needed" },
+  { value: "spam_detected", label: "Spam Detected" },
+  { value: "coupon_found", label: "Coupon Found" },
+  { value: "otp_found", label: "OTP Code Found" },
+  { value: "calendar_event_created", label: "Calendar Event Created" },
+  { value: "rule_executed", label: "Rule Executed" },
+  { value: "newsletter_detected", label: "Newsletter Detected" },
+  { value: "email_summary", label: "Email Summary" },
+  { value: "ai_error", label: "AI Error" },
+  { value: "contact_assigned", label: "Contact Assigned" },
+  { value: "approval_needed", label: "Approval Needed" },
+];
 
 /**
  * Full template editing experience: type sidebar, editor textarea, preview,
  * save/reset/preview actions, and the variables reference panel.
+ *
+ * Queries config from the React Query cache (shared with the parent page).
  */
 export function TemplateEditor() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const configQuery = useQuery({
-    queryKey: ["notification-config"],
-    queryFn: fetchConfig,
-  });
-  const config = configQuery.data;
+  const configQuery = useGetConfigApiNotificationsConfigGet();
+  const config = unwrapResponse<NotificationConfigResponse>(configQuery.data);
 
-  const eventsQuery = useQuery({
-    queryKey: ["notification-events"],
-    queryFn: fetchEvents,
-    staleTime: 5 * 60_000,
-  });
-  const templateTypes = (eventsQuery.data ?? []).map((e) => ({
-    value: e.event_type,
-    label: e.display_name,
-  }));
+  const updateMutation = useUpdateConfigApiNotificationsConfigPut();
+  const previewMutation = usePreviewNotificationApiNotificationsPreviewPost();
 
-  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState(TEMPLATE_TYPES[0]!.value);
   const [templateContent, setTemplateContent] = useState("");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -136,272 +85,360 @@ export function TemplateEditor() {
   const [pendingSwitchType, setPendingSwitchType] = useState<string | null>(null);
   const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
 
+  // Prevents background refetches from overwriting in-progress edits.
   const serverStateRef = useRef<string | null>(null);
 
-  // Auto-select first template type
-  useEffect(() => {
-    if (!selectedTemplate && templateTypes.length > 0) {
-      setSelectedTemplate(templateTypes[0]!.value);
-    }
-  }, [selectedTemplate, templateTypes]);
-
   function currentTemplates(): Record<string, string> {
-    return config?.templates ?? {};
+    return (config?.templates ?? {}) as Record<string, string>;
+  }
+
+  function currentNotifyOn(): NotifyOnConfig {
+    return (config?.notify_on ?? {}) as NotifyOnConfig;
   }
 
   const isCustomTemplate = !!currentTemplates()[selectedTemplate];
   const selectedLabel =
-    templateTypes.find((t) => t.value === selectedTemplate)?.label ?? selectedTemplate;
+    TEMPLATE_TYPES.find((t) => t.value === selectedTemplate)?.label ?? selectedTemplate;
 
-  // Load the effective template content when selection or config changes
-  const loadTemplate = useCallback(
-    async (type: string) => {
-      const custom = currentTemplates()[type];
-      if (custom) {
-        setTemplateContent(custom);
-        serverStateRef.current = custom;
-      } else {
-        try {
-          const defaultTpl = await fetchDefaultTemplate(type);
-          setTemplateContent(defaultTpl);
-          serverStateRef.current = defaultTpl;
-        } catch {
-          setTemplateContent("");
-          serverStateRef.current = "";
-        }
-      }
+  // Load template content when config loads or the selected type changes.
+  useEffect(() => {
+    if (!config) return;
+    const custom = (config.templates as Record<string, string>)?.[selectedTemplate] ?? "";
+    if (custom) {
+      serverStateRef.current = custom;
+      setTemplateContent(custom);
       setHasUnsavedChanges(false);
       setPreviewVisible(false);
       setPreviewResult(null);
-      setPreviewErrors([]);
+    } else {
+      const controller = new AbortController();
+      getDefaultTemplateApiNotificationsTemplatesDefaultEventTypeGet(selectedTemplate, {
+        signal: controller.signal,
+      })
+        .then((res) => {
+          if (controller.signal.aborted) return;
+          const result = unwrapResponse<{ template: string }>(res);
+          const tmpl = result?.template ?? "";
+          serverStateRef.current = tmpl;
+          setTemplateContent(tmpl);
+          setHasUnsavedChanges(false);
+          setPreviewVisible(false);
+          setPreviewResult(null);
+        })
+        .catch(() => {
+          if (controller.signal.aborted) return;
+          serverStateRef.current = "";
+          setTemplateContent("");
+          setHasUnsavedChanges(false);
+        });
+      return () => controller.abort();
+    }
+  }, [config, selectedTemplate]);
+
+  const handleContentChange = useCallback((value: string) => {
+    setTemplateContent(value);
+    setPreviewVisible(false);
+    setPreviewResult(null);
+    if (serverStateRef.current !== null) {
+      setHasUnsavedChanges(value !== serverStateRef.current);
+    }
+  }, []);
+
+  const handleSelectType = useCallback(
+    (type: string) => {
+      if (type === selectedTemplate) return;
+      if (hasUnsavedChanges) {
+        setPendingSwitchType(type);
+        setDiscardDialogOpen(true);
+      } else {
+        serverStateRef.current = null;
+        setSelectedTemplate(type);
+      }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [config],
+    [selectedTemplate, hasUnsavedChanges],
   );
 
-  useEffect(() => {
-    if (selectedTemplate) {
-      loadTemplate(selectedTemplate);
-    }
-  }, [selectedTemplate, loadTemplate]);
-
-  function switchType(type: string) {
-    if (hasUnsavedChanges) {
-      setPendingSwitchType(type);
-      setDiscardDialogOpen(true);
-    } else {
-      setSelectedTemplate(type);
-    }
-  }
-
-  function confirmDiscard() {
+  const handleDiscardAndSwitch = useCallback(() => {
     if (pendingSwitchType) {
+      serverStateRef.current = null;
       setSelectedTemplate(pendingSwitchType);
+      setHasUnsavedChanges(false);
       setPendingSwitchType(null);
     }
     setDiscardDialogOpen(false);
-  }
+  }, [pendingSwitchType]);
 
-  // Save
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const templates = { ...currentTemplates() };
-      // Only save if content differs from default
-      templates[selectedTemplate] = templateContent;
-      return updateConfig(templates);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notification-config"] });
+  const handleCancelSwitch = useCallback(() => {
+    setPendingSwitchType(null);
+    setDiscardDialogOpen(false);
+  }, []);
+
+  async function onSaveTemplate() {
+    try {
+      await updateMutation.mutateAsync({
+        data: {
+          notify_on: currentNotifyOn(),
+          templates: { ...currentTemplates(), [selectedTemplate]: templateContent },
+        },
+      });
+      serverStateRef.current = templateContent;
       setHasUnsavedChanges(false);
-      toast({ title: "Template saved", description: `Updated template for "${selectedLabel}".` });
-    },
-    onError: () => {
-      toast({ title: "Save failed", description: "Could not save template.", variant: "destructive" });
-    },
-  });
-
-  // Reset to default
-  async function resetToDefault() {
-    const templates = { ...currentTemplates() };
-    delete templates[selectedTemplate];
-    try {
-      await updateConfig(templates);
-      queryClient.invalidateQueries({ queryKey: ["notification-config"] });
-      await loadTemplate(selectedTemplate);
-      toast({ title: "Template reset", description: `Reverted "${selectedLabel}" to default.` });
+      queryClient.invalidateQueries({
+        queryKey: getGetConfigApiNotificationsConfigGetQueryKey(),
+      });
+      toast({
+        title: "Template saved",
+        description: `Template for ${selectedLabel} updated successfully.`,
+      });
     } catch {
-      toast({ title: "Reset failed", description: "Could not reset template.", variant: "destructive" });
+      toast({
+        title: "Failed to save template",
+        description: "An error occurred while saving the template. Please try again.",
+        variant: "destructive",
+      });
     }
   }
 
-  // Preview
-  async function onPreview() {
+  async function onResetTemplate() {
     try {
-      const result = await previewTemplate(templateContent, selectedTemplate);
-      setPreviewResult(result.rendered);
-      setPreviewErrors(result.errors);
-      setPreviewVisible(true);
+      const templates = { ...currentTemplates() };
+      delete templates[selectedTemplate];
+      await updateMutation.mutateAsync({
+        data: { notify_on: currentNotifyOn(), templates },
+      });
+      queryClient.invalidateQueries({
+        queryKey: getGetConfigApiNotificationsConfigGetQueryKey(),
+      });
+      const res = await getDefaultTemplateApiNotificationsTemplatesDefaultEventTypeGet(
+        selectedTemplate,
+      );
+      const defaultResult = unwrapResponse<{ template: string }>(res);
+      const tmpl = defaultResult?.template ?? "";
+      serverStateRef.current = tmpl;
+      setTemplateContent(tmpl);
+      setHasUnsavedChanges(false);
+      setPreviewVisible(false);
+      setPreviewResult(null);
+      toast({
+        title: "Template reset",
+        description: `Template for ${selectedLabel} reset to default.`,
+      });
     } catch {
-      setPreviewErrors(["Failed to render preview"]);
-      setPreviewVisible(true);
+      toast({
+        title: "Failed to reset template",
+        description: "Could not restore the default template. Please try again.",
+        variant: "destructive",
+      });
     }
   }
 
-  if (configQuery.isLoading || eventsQuery.isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Notification Templates</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-[200px] w-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
+  async function onPreviewTemplate() {
+    if (previewVisible) {
+      setPreviewVisible(false);
+      return;
+    }
+    try {
+      const res = await previewMutation.mutateAsync({
+        data: { template: templateContent, event_type: selectedTemplate },
+      });
+      const result = unwrapResponse<{ rendered: string; errors?: string[] }>(res);
+      setPreviewResult(result?.rendered ?? "");
+      setPreviewErrors(result?.errors ?? []);
+      setPreviewVisible(true);
+    } catch {
+      toast({
+        title: "Preview failed",
+        description: "Could not render the template preview.",
+        variant: "destructive",
+      });
+    }
   }
-
-  if (!templateTypes.length) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileCode2 className="h-5 w-5" />
-          Notification Templates
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Template type selector */}
-        <div className="flex flex-wrap gap-1.5">
-          {templateTypes.map((t) => (
-            <button
-              key={t.value}
-              onClick={() => switchType(t.value)}
-              className={cn(
-                "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
-                t.value === selectedTemplate
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-background hover:bg-muted",
+    <>
+      {/* Discard unsaved changes dialog */}
+      <AlertDialog open={discardDialogOpen} onOpenChange={setDiscardDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes to the{" "}
+              <span className="font-medium">{selectedLabel}</span> template. Switching will
+              discard them.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelSwitch}>Stay</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDiscardAndSwitch}>Discard</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="flex flex-col gap-6 lg:flex-row">
+        {/* Sidebar - template types */}
+        <div className="w-full shrink-0 lg:w-64">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Templates</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {configQuery.isLoading ? (
+                <div className="space-y-2 px-4 pb-4">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-8 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <nav className="flex flex-col">
+                  {TEMPLATE_TYPES.map((tmpl) => {
+                    const isSelected = selectedTemplate === tmpl.value;
+                    const hasCustom = !!currentTemplates()[tmpl.value];
+                    return (
+                      <button
+                        key={tmpl.value}
+                        onClick={() => handleSelectType(tmpl.value)}
+                        aria-current={isSelected ? "page" : undefined}
+                        className={cn(
+                          "flex items-center gap-2 px-4 py-2.5 text-left text-sm transition-colors hover:bg-accent",
+                          isSelected && "bg-accent font-medium",
+                        )}
+                      >
+                        <FileCode2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <span className="flex-1 truncate">{tmpl.label}</span>
+                        {hasCustom && <Badge variant="secondary">Custom</Badge>}
+                      </button>
+                    );
+                  })}
+                </nav>
               )}
-            >
-              {t.label}
-              {currentTemplates()[t.value] && (
-                <Pencil className="ml-1 inline h-3 w-3 text-primary/60" />
-              )}
-            </button>
-          ))}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Status badge */}
-        <div className="flex items-center gap-2">
-          <Badge variant={isCustomTemplate ? "default" : "secondary"}>
-            {isCustomTemplate ? "Custom" : "Default"}
-          </Badge>
-          {hasUnsavedChanges && (
-            <Badge variant="warning" className="text-amber-600 border-amber-300">
-              Unsaved changes
-            </Badge>
+        {/* Right panel - editor */}
+        <div className="min-w-0 flex-1 space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold">{selectedLabel}</h2>
+                {isCustomTemplate && <Badge variant="secondary">Customized</Badge>}
+                {hasUnsavedChanges && <Badge variant="destructive">Unsaved</Badge>}
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Customize the Jinja2 notification template for this event type.
+              </p>
+            </div>
+          </div>
+
+          {configQuery.isLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-64 w-full" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {previewVisible ? "Preview (with sample data)" : "Template Content"}
+                </label>
+                {previewVisible && previewResult !== null ? (
+                  <TemplatePreview result={previewResult} errors={previewErrors} />
+                ) : (
+                  <Textarea
+                    value={templateContent}
+                    onChange={(e) => handleContentChange(e.target.value)}
+                    className="h-[300px] resize-none font-mono text-xs leading-relaxed"
+                    placeholder="Enter your Jinja2 template here..."
+                  />
+                )}
+              </div>
+
+              <Collapsible open={variablesOpen} onOpenChange={setVariablesOpen}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <ChevronRight
+                        className={cn(
+                          "h-4 w-4 transition-transform",
+                          variablesOpen && "rotate-90",
+                        )}
+                      />
+                      <Variable className="h-4 w-4" />
+                      Available Template Variables
+                    </button>
+                  </CollapsibleTrigger>
+
+                  <div className="ml-auto flex flex-wrap gap-2">
+                    {isCustomTemplate && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <AppButton
+                            icon={<RotateCcw />}
+                            label="Reset to Default"
+                            disabled={updateMutation.isPending}
+                          >
+                            Reset to Default
+                          </AppButton>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Reset to default template?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will discard your custom template for{" "}
+                              <span className="font-medium">{selectedLabel}</span> and restore
+                              the built-in default. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onResetTemplate()}>
+                              Reset
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+
+                    <AppButton
+                      icon={previewVisible ? <Pencil /> : <Eye />}
+                      label={previewVisible ? "Edit" : "Preview"}
+                      loading={previewMutation.isPending}
+                      disabled={previewMutation.isPending || !templateContent.trim()}
+                      onClick={onPreviewTemplate}
+                    >
+                      {previewMutation.isPending
+                        ? "Rendering..."
+                        : previewVisible
+                          ? "Edit"
+                          : "Preview"}
+                    </AppButton>
+
+                    <AppButton
+                      icon={<Save />}
+                      label="Save template"
+                      variant="primary"
+                      loading={updateMutation.isPending}
+                      disabled={updateMutation.isPending || !hasUnsavedChanges}
+                      onClick={onSaveTemplate}
+                    >
+                      {updateMutation.isPending ? "Saving..." : "Save"}
+                    </AppButton>
+                  </div>
+                </div>
+
+                <CollapsibleContent>
+                  <div className="mt-3">
+                    <TemplateVariables />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
           )}
         </div>
-
-        {/* Editor textarea */}
-        <Textarea
-          value={templateContent}
-          onChange={(e) => {
-            setTemplateContent(e.target.value);
-            setHasUnsavedChanges(e.target.value !== serverStateRef.current);
-          }}
-          className="h-[300px] font-mono text-xs leading-relaxed resize-y"
-          placeholder="Enter your Jinja2 notification template..."
-        />
-
-        {/* Actions */}
-        <div className="flex flex-wrap items-center gap-2">
-          <AppButton
-            icon={<Save />}
-            label="Save"
-            variant="primary"
-            disabled={!hasUnsavedChanges || saveMutation.isPending}
-            loading={saveMutation.isPending}
-            onClick={() => saveMutation.mutate()}
-          >
-            Save
-          </AppButton>
-          <AppButton
-            icon={<Eye />}
-            label="Preview"
-            variant="outline"
-            onClick={onPreview}
-          >
-            Preview
-          </AppButton>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <AppButton
-                icon={<RotateCcw />}
-                label="Reset to Default"
-                variant="ghost"
-                disabled={!isCustomTemplate}
-              >
-                Reset to Default
-              </AppButton>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Reset template?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will revert the &ldquo;{selectedLabel}&rdquo; template back to the
-                  built-in default. Any customizations will be lost.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={resetToDefault}>Reset</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-
-        {/* Preview output */}
-        {previewVisible && previewResult !== null && (
-          <TemplatePreview result={previewResult} errors={previewErrors} />
-        )}
-
-        {/* Variables reference */}
-        <Collapsible open={variablesOpen} onOpenChange={setVariablesOpen}>
-          <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors">
-            <ChevronRight
-              className={cn("h-4 w-4 transition-transform", variablesOpen && "rotate-90")}
-            />
-            <Variable className="h-4 w-4" />
-            Template Variables
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-3">
-            <TemplateVariables eventType={selectedTemplate} />
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* Discard dialog */}
-        <AlertDialog open={discardDialogOpen} onOpenChange={setDiscardDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
-              <AlertDialogDescription>
-                You have unsaved changes to the current template. Switching will discard them.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setPendingSwitchType(null)}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDiscard}>Discard</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardContent>
-    </Card>
+      </div>
+    </>
   );
 }

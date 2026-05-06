@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { Bell, ChevronDown, ChevronRight, Plus, Send, Trash2, Save } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Send, Trash2, Save } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { QueryError } from "@/components/query-error";
 import { AppButton } from "@/components/app-button";
+import { AppDialog } from "@/components/app-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -26,7 +27,7 @@ import type { MailAccountResponse } from "@/types/api";
 import { TemplateEditor } from "@/components/notifications/template-editor";
 
 // ---------------------------------------------------------------------------
-// Types for the new channels API
+// Types for the channels API
 // ---------------------------------------------------------------------------
 
 interface NotificationChannel {
@@ -46,7 +47,7 @@ interface NotificationEventInfo {
 }
 
 // ---------------------------------------------------------------------------
-// API helpers (custom fetchers for new endpoints)
+// API helpers
 // ---------------------------------------------------------------------------
 
 const API_BASE = "/api/notifications";
@@ -102,7 +103,7 @@ async function fetchEvents(): Promise<NotificationEventInfo[]> {
 }
 
 // ---------------------------------------------------------------------------
-// Channel Card (expandable)
+// Channel Card (expandable, with Switch toggles)
 // ---------------------------------------------------------------------------
 
 interface ChannelCardProps {
@@ -116,7 +117,6 @@ function ChannelCard({ channel, accounts, events }: ChannelCardProps) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
 
-  // null means "all selected" — represent as full list for UI toggles
   const allAccountIds = accounts.map((a) => a.id);
   const allEventTypes = events.map((e) => e.event_type);
 
@@ -128,7 +128,6 @@ function ChannelCard({ channel, accounts, events }: ChannelCardProps) {
   );
   const [testing, setTesting] = useState(false);
 
-  // Determine what to send to the API: if all are selected, send null
   function getAccountIdsForApi(): string[] | null {
     if (localAccountIds.length === allAccountIds.length && allAccountIds.every((id) => localAccountIds.includes(id))) {
       return null;
@@ -193,7 +192,6 @@ function ChannelCard({ channel, accounts, events }: ChannelCardProps) {
     setLocalEventTypes(checked ? [...localEventTypes, type] : localEventTypes.filter((e) => e !== type));
   }
 
-  // Check if state differs from server
   const serverAccountIds = channel.mail_account_ids ?? allAccountIds;
   const serverEventTypes = channel.event_types ?? allEventTypes;
   const hasChanges =
@@ -232,18 +230,23 @@ function ChannelCard({ channel, accounts, events }: ChannelCardProps) {
       {expanded && (
         <div className="border-t px-3 pb-3 pt-3 space-y-4">
           {/* Mail Accounts */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Mail Accounts</Label>
+          <div className="space-y-3">
+            <div>
+              <h4 className="text-sm font-medium">Mail Accounts</h4>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Choose which accounts trigger notifications on this channel.
+              </p>
+            </div>
             {accounts.map((acc) => (
-              <div key={acc.id} className="flex items-center gap-2">
-                <Checkbox
-                  id={`account-${channel.id}-${acc.id}`}
-                  checked={localAccountIds.includes(acc.id)}
-                  onCheckedChange={(checked) => toggleAccount(acc.id, !!checked)}
-                />
-                <Label htmlFor={`account-${channel.id}-${acc.id}`} className="text-xs">
+              <div key={acc.id} className="flex items-center justify-between">
+                <Label htmlFor={`account-${channel.id}-${acc.id}`} className="cursor-pointer text-sm">
                   {acc.name} ({acc.email_address})
                 </Label>
+                <Switch
+                  id={`account-${channel.id}-${acc.id}`}
+                  checked={localAccountIds.includes(acc.id)}
+                  onCheckedChange={(checked) => toggleAccount(acc.id, checked)}
+                />
               </div>
             ))}
           </div>
@@ -251,18 +254,23 @@ function ChannelCard({ channel, accounts, events }: ChannelCardProps) {
           <Separator />
 
           {/* Event Types */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Events</Label>
+          <div className="space-y-3">
+            <div>
+              <h4 className="text-sm font-medium">Notification Events</h4>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Choose which events trigger a notification on this channel.
+              </p>
+            </div>
             {events.map((evt) => (
-              <div key={evt.event_type} className="flex items-center gap-2">
-                <Checkbox
-                  id={`event-${channel.id}-${evt.event_type}`}
-                  checked={localEventTypes.includes(evt.event_type)}
-                  onCheckedChange={(checked) => toggleEvent(evt.event_type, !!checked)}
-                />
-                <Label htmlFor={`event-${channel.id}-${evt.event_type}`} className="text-xs">
+              <div key={evt.event_type} className="flex items-center justify-between">
+                <Label htmlFor={`event-${channel.id}-${evt.event_type}`} className="cursor-pointer text-sm">
                   {evt.display_name}
                 </Label>
+                <Switch
+                  id={`event-${channel.id}-${evt.event_type}`}
+                  checked={localEventTypes.includes(evt.event_type)}
+                  onCheckedChange={(checked) => toggleEvent(evt.event_type, checked)}
+                />
               </div>
             ))}
           </div>
@@ -298,6 +306,7 @@ export default function NotificationsPage() {
   usePageTitle("Notifications");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newUrl, setNewUrl] = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
 
@@ -321,6 +330,7 @@ export default function NotificationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notification-channels"] });
       setNewUrl("");
+      setAddDialogOpen(false);
       toast({ title: "Channel added", description: "New notification channel created." });
     },
     onError: () => {
@@ -328,7 +338,7 @@ export default function NotificationsPage() {
     },
   });
 
-  function onAddChannel(e: React.FormEvent<HTMLFormElement>) {
+  function onSubmitAdd(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const trimmed = newUrl.trim();
     if (!trimmed) {
@@ -354,6 +364,11 @@ export default function NotificationsPage() {
         <PageHeader
           title="Notifications"
           description="Configure notification channels and delivery routing."
+          actions={
+            <AppButton icon={<Plus />} label="Add Channel" variant="primary" disabled>
+              Add Channel
+            </AppButton>
+          }
         />
         <QueryError
           message="Failed to load notification settings."
@@ -368,25 +383,32 @@ export default function NotificationsPage() {
       <PageHeader
         title="Notifications"
         description="Configure notification channels and delivery routing."
+        actions={
+          <AppButton
+            icon={<Plus />}
+            label="Add Channel"
+            variant="primary"
+            onClick={() => setAddDialogOpen(true)}
+          >
+            Add Channel
+          </AppButton>
+        }
       />
 
+      {/* Channels section */}
       <Card>
         <CardHeader>
           <CardTitle>Notification Channels</CardTitle>
           <CardDescription>
-            Add Apprise-compatible notification URLs. Each channel can be configured
-            to receive notifications only for specific mail accounts and event types.
-            Expand a channel to configure its routing.
+            Apprise-compatible notification URLs. Expand a channel to configure
+            which mail accounts and events it receives.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {channels.length === 0 && !channelsQuery.isLoading && (
-            <div className="flex flex-col items-center gap-2 py-8 text-center">
-              <Bell className="h-10 w-10 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                No notification channels configured yet. Add an Apprise URL below.
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              No notification channels configured yet.
+            </p>
           )}
 
           {channels.map((channel) => (
@@ -397,40 +419,43 @@ export default function NotificationsPage() {
               events={events}
             />
           ))}
-
-          {channels.length < 10 && (
-            <>
-              <Separator />
-              <form onSubmit={onAddChannel} className="flex items-start gap-2">
-                <div className="flex-1">
-                  <Input
-                    value={newUrl}
-                    onChange={(e) => { setNewUrl(e.target.value); setUrlError(null); }}
-                    placeholder="apprise://service/token..."
-                    className="font-mono text-sm"
-                  />
-                  {urlError && (
-                    <p className="mt-1 text-xs text-destructive">{urlError}</p>
-                  )}
-                </div>
-                <AppButton
-                  icon={<Plus />}
-                  label="Add"
-                  type="submit"
-                  variant="primary"
-                  disabled={createMutation.isPending}
-                  loading={createMutation.isPending}
-                >
-                  Add
-                </AppButton>
-              </form>
-            </>
-          )}
         </CardContent>
       </Card>
 
-      {/* Template Editor */}
+      {/* Template Editor (original design) */}
       <TemplateEditor />
+
+      {/* Add Channel Dialog */}
+      <AppDialog
+        open={addDialogOpen}
+        onOpenChange={(open) => {
+          setAddDialogOpen(open);
+          if (!open) { setNewUrl(""); setUrlError(null); }
+        }}
+        title="Add Notification Channel"
+        description="Enter an Apprise-compatible notification URL (e.g. Telegram, Discord, email)."
+        primaryLabel="Add Channel"
+        primaryIcon={<Plus />}
+        loading={createMutation.isPending}
+        form="add-channel-form"
+      >
+        <form id="add-channel-form" onSubmit={onSubmitAdd} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="channel-url">Notification URL</Label>
+            <Input
+              id="channel-url"
+              value={newUrl}
+              onChange={(e) => { setNewUrl(e.target.value); setUrlError(null); }}
+              placeholder="apprise://service/token..."
+              className="font-mono text-sm"
+              autoFocus
+            />
+            {urlError && (
+              <p className="text-xs text-destructive">{urlError}</p>
+            )}
+          </div>
+        </form>
+      </AppDialog>
     </div>
   );
 }
