@@ -49,11 +49,14 @@ async def list_calendar_events(
     if search:
         base_stmt = base_stmt.where(CalendarEvent.title.ilike(f"%{sanitize_like(search)}%"))
 
-    order_col = resolve_sort_order(sort, {
-        "newest": CalendarEvent.created_at.desc(),
-        "oldest": CalendarEvent.created_at.asc(),
-        "title": CalendarEvent.title.asc(),
-    })
+    order_col = resolve_sort_order(
+        sort,
+        {
+            "newest": CalendarEvent.created_at.desc(),
+            "oldest": CalendarEvent.created_at.asc(),
+            "title": CalendarEvent.title.asc(),
+        },
+    )
 
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)

@@ -50,11 +50,14 @@ async def list_applied_labels(
     if label:
         base_stmt = base_stmt.where(AppliedLabel.label.ilike(f"%{sanitize_like(label)}%"))
 
-    order_col = resolve_sort_order(sort, {
-        "newest": AppliedLabel.created_at.desc(),
-        "oldest": AppliedLabel.created_at.asc(),
-        "label": AppliedLabel.label.asc(),
-    })
+    order_col = resolve_sort_order(
+        sort,
+        {
+            "newest": AppliedLabel.created_at.desc(),
+            "oldest": AppliedLabel.created_at.asc(),
+            "label": AppliedLabel.label.asc(),
+        },
+    )
 
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)

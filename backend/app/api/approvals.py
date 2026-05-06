@@ -70,10 +70,13 @@ async def list_approvals(
             )
         )
 
-    order_col = resolve_sort_order(sort, {
-        "newest": Approval.created_at.desc(),
-        "oldest": Approval.created_at.asc(),
-    })
+    order_col = resolve_sort_order(
+        sort,
+        {
+            "newest": Approval.created_at.desc(),
+            "oldest": Approval.created_at.asc(),
+        },
+    )
     base_stmt = base_stmt.order_by(order_col)
 
     result = await paginate(db, base_stmt, page, per_page)

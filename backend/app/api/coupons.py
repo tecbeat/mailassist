@@ -51,12 +51,15 @@ async def list_coupons(
     if active_only:
         base_stmt = base_stmt.where(ExtractedCoupon.is_used.is_(False))
 
-    order_col = resolve_sort_order(sort, {
-        "newest": ExtractedCoupon.created_at.desc(),
-        "oldest": ExtractedCoupon.created_at.asc(),
-        "store": ExtractedCoupon.store.asc(),
-        "expiry": ExtractedCoupon.expires_at.asc().nullslast(),
-    })
+    order_col = resolve_sort_order(
+        sort,
+        {
+            "newest": ExtractedCoupon.created_at.desc(),
+            "oldest": ExtractedCoupon.created_at.asc(),
+            "store": ExtractedCoupon.store.asc(),
+            "expiry": ExtractedCoupon.expires_at.asc().nullslast(),
+        },
+    )
 
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)

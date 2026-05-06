@@ -48,11 +48,14 @@ async def list_newsletters(
     if sender:
         base_stmt = base_stmt.where(DetectedNewsletter.sender_address.ilike(f"%{sanitize_like(sender)}%"))
 
-    order_col = resolve_sort_order(sort, {
-        "newest": DetectedNewsletter.created_at.desc(),
-        "oldest": DetectedNewsletter.created_at.asc(),
-        "name": DetectedNewsletter.newsletter_name.asc(),
-    })
+    order_col = resolve_sort_order(
+        sort,
+        {
+            "newest": DetectedNewsletter.created_at.desc(),
+            "oldest": DetectedNewsletter.created_at.asc(),
+            "name": DetectedNewsletter.newsletter_name.asc(),
+        },
+    )
 
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)

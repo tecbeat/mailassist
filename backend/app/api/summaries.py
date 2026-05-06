@@ -65,10 +65,13 @@ async def list_summaries(
         (EmailSummary.mail_date.is_not(None), EmailSummary.mail_date),
         else_=EmailSummary.created_at,
     )
-    order_col = resolve_sort_order(sort, {
-        "newest": sort_col.desc(),
-        "oldest": sort_col.asc(),
-    })
+    order_col = resolve_sort_order(
+        sort,
+        {
+            "newest": sort_col.desc(),
+            "oldest": sort_col.asc(),
+        },
+    )
     base_stmt = base_stmt.order_by(order_col)
 
     result = await paginate(db, base_stmt, page, per_page)

@@ -53,12 +53,15 @@ async def list_otp_codes(
     if active_only:
         base_stmt = base_stmt.where(ExtractedOtpCode.is_expired.is_(False))
 
-    order_col = resolve_sort_order(sort, {
-        "newest": ExtractedOtpCode.created_at.desc(),
-        "oldest": ExtractedOtpCode.created_at.asc(),
-        "service": ExtractedOtpCode.service.asc(),
-        "expiry": ExtractedOtpCode.expires_at.asc().nullslast(),
-    })
+    order_col = resolve_sort_order(
+        sort,
+        {
+            "newest": ExtractedOtpCode.created_at.desc(),
+            "oldest": ExtractedOtpCode.created_at.asc(),
+            "service": ExtractedOtpCode.service.asc(),
+            "expiry": ExtractedOtpCode.expires_at.asc().nullslast(),
+        },
+    )
 
     base_stmt = base_stmt.order_by(order_col)
     result = await paginate(db, base_stmt, page, per_page)
