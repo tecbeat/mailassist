@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.8.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.8.0-beta) - 2026-05-06
+
+### 🚜 Refactor
+
+- Use imap_connection context manager in mail_accounts API - ([fb4b78f](https://git.teccave.de/tecbeat/mailassist/commit/fb4b78f4e3b787fa99fee907b935a884f97bf038))
+
 ## [2.7.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.7.0-beta) - 2026-05-06
 
 ### ⛰️  Features
