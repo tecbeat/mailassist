@@ -128,12 +128,19 @@ class OtpExtractionPlugin(AIFunctionPlugin[OtpExtractionResponse]):
     def get_notification_variables(cls) -> list[dict[str, Any]]:
         return [
             {"name": "otp_codes", "var_type": "List", "description": "Extracted OTP codes", "example": '["482937"]'},
-            {"name": "otps", "var_type": "List", "description": "Full OTP objects with code, description, service, code_type", "example": '[{"code": "482937", "description": "Login code", "service": "GitHub", "code_type": "2fa"}]'},
+            {
+                "name": "otps",
+                "var_type": "List",
+                "description": "Full OTP objects with code, description, service, code_type",
+                "example": '[{"code": "482937", "description": "Login code", "service": "GitHub", "code_type": "2fa"}]',
+            },
         ]
 
     @classmethod
     def get_preview_context(cls) -> dict[str, Any]:
         return {
             "otp_codes": ["482937"],
-            "otps": [{"code": "482937", "description": "Login verification code", "service": "GitHub", "code_type": "2fa"}],
+            "otps": [
+                {"code": "482937", "description": "Login verification code", "service": "GitHub", "code_type": "2fa"}
+            ],
         }

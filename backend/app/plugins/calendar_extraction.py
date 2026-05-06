@@ -131,11 +131,22 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
     @classmethod
     def get_notification_variables(cls) -> list[dict[str, Any]]:
         return [
-            {"name": "calendar_event", "var_type": "Dict", "description": "Extracted calendar event (title, start, end, location, description)", "example": '{"title": "Team Meeting", "start": "2026-03-31T14:00:00Z", "location": "Room 5"}'},
+            {
+                "name": "calendar_event",
+                "var_type": "Dict",
+                "description": "Extracted calendar event (title, start, end, location, description)",
+                "example": '{"title": "Team Meeting", "start": "2026-03-31T14:00:00Z", "location": "Room 5"}',
+            },
         ]
 
     @classmethod
     def get_preview_context(cls) -> dict[str, Any]:
         return {
-            "calendar_event": {"title": "Team Meeting", "start": "2026-03-31T14:00:00Z", "end": "2026-03-31T15:00:00Z", "location": "Room 5", "description": "Quarterly review"},
+            "calendar_event": {
+                "title": "Team Meeting",
+                "start": "2026-03-31T14:00:00Z",
+                "end": "2026-03-31T15:00:00Z",
+                "location": "Room 5",
+                "description": "Quarterly review",
+            },
         }

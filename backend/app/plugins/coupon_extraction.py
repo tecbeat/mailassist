@@ -120,8 +120,18 @@ class CouponExtractionPlugin(AIFunctionPlugin[CouponExtractionResponse]):
     @classmethod
     def get_notification_variables(cls) -> list[dict[str, Any]]:
         return [
-            {"name": "coupon_codes", "var_type": "List", "description": "Extracted coupon/discount codes", "example": '["SAVE20", "FREESHIP"]'},
-            {"name": "coupons", "var_type": "List", "description": "Full coupon objects with code, description, store", "example": '[{"code": "SAVE20", "description": "20% off", "store": "Amazon"}]'},
+            {
+                "name": "coupon_codes",
+                "var_type": "List",
+                "description": "Extracted coupon/discount codes",
+                "example": '["SAVE20", "FREESHIP"]',
+            },
+            {
+                "name": "coupons",
+                "var_type": "List",
+                "description": "Full coupon objects with code, description, store",
+                "example": '[{"code": "SAVE20", "description": "20% off", "store": "Amazon"}]',
+            },
         ]
 
     @classmethod

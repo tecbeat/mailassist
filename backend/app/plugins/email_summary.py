@@ -106,11 +106,36 @@ class EmailSummaryPlugin(AIFunctionPlugin[EmailSummaryResponse]):
     @classmethod
     def get_notification_variables(cls) -> list[dict[str, Any]]:
         return [
-            {"name": "summary", "var_type": "String", "description": "Short email summary text", "example": "Meeting confirmation for Q2 report discussion."},
-            {"name": "key_points", "var_type": "List", "description": "Key points extracted from the email", "example": '["Meeting at 2pm", "Bring Q2 report"]'},
-            {"name": "urgency", "var_type": "String", "description": "Urgency level (low, normal, high, critical)", "example": "medium"},
-            {"name": "action_required", "var_type": "Boolean", "description": "Whether user action is required", "example": "true"},
-            {"name": "action_description", "var_type": "String", "description": "Description of required action", "example": "Prepare Q2 report for meeting"},
+            {
+                "name": "summary",
+                "var_type": "String",
+                "description": "Short email summary text",
+                "example": "Meeting confirmation for Q2 report discussion.",
+            },
+            {
+                "name": "key_points",
+                "var_type": "List",
+                "description": "Key points extracted from the email",
+                "example": '["Meeting at 2pm", "Bring Q2 report"]',
+            },
+            {
+                "name": "urgency",
+                "var_type": "String",
+                "description": "Urgency level (low, normal, high, critical)",
+                "example": "medium",
+            },
+            {
+                "name": "action_required",
+                "var_type": "Boolean",
+                "description": "Whether user action is required",
+                "example": "true",
+            },
+            {
+                "name": "action_description",
+                "var_type": "String",
+                "description": "Description of required action",
+                "example": "Prepare Q2 report for meeting",
+            },
         ]
 
     @classmethod

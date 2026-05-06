@@ -75,7 +75,9 @@ def downgrade() -> None:
     if insp.has_table("notification_configs"):
         columns = {c["name"] for c in insp.get_columns("notification_configs")}
         if "apprise_urls" not in columns:
-            op.add_column("notification_configs", sa.Column("apprise_urls", sa.JSON, nullable=False, server_default="[]"))
+            op.add_column(
+                "notification_configs", sa.Column("apprise_urls", sa.JSON, nullable=False, server_default="[]")
+            )
         if "notify_on" not in columns:
             op.add_column("notification_configs", sa.Column("notify_on", sa.JSON, nullable=False, server_default="{}"))
 

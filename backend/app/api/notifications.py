@@ -90,9 +90,7 @@ async def create_channel(
     user_id: CurrentUserId,
 ) -> NotificationChannelResponse:
     """Create a new notification channel (max 10 per user)."""
-    count_result = await db.execute(
-        select(NotificationChannel).where(NotificationChannel.user_id == user_id)
-    )
+    count_result = await db.execute(select(NotificationChannel).where(NotificationChannel.user_id == user_id))
     existing = count_result.scalars().all()
     if len(existing) >= 10:
         raise HTTPException(status_code=400, detail="Maximum of 10 channels allowed")
@@ -265,12 +263,27 @@ async def list_events(user_id: CurrentUserId) -> list[NotificationEventInfo]:
 # Base context variables always available in notification templates
 _BASE_NOTIFICATION_VARIABLES: list[dict[str, Any]] = [
     {"name": "subject", "var_type": "String", "description": "Email subject line", "example": "Re: Q2 Report"},
-    {"name": "sender", "var_type": "String", "description": "Full sender string", "example": "Max Müller <max@example.com>"},
+    {
+        "name": "sender",
+        "var_type": "String",
+        "description": "Full sender string",
+        "example": "Max Müller <max@example.com>",
+    },
     {"name": "sender_name", "var_type": "String", "description": "Sender display name", "example": "Max Müller"},
     {"name": "account_name", "var_type": "String", "description": "Mail account name", "example": "Work"},
-    {"name": "account_email", "var_type": "String", "description": "Mail account email address", "example": "me@work.com"},
+    {
+        "name": "account_email",
+        "var_type": "String",
+        "description": "Mail account email address",
+        "example": "me@work.com",
+    },
     {"name": "mail_uid", "var_type": "String", "description": "Unique mail identifier", "example": "12345"},
-    {"name": "plugins_executed", "var_type": "List", "description": "List of plugins that processed the email", "example": '["email_summary", "coupon_extraction"]'},
+    {
+        "name": "plugins_executed",
+        "var_type": "List",
+        "description": "List of plugins that processed the email",
+        "example": '["email_summary", "coupon_extraction"]',
+    },
 ]
 
 

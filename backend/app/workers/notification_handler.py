@@ -185,9 +185,7 @@ async def handle_ai_processing_complete(event: Event) -> None:
             for event_type in triggered_event_types:
                 # Find channels that match this event + account
                 assert event.account_id is not None
-                matching_channels = [
-                    c for c in channels if _channel_matches(c, event.account_id, event_type)
-                ]
+                matching_channels = [c for c in channels if _channel_matches(c, event.account_id, event_type)]
 
                 if not matching_channels:
                     continue

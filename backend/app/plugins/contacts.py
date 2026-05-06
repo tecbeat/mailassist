@@ -141,10 +141,30 @@ class ContactsPlugin(AIFunctionPlugin[ContactAssignmentResponse]):
     @classmethod
     def get_notification_variables(cls) -> list[dict[str, Any]]:
         return [
-            {"name": "contact_name", "var_type": "String", "description": "Name of the assigned contact", "example": "Max Müller"},
-            {"name": "confidence", "var_type": "Float", "description": "Confidence score of the contact assignment", "example": "0.92"},
-            {"name": "is_new_contact_suggestion", "var_type": "Boolean", "description": "Whether this is a new contact suggestion", "example": "true"},
-            {"name": "reasoning", "var_type": "String", "description": "AI reasoning for the contact assignment", "example": "Email address matches known contact"},
+            {
+                "name": "contact_name",
+                "var_type": "String",
+                "description": "Name of the assigned contact",
+                "example": "Max Müller",
+            },
+            {
+                "name": "confidence",
+                "var_type": "Float",
+                "description": "Confidence score of the contact assignment",
+                "example": "0.92",
+            },
+            {
+                "name": "is_new_contact_suggestion",
+                "var_type": "Boolean",
+                "description": "Whether this is a new contact suggestion",
+                "example": "true",
+            },
+            {
+                "name": "reasoning",
+                "var_type": "String",
+                "description": "AI reasoning for the contact assignment",
+                "example": "Email address matches known contact",
+            },
         ]
 
     @classmethod

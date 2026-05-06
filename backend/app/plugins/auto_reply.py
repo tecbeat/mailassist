@@ -115,9 +115,24 @@ class AutoReplyPlugin(AIFunctionPlugin[AutoReplyResponse]):
     @classmethod
     def get_notification_variables(cls) -> list[dict[str, Any]]:
         return [
-            {"name": "draft_body", "var_type": "String", "description": "The generated reply draft text", "example": "Thank you for your email..."},
-            {"name": "tone", "var_type": "String", "description": "Tone of the generated reply", "example": "professional"},
-            {"name": "action_taken", "var_type": "String", "description": "Summary of the action performed", "example": "Draft reply created (tone: professional)"},
+            {
+                "name": "draft_body",
+                "var_type": "String",
+                "description": "The generated reply draft text",
+                "example": "Thank you for your email...",
+            },
+            {
+                "name": "tone",
+                "var_type": "String",
+                "description": "Tone of the generated reply",
+                "example": "professional",
+            },
+            {
+                "name": "action_taken",
+                "var_type": "String",
+                "description": "Summary of the action performed",
+                "example": "Draft reply created (tone: professional)",
+            },
         ]
 
     @classmethod
