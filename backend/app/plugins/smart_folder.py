@@ -57,9 +57,7 @@ class SmartFolderPlugin(AIFunctionPlugin[SmartFolderResponse]):
                     folder=folder,
                     mail_uid=context.mail_uid,
                 )
-                raise ExcludedFolderError(
-                    f"AI suggested excluded folder '{folder}' twice despite corrective prompt"
-                )
+                raise ExcludedFolderError(f"AI suggested excluded folder '{folder}' twice despite corrective prompt")
 
             self.logger.info(
                 "smart_folder_excluded_folder_reprompt",
