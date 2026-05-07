@@ -62,7 +62,6 @@ async def resolve_prompts(
         "account_email": context.account_email,
         "existing_labels": context.existing_labels,
         "existing_folders": context.existing_folders,
-        "excluded_folders": context.excluded_folders,
         "folder_separator": context.folder_separator,
         "mail_size": context.mail_size,
         "thread_length": context.thread_length,

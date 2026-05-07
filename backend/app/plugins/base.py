@@ -66,6 +66,7 @@ class ActionResult:
     requires_approval: bool = False
     approval_summary: str | None = None
     skip_remaining_plugins: bool = False
+    retry_prompt: str | None = None
 
 
 @dataclass

@@ -37,13 +37,6 @@ Existing folders on this account:
 {% if not existing_folders %}
 (No custom folders yet)
 {% endif %}
-{% if excluded_folders %}
-
-EXCLUDED folders (NEVER suggest these -- the user has explicitly excluded them):
-{% for folder in excluded_folders %}
-- {{ folder }}
-{% endfor %}
-{% endif %}
 
 === BEGIN UNTRUSTED EMAIL CONTENT ===
 From: {{ sender_name | default(sender) }} <{{ sender }}>
