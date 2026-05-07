@@ -67,7 +67,9 @@ class TestCallLLMParsing:
         mock_response = _make_litellm_response(valid, total_tokens=10)
 
         with (
-            patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_response) as mock_call,
+            patch(
+                "app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_response
+            ) as mock_call,
             patch("app.services.ai._track_tokens", new_callable=AsyncMock),
         ):
             await call_llm(
