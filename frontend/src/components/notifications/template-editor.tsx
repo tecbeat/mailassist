@@ -431,7 +431,7 @@ export function TemplateEditor() {
 
                 <CollapsibleContent>
                   <div className="mt-3">
-                    <TemplateVariables />
+                    <TemplateVariables eventType={selectedTemplate} />
                   </div>
                 </CollapsibleContent>
               </Collapsible>

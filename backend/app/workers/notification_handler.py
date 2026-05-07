@@ -1,19 +1,12 @@
 """Notification event handler.
 
 Subscribes to ``AIProcessingCompleteEvent`` and sends notifications
-via Apprise when the user has enabled the relevant notify_on toggle.
+via Apprise when the user has configured channels for the relevant events.
 
-Mapping from plugin names to notification event types:
-
-    auto_reply        -> reply_needed
-    spam_detection    -> spam_detected
-    coupon_extraction -> coupon_found
-    otp_extraction    -> otp_found
-    calendar_extraction -> calendar_event_created
-    rules             -> rule_executed
-    newsletter_detection -> newsletter_detected
-    email_summary     -> email_summary
-    contacts          -> contact_assigned
+Event types are derived dynamically from the plugin registry via each
+plugin's ``notification_event_type`` attribute.  Per-channel filtering
+routes notifications only to channels that match the mail account and
+event type.
 """
 
 from __future__ import annotations
@@ -31,16 +24,11 @@ from app.core.events import (
     get_event_bus,
 )
 from app.models.mail import (
-    AutoReplyRecord,
-    CalendarEvent,
-    ContactAssignment,
-    EmailSummary,
-    ExtractedCoupon,
-    ExtractedOtpCode,
     MailAccount,
     TrackedEmail,
 )
-from app.models.notifications import NotificationConfig
+from app.models.notifications import NotificationChannel, NotificationConfig
+from app.plugins.registry import get_plugin_registry
 from app.services.notifications import send_notification
 
 if TYPE_CHECKING:
@@ -50,18 +38,15 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger()
 
-# Plugin name -> notify_on toggle key
-_PLUGIN_TO_EVENT_TYPE: dict[str, str] = {
-    "auto_reply": "reply_needed",
-    "spam_detection": "spam_detected",
-    "coupon_extraction": "coupon_found",
-    "otp_extraction": "otp_found",
-    "calendar_extraction": "calendar_event_created",
-    "rules": "rule_executed",
-    "newsletter_detection": "newsletter_detected",
-    "email_summary": "email_summary",
-    "contacts": "contact_assigned",
-}
+
+def _build_event_type_map() -> dict[str, str]:
+    """Build plugin_name → event_type mapping from the plugin registry."""
+    registry = get_plugin_registry()
+    mapping: dict[str, str] = {}
+    for plugin in registry.get_all_plugins():
+        if plugin.notification_event_type:
+            mapping[plugin.name] = plugin.notification_event_type
+    return mapping
 
 
 async def _load_plugin_context(
@@ -70,110 +55,44 @@ async def _load_plugin_context(
     account_id: UUID,
     mail_uid: str,
 ) -> dict[str, Any]:
-    """Load plugin-specific result data for notification template context.
+    """Load plugin-specific notification context from the plugin registry.
 
-    Each event type maps to a specific result table.  Returns a dict
-    of template variables that will be merged into the notification context.
+    Delegates to the plugin's ``load_notification_context()`` method.
     """
-    extra: dict[str, Any] = {}
+    registry = get_plugin_registry()
 
-    try:
-        if event_type == "email_summary":
-            summary_result = await db.execute(
-                select(EmailSummary).where(
-                    EmailSummary.mail_account_id == account_id,
-                    EmailSummary.mail_uid == mail_uid,
-                )
-            )
-            summary = summary_result.scalar_one_or_none()
-            if summary:
-                extra["summary"] = summary.summary
-                extra["key_points"] = summary.key_points or []
-                extra["urgency"] = summary.urgency or "normal"
-                extra["action_required"] = summary.action_required
-                extra["action_description"] = summary.action_description or ""
+    # Find the plugin that owns this event type
+    for plugin in registry.get_all_plugins():
+        if plugin.notification_event_type == event_type:
+            try:
+                return await plugin.load_notification_context(db, account_id, mail_uid)
+            except Exception:
+                logger.warning("plugin_context_load_failed", event_type=event_type, plugin=plugin.name)
+                return {}
 
-        elif event_type == "coupon_found":
-            coupon_result = await db.execute(
-                select(ExtractedCoupon).where(
-                    ExtractedCoupon.mail_account_id == account_id,
-                    ExtractedCoupon.mail_uid == mail_uid,
-                )
-            )
-            coupons = coupon_result.scalars().all()
-            extra["coupon_codes"] = [c.code for c in coupons]
-            extra["coupons"] = [{"code": c.code, "description": c.description, "store": c.store} for c in coupons]
+    return {}
 
-        elif event_type == "otp_found":
-            otp_result = await db.execute(
-                select(ExtractedOtpCode).where(
-                    ExtractedOtpCode.mail_account_id == account_id,
-                    ExtractedOtpCode.mail_uid == mail_uid,
-                )
-            )
-            otp_codes = otp_result.scalars().all()
-            extra["otp_codes"] = [c.code for c in otp_codes]
-            extra["otps"] = [
-                {"code": c.code, "description": c.description, "service": c.service, "code_type": c.code_type}
-                for c in otp_codes
-            ]
 
-        elif event_type == "calendar_event_created":
-            cal_result = await db.execute(
-                select(CalendarEvent).where(
-                    CalendarEvent.mail_account_id == account_id,
-                    CalendarEvent.mail_uid == mail_uid,
-                )
-            )
-            cal = cal_result.scalar_one_or_none()
-            if cal:
-                extra["calendar_event"] = {
-                    "title": cal.title,
-                    "start": cal.start,
-                    "end": cal.end,
-                    "location": cal.location,
-                    "description": cal.description,
-                }
+def _channel_matches(
+    channel: NotificationChannel,
+    account_id: UUID,
+    event_type: str,
+) -> bool:
+    """Check if a channel should receive a notification for this event."""
+    # Check mail account filter
+    if channel.mail_account_ids is not None and str(account_id) not in channel.mail_account_ids:
+        return False
 
-        elif event_type == "reply_needed":
-            reply_result = await db.execute(
-                select(AutoReplyRecord).where(
-                    AutoReplyRecord.mail_account_id == account_id,
-                    AutoReplyRecord.mail_uid == mail_uid,
-                )
-            )
-            reply = reply_result.scalar_one_or_none()
-            if reply:
-                extra["action_taken"] = f"Draft reply created (tone: {reply.tone or 'default'})"
-                extra["draft_body"] = reply.draft_body
-                extra["tone"] = reply.tone
-
-        elif event_type == "contact_assigned":
-            assign_result = await db.execute(
-                select(ContactAssignment).where(
-                    ContactAssignment.mail_account_id == account_id,
-                    ContactAssignment.mail_uid == mail_uid,
-                )
-            )
-            assignment = assign_result.scalar_one_or_none()
-            if assignment:
-                extra["contact_name"] = assignment.contact_name
-                extra["confidence"] = assignment.confidence
-                extra["is_new_contact_suggestion"] = assignment.is_new_contact_suggestion
-                extra["reasoning"] = assignment.reasoning
-
-    except Exception:
-        logger.warning("plugin_context_load_failed", event_type=event_type)
-
-    return extra
+    # Check event type filter
+    return channel.event_types is None or event_type in channel.event_types
 
 
 async def handle_ai_processing_complete(event: Event) -> None:
     """Send notifications for completed AI processing if configured.
 
-    For each plugin that ran, checks whether the user has enabled the
-    corresponding notification toggle.  Sends one notification per
-    triggered event type.
+    For each plugin that ran, checks whether any notification channel is
+    configured for the event.  Sends one notification per triggered event
+    type to each matching channel.
     """
     assert isinstance(event, AIProcessingCompleteEvent)
 
@@ -186,10 +105,13 @@ async def handle_ai_processing_complete(event: Event) -> None:
         mail_uid=event.mail_uid,
     )
 
+    # Build dynamic mapping
+    plugin_to_event = _build_event_type_map()
+
     # Determine which event types should fire
     triggered_event_types: list[str] = []
     for plugin_name in event.plugins_executed:
-        event_type = _PLUGIN_TO_EVENT_TYPE.get(plugin_name)
+        event_type = plugin_to_event.get(plugin_name)
         if event_type:
             triggered_event_types.append(event_type)
 
@@ -201,26 +123,16 @@ async def handle_ai_processing_complete(event: Event) -> None:
         log.debug("notification_skip", reason="no_triggered_events")
         return
 
-    # Load notification config and mail metadata from DB
     try:
         async with get_session_ctx() as db:
-            # Load NotificationConfig
-            config_result = await db.execute(
-                select(NotificationConfig).where(NotificationConfig.user_id == event.user_id)
+            # Load all notification channels for this user
+            channels_result = await db.execute(
+                select(NotificationChannel).where(NotificationChannel.user_id == event.user_id)
             )
-            config = config_result.scalar_one_or_none()
+            channels = channels_result.scalars().all()
 
-            if not config or not config.apprise_urls:
-                log.debug("notification_skip", reason="no_config_or_urls")
-                return
-
-            notify_on: dict[str, Any] = config.notify_on or {}
-
-            # Filter to only event types the user has enabled
-            enabled_types = [et for et in triggered_event_types if notify_on.get(et, False)]
-
-            if not enabled_types:
-                log.debug("notification_skip", reason="no_enabled_toggles", triggered=triggered_event_types)
+            if not channels:
+                log.debug("notification_skip", reason="no_channels")
                 return
 
             # Load TrackedEmail for context (subject, sender)
@@ -262,13 +174,23 @@ async def handle_ai_processing_complete(event: Event) -> None:
             }
 
             # Get custom templates from config
-            custom_templates: dict[str, Any] = config.templates or {}
+            config_result = await db.execute(
+                select(NotificationConfig).where(NotificationConfig.user_id == event.user_id)
+            )
+            config = config_result.scalar_one_or_none()
+            custom_templates: dict[str, Any] = config.templates if config else {}
 
-            # Send one notification per enabled event type
+            # Send notifications per event type per matching channel
             channels_sent: list[str] = []
-            for event_type in enabled_types:
-                # Enrich context with plugin-specific data
+            for event_type in triggered_event_types:
+                # Find channels that match this event + account
                 assert event.account_id is not None
+                matching_channels = [c for c in channels if _channel_matches(c, event.account_id, event_type)]
+
+                if not matching_channels:
+                    continue
+
+                # Load plugin-specific context
                 plugin_ctx = await _load_plugin_context(
                     db,
                     event_type,
@@ -276,16 +198,18 @@ async def handle_ai_processing_complete(event: Event) -> None:
                     event.mail_uid,
                 )
                 context = {**base_context, **plugin_ctx}
-
                 custom_tpl = custom_templates.get(event_type)
-                success = await send_notification(
-                    apprise_urls=config.apprise_urls,
-                    event_type=event_type,
-                    context=context,
-                    custom_template=custom_tpl,
-                )
-                if success:
-                    channels_sent.append(event_type)
+
+                # Send to each matching channel individually
+                for channel in matching_channels:
+                    success = await send_notification(
+                        apprise_urls=[channel.url],
+                        event_type=event_type,
+                        context=context,
+                        custom_template=custom_tpl,
+                    )
+                    if success:
+                        channels_sent.append(event_type)
 
             if channels_sent:
                 log.info(
@@ -295,6 +219,8 @@ async def handle_ai_processing_complete(event: Event) -> None:
                 )
 
                 # Mark email summary as notified to prevent duplicates
+                from app.models.mail import EmailSummary
+
                 summary_result = await db.execute(
                     select(EmailSummary).where(
                         EmailSummary.mail_account_id == event.account_id,
@@ -318,7 +244,7 @@ async def handle_ai_processing_complete(event: Event) -> None:
                     )
                 )
             else:
-                log.warning("notifications_all_failed", event_types=enabled_types)
+                log.debug("notifications_no_matching_channels", event_types=triggered_event_types)
 
     except Exception:
         log.exception("notification_handler_error")
@@ -328,4 +254,3 @@ def register_notification_handlers() -> None:
     """Register notification event handlers on the global event bus."""
     bus = get_event_bus()
     bus.subscribe(AIProcessingCompleteEvent, handle_ai_processing_complete)
-    logger.info("notification_handlers_registered")

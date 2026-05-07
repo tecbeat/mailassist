@@ -32,6 +32,8 @@ class RulesPlugin(AIFunctionPlugin[_NoOpResponse]):
     approval_key = "rules"
     has_view_page = True
     view_route = "/rules"
+    notification_event_type = "rule_executed"
+    notification_template = "notifications/default.j2"
 
     async def execute(self, context: MailContext, ai_response: _NoOpResponse) -> ActionResult:
         """Not called -- rules are evaluated separately."""

@@ -96,6 +96,7 @@ const STATIC_CONFIG_ITEMS_TOP: NavItem[] = [
 const STATIC_CONFIG_ITEMS_BOTTOM: NavItem[] = [
   { label: "Mail Accounts", to: "/mail-accounts", icon: Mail },
   { label: "AI Providers", to: "/ai-providers", icon: Brain },
+  { label: "Notifications", to: "/notifications", icon: Bell },
 ];
 
 // ---------------------------------------------------------------------------

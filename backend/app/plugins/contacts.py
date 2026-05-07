@@ -52,6 +52,8 @@ class ContactsPlugin(AIFunctionPlugin[ContactAssignmentResponse]):
     approval_key = "contacts"
     has_view_page = True
     view_route = "/contacts"
+    notification_event_type = "contact_assigned"
+    notification_template = "notifications/contact_assigned.j2"
     default_config: ClassVar[dict[str, Any]] = {"confidence_threshold": 0.85}
 
     async def execute(self, context: MailContext, ai_response: ContactAssignmentResponse) -> ActionResult:
@@ -98,3 +100,78 @@ class ContactsPlugin(AIFunctionPlugin[ContactAssignmentResponse]):
             f"Assign to '{ai_response.contact_name}' "
             f"(confidence: {ai_response.confidence:.0%}): {ai_response.reasoning}"
         )
+
+    @classmethod
+    def get_notification_context(cls, result_data: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "contact_name": result_data.get("contact_name", ""),
+            "confidence": result_data.get("confidence", 0.0),
+            "is_new_contact_suggestion": result_data.get("is_new_contact_suggestion", False),
+            "reasoning": result_data.get("reasoning", ""),
+        }
+
+    @classmethod
+    async def load_notification_context(
+        cls,
+        db: Any,
+        account_id: Any,
+        mail_uid: str,
+    ) -> dict[str, Any]:
+        """Load contact assignment data from the database for notification context."""
+        from sqlalchemy import select
+
+        from app.models.mail import ContactAssignment
+
+        result = await db.execute(
+            select(ContactAssignment).where(
+                ContactAssignment.mail_account_id == account_id,
+                ContactAssignment.mail_uid == mail_uid,
+            )
+        )
+        assignment = result.scalar_one_or_none()
+        if assignment:
+            return {
+                "contact_name": assignment.contact_name,
+                "confidence": assignment.confidence,
+                "is_new_contact_suggestion": assignment.is_new_contact_suggestion,
+                "reasoning": assignment.reasoning,
+            }
+        return {}
+
+    @classmethod
+    def get_notification_variables(cls) -> list[dict[str, Any]]:
+        return [
+            {
+                "name": "contact_name",
+                "var_type": "String",
+                "description": "Name of the assigned contact",
+                "example": "Max Müller",
+            },
+            {
+                "name": "confidence",
+                "var_type": "Float",
+                "description": "Confidence score of the contact assignment",
+                "example": "0.92",
+            },
+            {
+                "name": "is_new_contact_suggestion",
+                "var_type": "Boolean",
+                "description": "Whether this is a new contact suggestion",
+                "example": "true",
+            },
+            {
+                "name": "reasoning",
+                "var_type": "String",
+                "description": "AI reasoning for the contact assignment",
+                "example": "Email address matches known contact",
+            },
+        ]
+
+    @classmethod
+    def get_preview_context(cls) -> dict[str, Any]:
+        return {
+            "contact_name": "Max Müller",
+            "confidence": 0.92,
+            "is_new_contact_suggestion": False,
+            "reasoning": "Email address matches known contact",
+        }

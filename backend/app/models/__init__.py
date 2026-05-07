@@ -31,7 +31,7 @@ from app.models.mail import (
     TrackedEmailStatus,
     UrgencyLevel,
 )
-from app.models.notifications import NotificationConfig, SummaryFilterConfig
+from app.models.notifications import NotificationChannel, NotificationConfig, SummaryFilterConfig
 from app.models.reprocessing import (
     FolderChangeLog,
     LabelChangeLog,
@@ -72,6 +72,7 @@ __all__ = [
     # change logs
     "LabelChangeLog",
     "MailAccount",
+    "NotificationChannel",
     "NotificationConfig",
     "Prompt",
     # ai

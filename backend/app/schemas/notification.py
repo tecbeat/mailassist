@@ -9,22 +9,6 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
-class NotifyOnConfig(BaseModel):
-    """Toggles for which events trigger notifications."""
-
-    reply_needed: bool = False
-    spam_detected: bool = False
-    coupon_found: bool = False
-    otp_found: bool = False
-    calendar_event_created: bool = False
-    rule_executed: bool = False
-    newsletter_detected: bool = False
-    email_summary: bool = False
-    ai_error: bool = False
-    contact_assigned: bool = False
-    approval_needed: bool = False
-
-
 def mask_apprise_url(url: str) -> str:
     """Mask sensitive parts of an Apprise URL for safe display.
 
@@ -52,30 +36,63 @@ def mask_apprise_url(url: str) -> str:
         return re.sub(r"://.*", "://***", url) if "://" in url else "***"
 
 
-class NotificationConfigResponse(BaseModel):
-    """Response schema for notification configuration."""
+# ---------------------------------------------------------------------------
+# Notification Channel schemas
+# ---------------------------------------------------------------------------
+
+
+class NotificationChannelCreate(BaseModel):
+    """Request to create a new notification channel."""
+
+    url: str = Field(min_length=1, max_length=1000)
+    mail_account_ids: list[UUID] | None = Field(default=None)
+    event_types: list[str] | None = Field(default=None)
+
+
+class NotificationChannelUpdate(BaseModel):
+    """Request to update a notification channel's routing config."""
+
+    mail_account_ids: list[UUID] | None = Field(default=None)
+    event_types: list[str] | None = Field(default=None)
+
+
+class NotificationChannelResponse(BaseModel):
+    """Response schema for a single notification channel."""
 
     id: UUID
-    apprise_urls: list[str]
+    url: str  # masked
+    mail_account_ids: list[UUID] | None
+    event_types: list[str] | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Notification Config schemas (templates only now)
+# ---------------------------------------------------------------------------
+
+
+class NotificationConfigResponse(BaseModel):
+    """Response schema for notification configuration (templates)."""
+
+    id: UUID
     templates: dict[str, Any]
-    notify_on: dict[str, Any]
     updated_at: datetime
 
     model_config = {"from_attributes": True}
 
 
 class NotificationConfigUpdate(BaseModel):
-    """Update schema for notification configuration."""
+    """Update schema for notification templates."""
 
-    apprise_urls: list[str] | None = Field(default=None, max_length=10)
     templates: dict[str, Any] = Field(default_factory=dict)
-    notify_on: NotifyOnConfig = Field(default_factory=NotifyOnConfig)
 
 
-class NotificationUrlAdd(BaseModel):
-    """Request to add a new Apprise URL."""
-
-    url: str = Field(min_length=1, max_length=1000)
+# ---------------------------------------------------------------------------
+# Test / Preview / Variables
+# ---------------------------------------------------------------------------
 
 
 class NotificationTestRequest(BaseModel):
@@ -110,3 +127,12 @@ class DefaultTemplateResponse(BaseModel):
 
     event_type: str
     template: str
+
+
+class NotificationEventInfo(BaseModel):
+    """Metadata about a notification event type (derived from plugin registry)."""
+
+    event_type: str
+    plugin_name: str
+    display_name: str
+    execution_order: int

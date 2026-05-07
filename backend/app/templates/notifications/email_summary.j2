@@ -1,4 +1,4 @@
-Email Summary ({{ urgency | default("normal") | upper }})
+[{{ account_name | default("mailassist") }}] Summary ({{ urgency | default("normal") | upper }}): {{ subject | default("No subject") }}
 
 From: {{ sender_name | default("") }} <{{ sender | default("unknown") }}>
 Subject: {{ subject | default("No subject") }}

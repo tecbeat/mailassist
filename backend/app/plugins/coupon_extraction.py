@@ -6,6 +6,7 @@ Runs fifth in the pipeline (execution_order=50).
 """
 
 import re
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -55,6 +56,8 @@ class CouponExtractionPlugin(AIFunctionPlugin[CouponExtractionResponse]):
     approval_key = "coupon"
     has_view_page = True
     view_route = "/coupons"
+    notification_event_type = "coupon_found"
+    notification_template = "notifications/coupon_found.j2"
 
     async def execute(self, context: MailContext, ai_response: CouponExtractionResponse) -> ActionResult:
         if not ai_response.has_coupons or not ai_response.coupons:
@@ -81,3 +84,81 @@ class CouponExtractionPlugin(AIFunctionPlugin[CouponExtractionResponse]):
     def get_approval_summary(self, ai_response: CouponExtractionResponse) -> str:
         labels = [c.code or c.description or "Promotion" for c in ai_response.coupons]
         return f"Found {len(labels)} coupon(s): {', '.join(labels)}"
+
+    @classmethod
+    async def load_notification_context(
+        cls,
+        db: Any,
+        account_id: Any,
+        mail_uid: str,
+    ) -> dict[str, Any]:
+        """Load coupon data from the database for notification context.
+
+        Returns flat variables for the first coupon in the mail.
+        """
+        from sqlalchemy import select
+
+        from app.models.mail import ExtractedCoupon
+
+        result = await db.execute(
+            select(ExtractedCoupon).where(
+                ExtractedCoupon.mail_account_id == account_id,
+                ExtractedCoupon.mail_uid == mail_uid,
+            )
+        )
+        coupons = result.scalars().all()
+        if not coupons:
+            return {}
+        coupon = coupons[0]
+        return {
+            "coupon_code": coupon.code or "",
+            "coupon_store": coupon.store or "",
+            "coupon_description": coupon.description or "",
+            "coupon_expires_at": str(coupon.expires_at.date()) if coupon.expires_at else "",
+            "coupon_valid_from": str(coupon.valid_from.date()) if coupon.valid_from else "",
+        }
+
+    @classmethod
+    def get_notification_variables(cls) -> list[dict[str, Any]]:
+        return [
+            {
+                "name": "coupon_code",
+                "var_type": "String",
+                "description": "The discount / promo code",
+                "example": "SAVE20",
+            },
+            {
+                "name": "coupon_store",
+                "var_type": "String",
+                "description": "Store or brand the coupon belongs to",
+                "example": "Amazon",
+            },
+            {
+                "name": "coupon_description",
+                "var_type": "String",
+                "description": "Short description of the offer",
+                "example": "20% off everything",
+            },
+            {
+                "name": "coupon_expires_at",
+                "var_type": "String",
+                "description": "Expiry date (YYYY-MM-DD) or empty string",
+                "example": "2026-12-31",
+            },
+            {
+                "name": "coupon_valid_from",
+                "var_type": "String",
+                "description": "Valid-from date (YYYY-MM-DD) or empty string",
+                "example": "2026-11-01",
+            },
+        ]
+
+    @classmethod
+    def get_preview_context(cls) -> dict[str, Any]:
+        return {
+            "coupon_code": "SAVE20",
+            "coupon_store": "Amazon",
+            "coupon_description": "20% off everything",
+            "coupon_expires_at": "2026-12-31",
+            "coupon_valid_from": "",
+        }

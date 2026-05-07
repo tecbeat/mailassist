@@ -25,5 +25,4 @@ export const pluginRoutes: Record<
   "auto-reply": lazy(() => import("@/pages/auto-reply")),
   summaries: lazy(() => import("@/pages/summaries")),
   contacts: lazy(() => import("@/pages/contacts")),
-  notifications: lazy(() => import("@/pages/notifications")),
 };

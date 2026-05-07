@@ -9,6 +9,8 @@ Folder organisation and labelling are left to the smart folder and
 labeling plugins that run later in the pipeline.
 """
 
+from typing import Any
+
 from pydantic import BaseModel, Field, field_validator
 
 from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
@@ -49,6 +51,8 @@ class NewsletterDetectionPlugin(AIFunctionPlugin[NewsletterDetectionResponse]):
     approval_key = "newsletter"
     has_view_page = True
     view_route = "/newsletters"
+    notification_event_type = "newsletter_detected"
+    notification_template = "notifications/newsletter_detected.j2"
 
     async def execute(self, context: MailContext, ai_response: NewsletterDetectionResponse) -> ActionResult:
         if not ai_response.is_newsletter:
@@ -74,3 +78,69 @@ class NewsletterDetectionPlugin(AIFunctionPlugin[NewsletterDetectionResponse]):
 
     def get_approval_summary(self, ai_response: NewsletterDetectionResponse) -> str:
         return f"Newsletter detected: {ai_response.newsletter_name or 'Unknown'}"
+
+    @classmethod
+    async def load_notification_context(
+        cls,
+        db: Any,
+        account_id: Any,
+        mail_uid: str,
+    ) -> dict[str, Any]:
+        """Load newsletter detection data from the database for notification context."""
+        from sqlalchemy import select
+
+        from app.models.mail import DetectedNewsletter
+
+        result = await db.execute(
+            select(DetectedNewsletter).where(
+                DetectedNewsletter.mail_account_id == account_id,
+                DetectedNewsletter.mail_uid == mail_uid,
+            )
+        )
+        newsletter = result.scalar_one_or_none()
+        if newsletter:
+            return {
+                "newsletter_name": newsletter.newsletter_name,
+                "newsletter_sender": newsletter.sender_address,
+                "has_unsubscribe": newsletter.has_unsubscribe,
+                "unsubscribe_url": newsletter.unsubscribe_url or "",
+            }
+        return {}
+
+    @classmethod
+    def get_notification_variables(cls) -> list[dict[str, Any]]:
+        return [
+            {
+                "name": "newsletter_name",
+                "var_type": "String",
+                "description": "Name of the detected newsletter",
+                "example": "The Weekly Digest",
+            },
+            {
+                "name": "newsletter_sender",
+                "var_type": "String",
+                "description": "Sender email address of the newsletter",
+                "example": "news@example.com",
+            },
+            {
+                "name": "has_unsubscribe",
+                "var_type": "Boolean",
+                "description": "Whether an unsubscribe link was found",
+                "example": "true",
+            },
+            {
+                "name": "unsubscribe_url",
+                "var_type": "String",
+                "description": "Unsubscribe URL (empty string if not found)",
+                "example": "https://example.com/unsubscribe?token=abc",
+            },
+        ]
+
+    @classmethod
+    def get_preview_context(cls) -> dict[str, Any]:
+        return {
+            "newsletter_name": "The Weekly Digest",
+            "newsletter_sender": "news@example.com",
+            "has_unsubscribe": True,
+            "unsubscribe_url": "https://example.com/unsubscribe?token=abc",
+        }

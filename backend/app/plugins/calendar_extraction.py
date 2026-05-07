@@ -7,6 +7,7 @@ Runs sixth in the pipeline (execution_order=60).
 """
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -53,6 +54,8 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
     approval_key = "calendar"
     has_view_page = True
     view_route = "/calendar"
+    notification_event_type = "calendar_event_created"
+    notification_template = "notifications/calendar_created.j2"
 
     async def execute(self, context: MailContext, ai_response: CalendarEventResponse) -> ActionResult:
         if not ai_response.has_event:
@@ -89,3 +92,111 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
 
     def get_approval_summary(self, ai_response: CalendarEventResponse) -> str:
         return f"Calendar event: '{ai_response.title}' on {ai_response.start}"
+
+    @classmethod
+    def get_notification_context(cls, result_data: dict[str, Any]) -> dict[str, Any]:
+        return {"calendar_event": result_data.get("calendar_event", {})}
+
+    @classmethod
+    async def load_notification_context(
+        cls,
+        db: Any,
+        account_id: Any,
+        mail_uid: str,
+    ) -> dict[str, Any]:
+        """Load calendar event data from the database for notification context.
+
+        Returns both a flat set of variables and the legacy ``calendar_event`` dict
+        so existing custom templates continue to work.
+        """
+        from sqlalchemy import select
+
+        from app.models.mail import CalendarEvent
+
+        result = await db.execute(
+            select(CalendarEvent).where(
+                CalendarEvent.mail_account_id == account_id,
+                CalendarEvent.mail_uid == mail_uid,
+            )
+        )
+        cal = result.scalar_one_or_none()
+        if cal:
+            start_str = cal.start.isoformat() if cal.start else ""
+            end_str = cal.end.isoformat() if cal.end else ""
+            return {
+                # flat vars
+                "event_title": cal.title,
+                "event_start": start_str,
+                "event_end": end_str,
+                "event_location": cal.location or "",
+                "event_description": cal.description or "",
+                "event_is_all_day": cal.is_all_day,
+                # legacy dict for backwards-compat with existing custom templates
+                "calendar_event": {
+                    "title": cal.title,
+                    "start": start_str,
+                    "end": end_str,
+                    "location": cal.location,
+                    "description": cal.description,
+                },
+            }
+        return {}
+
+    @classmethod
+    def get_notification_variables(cls) -> list[dict[str, Any]]:
+        return [
+            {
+                "name": "event_title",
+                "var_type": "String",
+                "description": "Title of the calendar event",
+                "example": "Team Meeting",
+            },
+            {
+                "name": "event_start",
+                "var_type": "String",
+                "description": "Start date/time in ISO 8601 format",
+                "example": "2026-03-31T14:00:00+00:00",
+            },
+            {
+                "name": "event_end",
+                "var_type": "String",
+                "description": "End date/time in ISO 8601 format (empty if not set)",
+                "example": "2026-03-31T15:00:00+00:00",
+            },
+            {
+                "name": "event_location",
+                "var_type": "String",
+                "description": "Location of the event (empty string if not set)",
+                "example": "Room 5",
+            },
+            {
+                "name": "event_description",
+                "var_type": "String",
+                "description": "Description / notes for the event",
+                "example": "Quarterly review",
+            },
+            {
+                "name": "event_is_all_day",
+                "var_type": "Boolean",
+                "description": "True if this is an all-day event",
+                "example": "false",
+            },
+        ]
+
+    @classmethod
+    def get_preview_context(cls) -> dict[str, Any]:
+        return {
+            "event_title": "Team Meeting",
+            "event_start": "2026-03-31T14:00:00+00:00",
+            "event_end": "2026-03-31T15:00:00+00:00",
+            "event_location": "Room 5",
+            "event_description": "Quarterly review",
+            "event_is_all_day": False,
+            "calendar_event": {
+                "title": "Team Meeting",
+                "start": "2026-03-31T14:00:00+00:00",
+                "end": "2026-03-31T15:00:00+00:00",
+                "location": "Room 5",
+                "description": "Quarterly review",
+            },
+        }
