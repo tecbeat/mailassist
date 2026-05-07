@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.14.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.14.0-beta) - 2026-05-07
+
 ## [2.13.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.13.1-beta) - 2026-05-07
 
 ### ⛰️  Features
@@ -12,6 +14,7 @@ All notable changes to this project will be documented in this file.
 ### 🐛 Bug Fixes
 
 - *(deps)* Update all non-major dependencies - ([980f48f](https://git.teccave.de/tecbeat/mailassist/commit/980f48f0d5336e34be90ea239fbd82393996830f))
+- *(deps)* Update valkey/valkey:9-alpine docker digest to d1cc706 - ([6229c14](https://git.teccave.de/tecbeat/mailassist/commit/6229c143f767dfdd90a2f6ffe7eb2a2eca353280))
 - Title+body fully controlled by template, no hardcoded title - ([d69c13b](https://git.teccave.de/tecbeat/mailassist/commit/d69c13bbc7a4417fe95958bcae020203f4380ace))
 - Add CSRF token to all API calls, return flat variables list - ([ec4b020](https://git.teccave.de/tecbeat/mailassist/commit/ec4b02006f3a3ac77901a9dff3bd20f356875bbc))
 - Add db.refresh after channel update, show detailed error in toast - ([8a93b10](https://git.teccave.de/tecbeat/mailassist/commit/8a93b10fd58095d06802d61af94c7f96d58695b4))
