@@ -33,6 +33,7 @@ from app.core.events import (
 )
 from app.models import (
     AIProvider,
+    CalDAVConfig,
     LabelChangeLog,
     MailAccount,
     UserSettings,
@@ -520,6 +521,13 @@ async def run_ai_pipeline(
         user_contacts=user_contacts_data,
         technical_indicators=technical_indicators,
     )
+
+    # --- Load CalDAV config for calendar past-events setting ---
+    caldav_stmt = select(CalDAVConfig).where(CalDAVConfig.user_id == UUID(user_id))
+    caldav_result = await db.execute(caldav_stmt)
+    caldav_config = caldav_result.scalar_one_or_none()
+    if caldav_config:
+        context.calendar_include_past_events = caldav_config.include_past_events
 
     # --- Rule evaluation ---
     await _evaluate_rules(db, user_id, account_id, mail_uid, context, event_bus, log, result)

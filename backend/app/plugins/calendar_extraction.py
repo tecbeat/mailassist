@@ -6,7 +6,7 @@ regardless of user settings (high-impact external action).
 Runs sixth in the pipeline (execution_order=60).
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
@@ -66,6 +66,26 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
                 success=True,
                 actions_taken=["event_detected_but_incomplete"],
             )
+
+        # Check if event is in the past — skip unless user opted in
+        if ai_response.start and not context.calendar_include_past_events:
+            try:
+                event_start = datetime.fromisoformat(ai_response.start)
+                # Make offset-naive datetimes UTC-aware for comparison
+                if event_start.tzinfo is None:
+                    from zoneinfo import ZoneInfo
+
+                    event_start = event_start.replace(tzinfo=ZoneInfo("Europe/Berlin"))
+                if event_start < datetime.now(UTC):
+                    self.logger.info(
+                        "calendar_event_past_skipped",
+                        title=ai_response.title,
+                        start=ai_response.start,
+                        mail_uid=context.mail_uid,
+                    )
+                    return self._no_action("calendar_event_in_past")
+            except (ValueError, TypeError):
+                pass  # If we can't parse, proceed normally
 
         actions: list[str] = [
             "apply_label:calendar",

@@ -37,3 +37,4 @@ charts/mailassist/ci/local-values.yaml
 charts/mailassist/ci/dev-values.yaml
 dev-deploy.sh
 .playwright-mcp/
+tmp.txt

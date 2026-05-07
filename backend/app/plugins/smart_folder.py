@@ -79,6 +79,18 @@ class SmartFolderPlugin(AIFunctionPlugin[SmartFolderResponse]):
         # Reset retry flag on successful (non-excluded) suggestion
         self._excluded_retry_done = False
 
+        # INBOX fallback: the AI couldn't determine a better folder — move to INBOX
+        if folder.upper() == "INBOX":
+            self.logger.info(
+                "smart_folder_inbox_fallback",
+                mail_uid=context.mail_uid,
+                reason=ai_response.reason,
+            )
+            return ActionResult(
+                success=True,
+                actions_taken=["move_to:INBOX"],
+            )
+
         existing_set = {f.lower() for f in context.existing_folders}
         is_new_folder = folder.lower() not in existing_set
 

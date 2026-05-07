@@ -17,4 +17,6 @@ export interface CalDAVConfigUpdate {
   password: string;
   /** @maxLength 255 */
   default_calendar: string;
+  /** Also create calendar events for past dates */
+  include_past_events?: boolean;
 }

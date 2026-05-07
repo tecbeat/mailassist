@@ -14,6 +14,7 @@ from uuid import UUID
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import Select, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -209,7 +210,13 @@ async def get_or_create[T](
     if instance is None:
         instance = model(user_id=user_id, **defaults)  # type: ignore[call-arg]
         db.add(instance)
-        await db.flush()
+        try:
+            await db.flush()
+        except IntegrityError:
+            # Concurrent request already created the row — roll back and re-fetch
+            await db.rollback()
+            result = await db.execute(stmt)
+            instance = result.scalar_one()
 
     return instance
 

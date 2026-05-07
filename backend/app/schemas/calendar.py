@@ -13,6 +13,7 @@ class CalDAVConfigResponse(BaseModel):
     id: UUID
     caldav_url: str
     default_calendar: str
+    include_past_events: bool
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -27,6 +28,7 @@ class CalDAVConfigUpdate(BaseModel):
     username: str = Field(max_length=200)
     password: str = Field(max_length=500)
     default_calendar: str = Field(max_length=255)
+    include_past_events: bool = Field(default=False, description="Also create calendar events for past dates")
 
     @field_validator("caldav_url")
     @classmethod

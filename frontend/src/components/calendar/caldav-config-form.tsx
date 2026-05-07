@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { QueryError } from "@/components/query-error";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast";
 import { unwrapResponse } from "@/lib/utils";
 import type { CalDAVConfigResponse, CalDAVTestResponse } from "@/types/api";
@@ -27,6 +28,7 @@ const calendarSchema = z.object({
   default_calendar: z.string().min(1, "Calendar name is required").max(255),
   username: z.string().max(200),
   password: z.string().max(500),
+  include_past_events: z.boolean(),
 });
 
 type CalendarFormValues = z.infer<typeof calendarSchema>;
@@ -53,6 +55,7 @@ export function CalDavConfigForm({ onSaved }: CalDavConfigFormProps) {
     reset,
     getValues,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<CalendarFormValues>({
     resolver: zodResolver(calendarSchema),
@@ -61,6 +64,7 @@ export function CalDavConfigForm({ onSaved }: CalDavConfigFormProps) {
       default_calendar: "",
       username: "",
       password: "",
+      include_past_events: false,
     },
   });
 
@@ -71,6 +75,7 @@ export function CalDavConfigForm({ onSaved }: CalDavConfigFormProps) {
         default_calendar: config.default_calendar ?? "",
         username: "",
         password: "",
+        include_past_events: config.include_past_events ?? false,
       });
     }
   }, [config, reset]);
@@ -83,6 +88,7 @@ export function CalDavConfigForm({ onSaved }: CalDavConfigFormProps) {
           default_calendar: data.default_calendar,
           username: data.username,
           password: data.password,
+          include_past_events: data.include_past_events,
         },
       });
       queryClient.invalidateQueries({
@@ -260,6 +266,22 @@ export function CalDavConfigForm({ onSaved }: CalDavConfigFormProps) {
               </p>
             )}
           </div>
+        </div>
+
+        <div className="flex items-center justify-between rounded-md border p-3">
+          <div className="space-y-0.5">
+            <Label htmlFor="include_past_events">Include past events</Label>
+            <p className="text-xs text-muted-foreground">
+              Also create calendar events for dates in the past (useful for reprocessing old emails).
+            </p>
+          </div>
+          <Switch
+            id="include_past_events"
+            checked={watch("include_past_events")}
+            onCheckedChange={(checked) =>
+              setValue("include_past_events", checked, { shouldDirty: true })
+            }
+          />
         </div>
 
         <Separator />

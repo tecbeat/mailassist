@@ -102,6 +102,11 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         if path in _CSRF_EXEMPT_PATHS:
             return await call_next(request)
 
+        # No CSRF needed when authentication is disabled (development mode)
+        settings = get_settings()
+        if settings.auth_disabled:
+            return await call_next(request)
+
         # Only enforce on state-changing methods
         if request.method in _CSRF_PROTECTED_METHODS:
             cookie_token = request.cookies.get("csrf_token")
@@ -184,6 +189,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         settings = get_settings()
+
+        # No rate limiting when auth is disabled (development mode)
+        if settings.auth_disabled:
+            return await call_next(request)
 
         try:
             cache = get_cache_client()
