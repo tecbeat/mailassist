@@ -12,7 +12,6 @@ export const aiProviderSchema = z.object({
   api_key: z.string().optional().or(z.literal("")),
   temperature: z.number().min(0).max(2),
   max_tokens: z.number().int().min(64).max(32768),
-  timeout_seconds: z.number().int().min(10).max(600).nullable().optional(),
 });
 
 export type AIProviderFormValues = z.infer<typeof aiProviderSchema>;
@@ -52,7 +51,6 @@ export function getDefaultFormValues(providerType: "openai" | "ollama" | "anthro
     api_key: "",
     temperature: defaults.temperature,
     max_tokens: defaults.max_tokens,
-    timeout_seconds: null,
   };
 }
 

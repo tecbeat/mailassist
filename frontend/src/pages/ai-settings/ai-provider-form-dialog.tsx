@@ -68,7 +68,6 @@ export function AIProviderFormDialog({
         api_key: "",
         temperature: editingProvider.temperature,
         max_tokens: editingProvider.max_tokens,
-        timeout_seconds: editingProvider.timeout_seconds ?? null,
       });
       prevProviderType.current = editingProvider.provider_type as "openai" | "ollama" | "anthropic";
     } else {
@@ -266,30 +265,7 @@ export function AIProviderFormDialog({
           )}
         </div>
 
-        {/* Timeout */}
-        <div className="space-y-2">
-          <Label htmlFor="timeout_seconds">
-            Timeout (seconds){" "}
-            <span className="text-xs text-muted-foreground">
-              (empty = global default)
-            </span>
-          </Label>
-          <Input
-            id="timeout_seconds"
-            type="number"
-            min="10"
-            max="600"
-            placeholder="120"
-            {...form.register("timeout_seconds", {
-              setValueAs: (v: string) => (v === "" ? null : Number(v)),
-            })}
-          />
-          {form.formState.errors.timeout_seconds && (
-            <p className="text-xs text-destructive">
-              {form.formState.errors.timeout_seconds.message}
-            </p>
-          )}
-        </div>
+        <Separator />
 
         {/* Max Tokens */}
         <div className="space-y-2">

@@ -288,7 +288,6 @@ export default function AISettingsPage() {
           model_name: values.model_name,
           temperature: values.temperature,
           max_tokens: values.max_tokens,
-          timeout_seconds: values.timeout_seconds ?? null,
           ...(values.api_key ? { api_key: values.api_key } : {}),
         },
       });
@@ -301,7 +300,6 @@ export default function AISettingsPage() {
           model_name: values.model_name,
           temperature: values.temperature,
           max_tokens: values.max_tokens,
-          timeout_seconds: values.timeout_seconds ?? null,
           ...(values.api_key ? { api_key: values.api_key } : {}),
         },
       });
