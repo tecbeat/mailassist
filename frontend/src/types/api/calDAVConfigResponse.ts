@@ -12,6 +12,7 @@ export interface CalDAVConfigResponse {
   id: string;
   caldav_url: string;
   default_calendar: string;
+  include_past_events: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;

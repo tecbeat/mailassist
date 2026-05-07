@@ -75,6 +75,10 @@ class Settings(BaseSettings):
     oidc_client_secret: str | None = Field(default=None, description="OIDC client secret")
     oidc_redirect_uri: str | None = Field(default=None, description="OIDC callback URL")
     oidc_scopes: str = "openid email profile"
+    auth_disabled: bool = Field(
+        default=False,
+        description="Disable authentication entirely. A default user is auto-created. FOR DEVELOPMENT ONLY.",
+    )
 
     # CORS
     cors_allowed_origins: str = Field(

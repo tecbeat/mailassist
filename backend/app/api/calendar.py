@@ -76,11 +76,13 @@ async def update_config(
             caldav_url=data.caldav_url,
             encrypted_credentials=encrypted,
             default_calendar=data.default_calendar,
+            include_past_events=data.include_past_events,
         )
         db.add(config)
     else:
         config.caldav_url = data.caldav_url
         config.default_calendar = data.default_calendar
+        config.include_past_events = data.include_past_events
         if has_new_credentials:
             try:
                 encrypted = encrypt_caldav_credentials(data.username, data.password)

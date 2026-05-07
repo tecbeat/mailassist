@@ -91,6 +91,7 @@ class CalDAVConfig(Base):
     caldav_url: Mapped[str] = mapped_column(String(500), nullable=False)
     encrypted_credentials: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     default_calendar: Mapped[str] = mapped_column(String(255), nullable=False)
+    include_past_events: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(

@@ -38,12 +38,6 @@ export function jobLabel(fn: string, mailUid?: string | null): string {
   return JOB_DISPLAY_NAMES[fn] ?? fn.replace(/_/g, " ");
 }
 
-export function actionLabel(type: string): string {
-  return type
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
 // ---------------------------------------------------------------------------
 // Skeleton loaders
 // ---------------------------------------------------------------------------

@@ -54,6 +54,7 @@ class MailContext:
     contact: dict[str, Any] | None = None
     user_contacts: list[dict[str, Any]] | None = None
     technical_indicators: dict[str, Any] | None = None
+    calendar_include_past_events: bool = False
 
 
 @dataclass

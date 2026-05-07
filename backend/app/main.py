@@ -209,6 +209,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
     logger.info("app_started")
 
+    if settings.auth_disabled:
+        logger.warning("auth_disabled", msg="Authentication is DISABLED. Do not use in production.")
+
     yield
 
     # Shutdown

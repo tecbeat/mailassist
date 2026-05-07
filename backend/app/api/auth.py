@@ -132,6 +132,11 @@ async def _exchange_code_for_token(
 async def login(request: Request) -> RedirectResponse:
     """Initiate OIDC login by redirecting to the identity provider."""
     settings = get_settings()
+
+    if settings.auth_disabled:
+        # No-auth mode: redirect straight to the app
+        return RedirectResponse(url="/", status_code=302)
+
     oidc_config = await _get_oidc_config()
     session_client = get_session_client()
 
@@ -376,6 +381,17 @@ async def logout(request: Request) -> JSONResponse:
 @router.get("/me")
 async def get_current_user(request: Request) -> JSONResponse:
     """Return current authenticated user info."""
+    settings = get_settings()
+    if settings.auth_disabled:
+        user_id = await _get_or_create_no_auth_user()
+        return JSONResponse(
+            content={
+                "user_id": str(user_id),
+                "email": "admin@localhost",
+                "display_name": "Admin (no-auth)",
+            }
+        )
+
     session_client = get_session_client()
     session_id = request.cookies.get("session_id")
 
@@ -397,12 +413,45 @@ async def get_current_user(request: Request) -> JSONResponse:
     )
 
 
+_NO_AUTH_USER_ID: UUID | None = None
+
+
+async def _get_or_create_no_auth_user() -> UUID:
+    """Return a default user for no-auth mode, creating one if needed."""
+    global _NO_AUTH_USER_ID
+    if _NO_AUTH_USER_ID is not None:
+        return _NO_AUTH_USER_ID
+
+    async with get_session_ctx() as db:
+        stmt = select(User).where(User.oidc_subject == "no-auth-default")
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+        if user is None:
+            user = User(
+                oidc_subject="no-auth-default",
+                email="admin@localhost",
+                display_name="Admin (no-auth)",
+            )
+            db.add(user)
+            await db.flush()
+            logger.warning("no_auth_user_created", user_id=str(user.id))
+        _NO_AUTH_USER_ID = user.id
+        await db.commit()
+    return _NO_AUTH_USER_ID
+
+
 async def get_current_user_id(request: Request) -> UUID:
     """FastAPI dependency: extract and validate user_id from session.
 
     Use via Depends(get_current_user_id) on protected endpoints.
     Raises 401 if not authenticated or session expired.
+
+    When AUTH_DISABLED=true, returns a default user without checking sessions.
     """
+    settings = get_settings()
+    if settings.auth_disabled:
+        return await _get_or_create_no_auth_user()
+
     session_client = get_session_client()
     session_id = request.cookies.get("session_id")
 
