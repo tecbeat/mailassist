@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.15.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.15.0-beta) - 2026-05-07
+
+### ⛰️  Features
+
+- Add Anthropic as first-class AI provider - ([11b19dd](https://git.teccave.de/tecbeat/mailassist/commit/11b19dd08d3216e52be23e3207ca5900d6e39b0f))
+
+### 🐛 Bug Fixes
+
+- Reprompt LLM when smart folder suggests excluded folder - ([4e39821](https://git.teccave.de/tecbeat/mailassist/commit/4e39821eff7c7b6e3eec8b38adc41cb0f7338e9f))
+- Remove timeout_seconds field from AI provider form - ([a9b2056](https://git.teccave.de/tecbeat/mailassist/commit/a9b2056200b2b082d9436e8d2cd3bfae34cedaaa))
+
+### 🎨 Styling
+
+- Fix ruff formatting in smart_folder.py - ([f7c312a](https://git.teccave.de/tecbeat/mailassist/commit/f7c312ad76201e2d4233b19941c66f604eb9e37f))
+- Fix ruff formatting in test file - ([0bd2269](https://git.teccave.de/tecbeat/mailassist/commit/0bd22697b721f53ccb98f37e7e63c73ce3ffe2f2))
+
+## [2.14.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.14.1-beta) - 2026-05-07
+
 ## [2.14.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.14.0-beta) - 2026-05-07
 
 ## [2.13.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.13.1-beta) - 2026-05-07
