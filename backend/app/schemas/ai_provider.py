@@ -10,8 +10,8 @@ class AIProviderCreate(BaseModel):
     """Request schema for creating an AI provider."""
 
     name: str | None = Field(default=None, max_length=100, description="Display name for this provider")
-    provider_type: str = Field(description="Provider type: 'openai' or 'ollama'")
-    api_key: str | None = Field(default=None, max_length=500, description="API key (write-only, OpenAI only)")
+    provider_type: str = Field(description="Provider type: 'openai', 'ollama', or 'anthropic'")
+    api_key: str | None = Field(default=None, max_length=500, description="API key (write-only, OpenAI/Anthropic only)")
     base_url: str = Field(max_length=500, description="Provider API base URL")
     model_name: str = Field(max_length=100, description="Model identifier (e.g. 'gpt-4o', 'llama3.1')")
     max_tokens: int = Field(default=1024, ge=64, le=32768)
@@ -23,8 +23,8 @@ class AIProviderCreate(BaseModel):
     @field_validator("provider_type")
     @classmethod
     def validate_provider_type(cls, v: str) -> str:
-        if v not in ("openai", "ollama"):
-            raise ValueError("provider_type must be 'openai' or 'ollama'")
+        if v not in ("openai", "ollama", "anthropic"):
+            raise ValueError("provider_type must be 'openai', 'ollama', or 'anthropic'")
         return v
 
 
@@ -44,8 +44,8 @@ class AIProviderUpdate(BaseModel):
     @field_validator("provider_type")
     @classmethod
     def validate_provider_type(cls, v: str | None) -> str | None:
-        if v is not None and v not in ("openai", "ollama"):
-            raise ValueError("provider_type must be 'openai' or 'ollama'")
+        if v is not None and v not in ("openai", "ollama", "anthropic"):
+            raise ValueError("provider_type must be 'openai', 'ollama', or 'anthropic'")
         return v
 
 

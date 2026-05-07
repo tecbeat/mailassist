@@ -243,6 +243,31 @@ async def execute_plugin(
     # --- Execute plugin action ---
     action_result = await plugin.safe_execute(context, ai_response, pipeline=pipeline)
 
+    # --- Reprompt loop: if the plugin requests a retry with corrective prompt ---
+    if action_result.retry_prompt:
+        log.info("plugin_reprompt_requested", plugin=plugin.name, retry_prompt=action_result.retry_prompt)
+        try:
+            ai_response, retry_tokens = await call_llm(
+                provider_type=provider.provider_type.value,
+                base_url=provider.base_url,
+                model_name=provider.model_name,
+                api_key=api_key,
+                system_prompt=system_prompt,
+                user_prompt=action_result.retry_prompt,
+                response_schema=plugin.get_response_schema(),
+                max_tokens=provider.max_tokens,
+                temperature=provider.temperature,
+                user_id=context.user_id,
+                timeout=provider.timeout_seconds or user_settings.ai_timeout_seconds,
+            )
+            tokens_used += retry_tokens
+        except (TransientLLMError, PermanentLLMError, ValueError) as e:
+            log.error("plugin_reprompt_failed", plugin=plugin.name, error=str(e))
+            outcome.failed = True
+            return outcome
+
+        action_result = await plugin.safe_execute(context, ai_response, pipeline=pipeline)
+
     # Only mark as "executed" if the plugin produced actionable results.
     # No-op results (e.g. spam_check_passed, no_reply_needed) should NOT
     # count as executed — they would incorrectly trigger notifications.

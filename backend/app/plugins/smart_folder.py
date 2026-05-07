@@ -21,6 +21,10 @@ class SmartFolderResponse(BaseModel):
     reason: str = Field(max_length=200)
 
 
+class ExcludedFolderError(Exception):
+    """Raised when the AI repeatedly suggests an excluded folder."""
+
+
 @register_plugin
 class SmartFolderPlugin(AIFunctionPlugin[SmartFolderResponse]):
     """Assign emails to IMAP folders using AI analysis."""
@@ -41,21 +45,39 @@ class SmartFolderPlugin(AIFunctionPlugin[SmartFolderResponse]):
 
         excluded_set = {f.lower() for f in context.excluded_folders}
 
-        # Hard guard: if the AI suggests an excluded folder, force approval
-        # so the user can override. This should rarely trigger because
-        # excluded folders are already filtered from the prompt.
+        # Guard: if the AI suggests an excluded folder, request a reprompt.
+        # The executor will re-call the LLM with the corrective prompt and
+        # invoke execute() again. On the second violation we raise an error.
         if folder.lower() in excluded_set:
-            self.logger.warning(
-                "smart_folder_excluded_folder_suggested",
+            is_retry = getattr(self, "_excluded_retry_done", False)
+
+            if is_retry:
+                self.logger.error(
+                    "smart_folder_excluded_folder_repeated",
+                    folder=folder,
+                    mail_uid=context.mail_uid,
+                )
+                raise ExcludedFolderError(f"AI suggested excluded folder '{folder}' twice despite corrective prompt")
+
+            self.logger.info(
+                "smart_folder_excluded_folder_reprompt",
                 folder=folder,
                 mail_uid=context.mail_uid,
             )
+            self._excluded_retry_done = True
+            existing = ", ".join(context.existing_folders) if context.existing_folders else "(no existing folders)"
             return ActionResult(
                 success=True,
                 actions_taken=[],
-                requires_approval=True,
-                approval_summary=f"AI suggested excluded folder '{folder}': {ai_response.reason}",
+                retry_prompt=(
+                    f"The folder '{folder}' is not allowed. "
+                    f"Choose a different folder from the existing list: {existing}. "
+                    "Respond with the same JSON format."
+                ),
             )
+
+        # Reset retry flag on successful (non-excluded) suggestion
+        self._excluded_retry_done = False
 
         existing_set = {f.lower() for f in context.existing_folders}
         is_new_folder = folder.lower() not in existing_set

@@ -52,9 +52,39 @@ class TestBuildModelString:
         result = _build_model_string("custom", "my-model")
         assert result == "my-model"
 
+    def test_anthropic_prefix(self):
+        result = _build_model_string("anthropic", "claude-sonnet-4-20250514")
+        assert result == "anthropic/claude-sonnet-4-20250514"
+
 
 class TestCallLLMParsing:
     """Test area 5: AI response parsing via call_llm."""
+
+    @pytest.mark.asyncio
+    async def test_anthropic_no_response_format(self):
+        """Anthropic calls must not include response_format."""
+        valid = json.dumps({"label": "work", "confidence": 0.9})
+        mock_response = _make_litellm_response(valid, total_tokens=10)
+
+        with (
+            patch(
+                "app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_response
+            ) as mock_call,
+            patch("app.services.ai._track_tokens", new_callable=AsyncMock),
+        ):
+            await call_llm(
+                provider_type="anthropic",
+                base_url="https://api.anthropic.com",
+                model_name="claude-sonnet-4-20250514",
+                api_key="sk-ant-test",
+                system_prompt="Classify.",
+                user_prompt="Test email body.",
+                response_schema=SampleSchema,
+                user_id="user-123",
+            )
+
+        kwargs = mock_call.call_args[1]
+        assert "response_format" not in kwargs
 
     @pytest.mark.asyncio
     async def test_valid_json_response(self):

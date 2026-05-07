@@ -6,20 +6,19 @@ import { z } from "zod/v4";
 
 export const aiProviderSchema = z.object({
   name: z.string().max(100).optional().or(z.literal("")),
-  provider_type: z.enum(["openai", "ollama"]),
+  provider_type: z.enum(["openai", "ollama", "anthropic"]),
   base_url: z.string().min(1, "Base URL is required").max(500),
   model_name: z.string().min(1, "Model name is required").max(100),
   api_key: z.string().optional().or(z.literal("")),
   temperature: z.number().min(0).max(2),
   max_tokens: z.number().int().min(64).max(32768),
-  timeout_seconds: z.number().int().min(10).max(600).nullable().optional(),
 });
 
 export type AIProviderFormValues = z.infer<typeof aiProviderSchema>;
 
 /** Provider-specific default values for temperature and max_tokens. */
 export const PROVIDER_DEFAULTS: Record<
-  "openai" | "ollama",
+  "openai" | "ollama" | "anthropic",
   { temperature: number; max_tokens: number; base_url: string; model_name: string }
 > = {
   openai: {
@@ -34,9 +33,15 @@ export const PROVIDER_DEFAULTS: Record<
     base_url: "http://localhost:11434",
     model_name: "llama3.1",
   },
+  anthropic: {
+    temperature: 0.3,
+    max_tokens: 4096,
+    base_url: "https://api.anthropic.com",
+    model_name: "claude-sonnet-4-20250514",
+  },
 };
 
-export function getDefaultFormValues(providerType: "openai" | "ollama" = "openai"): AIProviderFormValues {
+export function getDefaultFormValues(providerType: "openai" | "ollama" | "anthropic" = "openai"): AIProviderFormValues {
   const defaults = PROVIDER_DEFAULTS[providerType];
   return {
     name: "",
@@ -46,7 +51,6 @@ export function getDefaultFormValues(providerType: "openai" | "ollama" = "openai
     api_key: "",
     temperature: defaults.temperature,
     max_tokens: defaults.max_tokens,
-    timeout_seconds: null,
   };
 }
 
@@ -56,6 +60,8 @@ export function providerTypeLabel(type: string): string {
       return "OpenAI";
     case "ollama":
       return "Ollama";
+    case "anthropic":
+      return "Anthropic";
     default:
       return type.charAt(0).toUpperCase() + type.slice(1);
   }
