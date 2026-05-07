@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.16.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.16.0-beta) - 2026-05-07
+
+### ⛰️  Features
+
+- Smart folders, calendar past events, dashboard approvals, auth bypass - ([2c80980](https://git.teccave.de/tecbeat/mailassist/commit/2c80980b12dc3659cfbf2c944c659aae876bc4fd))
+
 ## [2.15.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.15.0-beta) - 2026-05-07
 
 ### ⛰️  Features
