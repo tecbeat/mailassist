@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 class ProviderType(str, enum.Enum):
     OPENAI = "openai"
     OLLAMA = "ollama"
+    ANTHROPIC = "anthropic"
 
 
 class AIProvider(Base):

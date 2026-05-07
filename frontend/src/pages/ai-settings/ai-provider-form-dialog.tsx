@@ -62,7 +62,7 @@ export function AIProviderFormDialog({
     if (editingProvider) {
       form.reset({
         name: editingProvider.name ?? "",
-        provider_type: editingProvider.provider_type as "openai" | "ollama",
+        provider_type: editingProvider.provider_type as "openai" | "ollama" | "anthropic",
         base_url: editingProvider.base_url,
         model_name: editingProvider.model_name,
         api_key: "",
@@ -70,7 +70,7 @@ export function AIProviderFormDialog({
         max_tokens: editingProvider.max_tokens,
         timeout_seconds: editingProvider.timeout_seconds ?? null,
       });
-      prevProviderType.current = editingProvider.provider_type as "openai" | "ollama";
+      prevProviderType.current = editingProvider.provider_type as "openai" | "ollama" | "anthropic";
     } else {
       form.reset(getDefaultFormValues());
       prevProviderType.current = "openai";
@@ -143,7 +143,7 @@ export function AIProviderFormDialog({
           <Select
             value={watchedProviderType}
             onValueChange={(value) =>
-              form.setValue("provider_type", value as "openai" | "ollama", {
+              form.setValue("provider_type", value as "openai" | "ollama" | "anthropic", {
                 shouldValidate: true,
               })
             }
@@ -154,6 +154,7 @@ export function AIProviderFormDialog({
             <SelectContent>
               <SelectItem value="openai">OpenAI</SelectItem>
               <SelectItem value="ollama">Ollama</SelectItem>
+              <SelectItem value="anthropic">Anthropic</SelectItem>
             </SelectContent>
           </Select>
           {form.formState.errors.provider_type && (
@@ -171,7 +172,9 @@ export function AIProviderFormDialog({
             placeholder={
               watchedProviderType === "ollama"
                 ? "http://localhost:11434"
-                : "https://api.openai.com/v1"
+                : watchedProviderType === "anthropic"
+                  ? "https://api.anthropic.com"
+                  : "https://api.openai.com/v1"
             }
             {...form.register("base_url")}
           />
@@ -188,7 +191,7 @@ export function AIProviderFormDialog({
           <Input
             id="model_name"
             placeholder={
-              watchedProviderType === "ollama" ? "llama3.1" : "gpt-4o"
+              watchedProviderType === "ollama" ? "llama3.1" : watchedProviderType === "anthropic" ? "claude-sonnet-4-20250514" : "gpt-4o"
             }
             {...form.register("model_name")}
           />
@@ -215,7 +218,9 @@ export function AIProviderFormDialog({
             placeholder={
               editingProvider
                 ? "Leave empty to keep existing"
-                : "sk-..."
+                : watchedProviderType === "anthropic"
+                  ? "sk-ant-..."
+                  : "sk-..."
             }
             {...form.register("api_key")}
           />

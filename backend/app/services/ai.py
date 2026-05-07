@@ -271,7 +271,7 @@ async def call_llm(
                 **optional_params,
             }
             # Only use response_format for providers that support it reliably
-            if provider_type.lower() not in ("ollama",):
+            if provider_type.lower() not in ("ollama", "anthropic"):
                 completion_kwargs["response_format"] = {"type": "json_object"}
 
             response = await litellm.acompletion(**completion_kwargs)
@@ -409,6 +409,8 @@ def _build_model_string(provider_type: str, model_name: str) -> str:
     """
     if provider_type == "ollama":
         return f"ollama/{model_name}"
+    if provider_type == "anthropic":
+        return f"anthropic/{model_name}"
     # OpenAI and compatible APIs use model name directly
     return model_name
 
