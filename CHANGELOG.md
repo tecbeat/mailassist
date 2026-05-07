@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 ## [2.13.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.13.1-beta) - 2026-05-07
 
+### ⛰️  Features
+
+- *(notifications)* Flatten plugin vars to single-item context per mail - ([590adb2](https://git.teccave.de/tecbeat/mailassist/commit/590adb2702a0e9be6f99fb130d50263614465cdc))
+- Refactor notifications to per-channel routing with dynamic plugin registry - ([5023036](https://git.teccave.de/tecbeat/mailassist/commit/5023036d2810dae8807c79cd474c6d97ce58bd7a))
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update all non-major dependencies - ([980f48f](https://git.teccave.de/tecbeat/mailassist/commit/980f48f0d5336e34be90ea239fbd82393996830f))
+- Title+body fully controlled by template, no hardcoded title - ([d69c13b](https://git.teccave.de/tecbeat/mailassist/commit/d69c13bbc7a4417fe95958bcae020203f4380ace))
+- Add CSRF token to all API calls, return flat variables list - ([ec4b020](https://git.teccave.de/tecbeat/mailassist/commit/ec4b02006f3a3ac77901a9dff3bd20f356875bbc))
+- Add db.refresh after channel update, show detailed error in toast - ([8a93b10](https://git.teccave.de/tecbeat/mailassist/commit/8a93b10fd58095d06802d61af94c7f96d58695b4))
+- Expandable channels with autosave, inline add form, blue Channels button - ([bace12e](https://git.teccave.de/tecbeat/mailassist/commit/bace12e5a79983b83adbf3594d65f29031f8599e))
+- Move channels to popup dialog with Switch toggles, match standard patterns - ([ff9f9bc](https://git.teccave.de/tecbeat/mailassist/commit/ff9f9bc853edb9ad7648358ec565a4f6194542ad))
+- Restore original template editor design, use Switch toggles and AppDialog - ([dae09e6](https://git.teccave.de/tecbeat/mailassist/commit/dae09e66cd390caf33602b64d09e972f112da290))
+- Restore template editor, fix channel update, remove 'All' toggles - ([8a4488c](https://git.teccave.de/tecbeat/mailassist/commit/8a4488ce2f7c3d7ceb288c24d85d8bde54ac2b57))
+- Simplify channel_matches to satisfy SIM103 lint rule - ([2c5fbbd](https://git.teccave.de/tecbeat/mailassist/commit/2c5fbbd5e9d553c444379ae0960b0cbff141af42))
+- Resolve lint errors and remove obsolete notification plugin test - ([1d862bb](https://git.teccave.de/tecbeat/mailassist/commit/1d862bb4e6a68b3f2c5be9a628df00cfb9498d98))
+
+### 🎨 Styling
+
+- Apply ruff format to notifications api and new plugins - ([589792d](https://git.teccave.de/tecbeat/mailassist/commit/589792d811d5a1d69928e6f844be356980e70712))
+- Apply ruff formatting - ([5cd85bf](https://git.teccave.de/tecbeat/mailassist/commit/5cd85bf592db472cc2c2f42faf9613b580086562))
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(deps)* Update valkey/valkey:9-alpine Docker digest to d1cc706 - ([2e8fae1](https://git.teccave.de/tecbeat/mailassist/commit/2e8fae17b49af8ca353ce1b2ff1cf837f7ac3d63))
