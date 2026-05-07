@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.13.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.13.1-beta) - 2026-05-07
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Update valkey/valkey:9-alpine Docker digest to d1cc706 - ([2e8fae1](https://git.teccave.de/tecbeat/mailassist/commit/2e8fae17b49af8ca353ce1b2ff1cf837f7ac3d63))
+
+## [2.13.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.13.0-beta) - 2026-05-06
+
 ## [2.12.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.12.0-beta) - 2026-05-06
 
 ### ⛰️  Features
