@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.17.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.17.0-beta) - 2026-05-08
+
+### ⛰️  Features
+
+- Upload auto-reply drafts to IMAP Drafts folder - ([fbcd84e](https://git.teccave.de/tecbeat/mailassist/commit/fbcd84eedb0b290ed584cfd73a8a49ee1d766697))
+
+### 🐛 Bug Fixes
+
+- Move UUID import to TYPE_CHECKING block - ([71db6d7](https://git.teccave.de/tecbeat/mailassist/commit/71db6d7687a88e837aca4cced27a32699dd86c36))
+
 ## [2.16.3-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.16.3-beta) - 2026-05-08
 
 ### 🐛 Bug Fixes
