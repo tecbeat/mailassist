@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.18.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.18.1-beta) - 2026-05-08
+
+### 🐛 Bug Fixes
+
+- Include changelogger artifact in Docker build for changelog dialog - ([7bfc349](https://git.teccave.de/tecbeat/mailassist/commit/7bfc349da635c58868aeb9864fce216bfd3f07b2))
+
 ## [2.18.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.18.0-beta) - 2026-05-08
 
 ### ⛰️  Features
