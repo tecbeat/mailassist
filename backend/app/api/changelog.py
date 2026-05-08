@@ -129,7 +129,11 @@ async def get_changelog(
     all_entries = _parse_changelog(content)
     entries = _entries_since(all_entries, since_version)
 
-    return {"version": settings.version, "entries": entries}
+    return {
+        "version": settings.version,
+        "since_version": since_version,
+        "entries": entries,
+    }
 
 
 @router.post("/changelog/dismiss")

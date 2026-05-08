@@ -6,6 +6,7 @@ import { customInstance } from "@/services/client";
 
 interface ChangelogResponse {
   version: string;
+  since_version: string | null;
   entries: Record<string, string>;
 }
 
@@ -106,6 +107,11 @@ export function ChangelogDialog() {
 
   if (!data) return null;
 
+  const fmtVersion = (v: string) => (v.startsWith("v") ? v : `v${v}`);
+  const description = data.since_version
+    ? `${fmtVersion(data.since_version)} → ${fmtVersion(data.version)}`
+    : fmtVersion(data.version);
+
   return (
     <AppDialog
       open={open}
@@ -116,9 +122,7 @@ export function ChangelogDialog() {
           What&apos;s New
         </span>
       }
-      description={
-        data.version.startsWith("v") ? data.version : `v${data.version}`
-      }
+      description={description}
       primaryLabel="Got it"
       primaryIcon={<Check />}
       onPrimaryClick={handleDismiss}

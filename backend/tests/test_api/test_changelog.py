@@ -109,6 +109,7 @@ class TestChangelogEndpoint:
 
         mock_last_seen.assert_awaited_once_with(mock_db, user_id)
         assert result["version"] == "1.2.0"
+        assert result["since_version"] is None
         # No last_seen → only latest entry
         assert "1.2.0" in result["entries"]
         assert "1.1.0" not in result["entries"]
@@ -130,6 +131,7 @@ class TestChangelogEndpoint:
 
         assert "1.2.0" in result["entries"]
         assert "1.1.0" not in result["entries"]
+        assert result["since_version"] == "1.1.0"
 
     async def test_changelog_returns_empty_when_up_to_date(self, tmp_path: Path) -> None:
         """Returns no entries when user has already seen the latest."""
