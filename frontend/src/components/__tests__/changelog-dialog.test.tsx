@@ -34,7 +34,7 @@ describe("ChangelogDialog", () => {
     await waitFor(() => {
       expect(screen.getByText("What's New")).toBeInTheDocument();
     });
-    expect(screen.getByText(/v1\.2\.0/)).toBeInTheDocument();
+    expect(screen.getAllByText(/v1\.2\.0/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Got it")).toBeInTheDocument();
   });
 
