@@ -671,6 +671,38 @@ async def _process_mail_inner(
         )
         return
 
+    # --- Notification dispatch (BEFORE Phase 4) ---
+    #
+    # The notification handler resolves plugin-specific context by querying
+    # plugin tables keyed on ``(mail_account_id, mail_uid)``.  If we wait
+    # until after Phase 4 to emit the event, an IMAP MOVE in Phase 4 will
+    # have rewritten ``tracked_email.mail_uid`` to the new COPYUID value
+    # while plugin rows still hold the pre-move UID — the lookup misses,
+    # the notification is sent with empty plugin variables, and the user
+    # sees a "From: real-sender / Code: " notification with the body
+    # filled by Jinja defaults.
+    #
+    # Plugin notifications describe the *data extracted* from the mail,
+    # not the *folder change* that may follow, so emitting before the
+    # move is also semantically correct.
+    #
+    # Trade-off: if Phase 4 fails and the mail is requeued, the next
+    # successful run will fire the notification a second time.  This is
+    # the same duplication risk the system already accepts for any
+    # plugin re-running on retry, and is preferable to silently dropping
+    # plugin context every time a mail is moved.
+    event_bus = get_event_bus()
+    await event_bus.emit(
+        AIProcessingCompleteEvent(
+            user_id=UUID(user_id),
+            account_id=UUID(account_id),
+            mail_uid=mail_uid,
+            current_folder=current_folder,
+            plugins_executed=pipeline_result.plugins_executed,
+            approvals_created=pipeline_result.approvals_created,
+        )
+    )
+
     # --- Phase 4: IMAP actions ---
     if pipeline_result.auto_actions:
         # Build plugin_names list for progress display
@@ -781,18 +813,9 @@ async def _process_mail_inner(
         )
         log.info("marked_completed_pipeline_did_not_run")
 
-    # Emit completion event
-    event_bus = get_event_bus()
-    await event_bus.emit(
-        AIProcessingCompleteEvent(
-            user_id=UUID(user_id),
-            account_id=UUID(account_id),
-            mail_uid=mail_uid,
-            current_folder=current_folder,
-            plugins_executed=pipeline_result.plugins_executed,
-            approvals_created=pipeline_result.approvals_created,
-        )
-    )
+    # Note: ``AIProcessingCompleteEvent`` is emitted earlier — before
+    # Phase 4 — so that plugin notification context lookups see the
+    # pre-move ``mail_uid``.  See the comment block above the emit.
 
     await _clear_pipeline_progress(account_id, mail_uid, current_folder)
 

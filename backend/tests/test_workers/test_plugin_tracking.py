@@ -1098,7 +1098,10 @@ class TestSavepointRollback:
                 new_callable=AsyncMock,
             ) as mock_pause_account,
             patch("app.workers.mail_processor._update_tracked_metadata", new_callable=AsyncMock),
+            patch("app.workers.mail_processor.get_event_bus") as mock_event_bus,
         ):
+            mock_event_bus.return_value.emit = AsyncMock()
+
             from app.workers.mail_processor import process_mail
 
             await process_mail(
@@ -1115,6 +1118,10 @@ class TestSavepointRollback:
         # Account should have been paused
         mock_pause_account.assert_awaited_once()
         assert "phase4_imap_error" in mock_pause_account.call_args[0][1]
+        # Issue #157: AIProcessingCompleteEvent must be emitted *before*
+        # Phase 4, so a Phase 4 IMAP error still surfaces a notification
+        # for the data persisted in Phase 3.
+        mock_event_bus.return_value.emit.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------
