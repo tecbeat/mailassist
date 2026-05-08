@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 import type { ContactResponse } from "@/types/api";
 
@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryError } from "@/components/query-error";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { MatchListItem } from "@/components/match-list-item";
+import { Pagination } from "@/components/pagination";
 
 import { getInitials } from "./contacts-schemas";
 
@@ -56,7 +56,7 @@ export function ContactListColumn({
   onPageChange,
 }: ContactListColumnProps) {
   return (
-    <div className="min-w-0 space-y-3">
+    <div className="min-w-0 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Contacts</h3>
         <Badge variant="secondary">{totalItems}</Badge>
@@ -83,7 +83,7 @@ export function ContactListColumn({
       </div>
 
       {/* Contact list */}
-      <ScrollArea className="h-[400px] rounded-md border">
+      <div className="flex-1 rounded-md border">
         {isLoading ? (
           <div className="space-y-2 p-2">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -150,32 +150,18 @@ export function ContactListColumn({
             })()}
           </div>
         )}
-      </ScrollArea>
+      </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-1">
-          <span className="text-xs text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          <div className="flex items-center gap-1">
-            <AppButton
-              icon={<ChevronLeft />}
-              label="Previous page"
-              variant="ghost"
-              disabled={page <= 1}
-              onClick={() => onPageChange(page - 1)}
-            />
-            <AppButton
-              icon={<ChevronRight />}
-              label="Next page"
-              variant="ghost"
-              disabled={page >= totalPages}
-              onClick={() => onPageChange(page + 1)}
-            />
-          </div>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalCount={totalItems}
+        onPageChange={onPageChange}
+        noun="contacts"
+        compact
+        className="shrink-0 mt-auto"
+      />
     </div>
   );
 }

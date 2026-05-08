@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Search, Mail, X, UserPlus } from "lucide-react";
 
 import type { ContactResponse, SenderResponse } from "@/types/api";
@@ -7,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryError } from "@/components/query-error";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { MatchListItem } from "@/components/match-list-item";
+import { Pagination } from "@/components/pagination";
 import { SpamButton } from "@/components/spam-button";
 
 // ---------------------------------------------------------------------------
@@ -34,6 +35,8 @@ interface SenderListColumnProps {
 // Component
 // ---------------------------------------------------------------------------
 
+const SENDERS_PER_PAGE = 20;
+
 export function SenderListColumn({
   senders,
   selectedContact,
@@ -48,8 +51,21 @@ export function SenderListColumn({
   onSenderClick,
   onCreateContact,
 }: SenderListColumnProps) {
+  const [page, setPage] = useState(1);
+
+  // Reset to page 1 when search or senders change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, senders.length]);
+
+  const totalPages = Math.max(1, Math.ceil(senders.length / SENDERS_PER_PAGE));
+  const paginatedSenders = senders.slice(
+    (page - 1) * SENDERS_PER_PAGE,
+    page * SENDERS_PER_PAGE,
+  );
+
   return (
-    <div className="min-w-0 space-y-3">
+    <div className="min-w-0 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Senders</h3>
         <Badge variant="secondary">{senders.length}</Badge>
@@ -76,7 +92,7 @@ export function SenderListColumn({
       </div>
 
       {/* Sender list */}
-      <ScrollArea className="h-[400px] rounded-md border">
+      <div className="flex-1 rounded-md border">
         {isLoading ? (
           <div className="space-y-2 p-2">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -95,7 +111,7 @@ export function SenderListColumn({
           </p>
         ) : (
           <div className="space-y-1 p-1">
-            {senders.map((sender) => {
+            {paginatedSenders.map((sender) => {
               const isSelected = selectedSender?.email_address === sender.email_address;
               const isAssignedToSelected = selectedContact
                 ? selectedContact.emails.some(
@@ -150,7 +166,18 @@ export function SenderListColumn({
             })}
           </div>
         )}
-      </ScrollArea>
+      </div>
+
+      {/* Pagination */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalCount={senders.length}
+        onPageChange={setPage}
+        noun="senders"
+        compact
+        className="shrink-0 mt-auto"
+      />
     </div>
   );
 }
