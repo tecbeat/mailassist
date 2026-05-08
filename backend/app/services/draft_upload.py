@@ -12,7 +12,6 @@ from datetime import UTC, datetime
 from email.message import EmailMessage
 from email.utils import format_datetime, make_msgid
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 import structlog
 
@@ -27,6 +26,8 @@ from app.services.mail import (
 )
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from app.models import MailAccount
 
 logger = structlog.get_logger()
