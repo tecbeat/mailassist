@@ -31,7 +31,7 @@ import { ContactListColumn } from "./contact-list-column";
 import { SenderListColumn } from "./sender-list-column";
 import { CreateContactDialog } from "./create-contact-dialog";
 
-const CONTACTS_PER_PAGE = 20;
+const CONTACTS_PER_PAGE = 10;
 
 // ---------------------------------------------------------------------------
 // Mappings Tab — Two-Column Matching UI

@@ -70,7 +70,8 @@ def _rebuild_actions(function_type: str, source: dict[str, Any]) -> list[str]:
 
     elif function_type == "spam_detection":
         if source.get("is_spam"):
-            actions.append("move_to:Spam")
+            actions.append("move_to_spam")
+            actions.append("mark_as_read")
 
     return actions
 

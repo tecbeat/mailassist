@@ -4,8 +4,24 @@ import { ChangelogDialog } from "@/components/changelog-dialog";
 
 const MOCK_CHANGELOG = {
   version: "1.2.0",
+  since_version: "1.0.0",
   entries: {
     "1.2.0": "### Added\n- New changelog dialog\n- Version display",
+    "1.1.0": "### Fixed\n- Bug fix",
+  },
+};
+
+const MOCK_CHANGELOG_EMPTY = {
+  version: "1.2.0",
+  since_version: "1.2.0",
+  entries: {},
+};
+
+const MOCK_CHANGELOG_FIRST_VISIT = {
+  version: "1.2.0",
+  since_version: null,
+  entries: {
+    "1.2.0": "### Added\n- New changelog dialog",
   },
 };
 
@@ -16,27 +32,12 @@ vi.mock("@/services/client", () => ({
 import { customInstance } from "@/services/client";
 const mockCustomInstance = vi.mocked(customInstance);
 
-// Provide a real in-memory localStorage since jsdom's implementation
-// may be replaced by vitest's --localstorage-file stub which lacks the full API.
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
-  return {
-    getItem: (key: string) => store[key] ?? null,
-    setItem: (key: string, value: string) => { store[key] = value; },
-    removeItem: (key: string) => { delete store[key]; },
-    clear: () => { store = {}; },
-  };
-})();
-
-vi.stubGlobal("localStorage", localStorageMock);
-
 describe("ChangelogDialog", () => {
   beforeEach(() => {
-    localStorageMock.clear();
     vi.clearAllMocks();
   });
 
-  it("shows dialog when version differs from localStorage", async () => {
+  it("shows dialog when server returns entries", async () => {
     mockCustomInstance.mockResolvedValueOnce({ data: MOCK_CHANGELOG });
 
     render(<ChangelogDialog />);
@@ -44,25 +45,46 @@ describe("ChangelogDialog", () => {
     await waitFor(() => {
       expect(screen.getByText("What's New")).toBeInTheDocument();
     });
-    expect(screen.getByText(/v1\.2\.0/)).toBeInTheDocument();
     expect(screen.getByText("Got it")).toBeInTheDocument();
   });
 
-  it("does not show dialog when localStorage version matches", async () => {
-    localStorage.setItem("mailassist-last-seen-version", "1.2.0");
+  it("shows version range in description when since_version is set", async () => {
     mockCustomInstance.mockResolvedValueOnce({ data: MOCK_CHANGELOG });
 
     render(<ChangelogDialog />);
 
-    // Wait for the fetch to complete, then verify no dialog
+    await waitFor(() => {
+      expect(screen.getByText("What's New")).toBeInTheDocument();
+    });
+    expect(screen.getByText("v1.0.0 → v1.2.0")).toBeInTheDocument();
+  });
+
+  it("shows only current version when since_version is null", async () => {
+    mockCustomInstance.mockResolvedValueOnce({ data: MOCK_CHANGELOG_FIRST_VISIT });
+
+    render(<ChangelogDialog />);
+
+    await waitFor(() => {
+      expect(screen.getByText("What's New")).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/→/)).not.toBeInTheDocument();
+  });
+
+  it("does not show dialog when server returns empty entries", async () => {
+    mockCustomInstance.mockResolvedValueOnce({ data: MOCK_CHANGELOG_EMPTY });
+
+    render(<ChangelogDialog />);
+
     await waitFor(() => {
       expect(mockCustomInstance).toHaveBeenCalled();
     });
     expect(screen.queryByText("What's New")).not.toBeInTheDocument();
   });
 
-  it("saves version to localStorage on dismiss", async () => {
+  it("calls dismiss endpoint on dismiss", async () => {
     mockCustomInstance.mockResolvedValueOnce({ data: MOCK_CHANGELOG });
+    // Mock the dismiss POST call
+    mockCustomInstance.mockResolvedValueOnce({ status: "ok" });
 
     const { userEvent } = await import("@testing-library/user-event");
     const user = userEvent.setup();
@@ -75,7 +97,7 @@ describe("ChangelogDialog", () => {
 
     await user.click(screen.getByText("Got it"));
 
-    expect(localStorage.getItem("mailassist-last-seen-version")).toBe("1.2.0");
+    expect(mockCustomInstance).toHaveBeenCalledWith("/api/changelog/dismiss", { method: "POST" });
   });
 
   it("handles API error gracefully without crashing", async () => {
@@ -83,7 +105,6 @@ describe("ChangelogDialog", () => {
 
     render(<ChangelogDialog />);
 
-    // Wait for the fetch to settle
     await waitFor(() => {
       expect(mockCustomInstance).toHaveBeenCalled();
     });

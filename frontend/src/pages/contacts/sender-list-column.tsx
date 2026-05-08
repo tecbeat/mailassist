@@ -35,7 +35,7 @@ interface SenderListColumnProps {
 // Component
 // ---------------------------------------------------------------------------
 
-const SENDERS_PER_PAGE = 20;
+const SENDERS_PER_PAGE = 10;
 
 export function SenderListColumn({
   senders,
