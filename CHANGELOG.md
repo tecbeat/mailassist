@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.16.3-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.16.3-beta) - 2026-05-08
+
+### 🐛 Bug Fixes
+
+- Use dynamic height for contact card and add empty state icon to summaries - ([0195cb7](https://git.teccave.de/tecbeat/mailassist/commit/0195cb747d25d3a2c753a87465edfa9dab1cc78f))
+- Replace scroll areas with pagination in contact matching card - ([50df4fe](https://git.teccave.de/tecbeat/mailassist/commit/50df4fe2bdfb2596cba181836d8e92ba7849b64f))
+
 ## [2.16.2-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.16.2-beta) - 2026-05-08
 
 ### 🐛 Bug Fixes
