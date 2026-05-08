@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.18.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.18.0-beta) - 2026-05-08
+
+### ⛰️  Features
+
+- Show version range in changelog dialog description - ([a1eb917](https://git.teccave.de/tecbeat/mailassist/commit/a1eb917f9f4289a4c0e5f717c1c092ab66607614))
+- Store last_seen_version in user_settings instead of localStorage - ([664317a](https://git.teccave.de/tecbeat/mailassist/commit/664317a1064d9b35dc309f765957f9b52b91128b))
+
+### 🐛 Bug Fixes
+
+- Prevent changelog popup when last_seen matches current version - ([a7d9ec6](https://git.teccave.de/tecbeat/mailassist/commit/a7d9ec6c7cef64ef8adf8cba49a1bd7d89e58df3))
+- Use getAllByText for version text that appears multiple times in dialog - ([f52ca07](https://git.teccave.de/tecbeat/mailassist/commit/f52ca07ca239d51b94762d71460d793bdd2f78d9))
+- Resolve lint and test failures for changelog last_seen_version - ([7189d89](https://git.teccave.de/tecbeat/mailassist/commit/7189d89cdb0833c239c0cfcab4008353d728f5c4))
+- Changelog endpoint returns only current version entry - ([fe28e61](https://git.teccave.de/tecbeat/mailassist/commit/fe28e615414a4f11b8568e1d77a05cfd76d1f347))
+- Reduce contacts and senders per page from 20 to 10 - ([015cf5d](https://git.teccave.de/tecbeat/mailassist/commit/015cf5dc4cf69cac2a9ad0bf209a49d555d39990))
+- Use move_to_spam action in approval rebuild for proper folder resolution - ([e1bb095](https://git.teccave.de/tecbeat/mailassist/commit/e1bb09562704731533a1fa92e7a28b9be7f27108))
+
 ## [2.17.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.17.0-beta) - 2026-05-08
 
 ### ⛰️  Features
