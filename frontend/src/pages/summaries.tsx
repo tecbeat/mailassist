@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { Trash2 } from "lucide-react";
+import { Mail, Trash2 } from "lucide-react";
 import {
   useListSummariesApiSummariesGet,
   useDeleteSummaryApiSummariesSummaryIdDelete,
@@ -182,6 +182,7 @@ export default function SummariesPage() {
               </SortFilterContent>
             }
             skeleton={<ListSkeleton lines={["w-1/3", "w-full"]} />}
+            emptyIcon={<Mail className="mb-3 h-10 w-10 text-muted-foreground" />}
             emptyMessage="No email summaries found."
             renderItem={(summary: EmailSummaryResponse) => {
               const expanded = expandedId === summary.id;

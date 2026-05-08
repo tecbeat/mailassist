@@ -236,7 +236,7 @@ export function MappingsTab({ onContactSelect }: { onContactSelect?: (contact: C
 
   return (
     <>
-    <Card className="flex flex-col min-h-[calc(100vh-12rem)]">
+    <Card className="flex flex-col">
       <CardHeader>
         <CardTitle>Match Emails and Contacts</CardTitle>
         <CardDescription>
