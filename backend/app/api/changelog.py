@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
-from app.api.deps import CurrentUserId, DbSession
+from app.api.deps import CurrentUserId, DbSession  # noqa: TC001
 from app.core.config import get_settings
 from app.models.user import UserSettings
 

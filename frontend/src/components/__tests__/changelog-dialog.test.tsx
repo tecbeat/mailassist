@@ -9,6 +9,11 @@ const MOCK_CHANGELOG = {
   },
 };
 
+const MOCK_CHANGELOG_EMPTY = {
+  version: "1.2.0",
+  entries: {},
+};
+
 vi.mock("@/services/client", () => ({
   customInstance: vi.fn(),
 }));
@@ -16,27 +21,12 @@ vi.mock("@/services/client", () => ({
 import { customInstance } from "@/services/client";
 const mockCustomInstance = vi.mocked(customInstance);
 
-// Provide a real in-memory localStorage since jsdom's implementation
-// may be replaced by vitest's --localstorage-file stub which lacks the full API.
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
-  return {
-    getItem: (key: string) => store[key] ?? null,
-    setItem: (key: string, value: string) => { store[key] = value; },
-    removeItem: (key: string) => { delete store[key]; },
-    clear: () => { store = {}; },
-  };
-})();
-
-vi.stubGlobal("localStorage", localStorageMock);
-
 describe("ChangelogDialog", () => {
   beforeEach(() => {
-    localStorageMock.clear();
     vi.clearAllMocks();
   });
 
-  it("shows dialog when version differs from localStorage", async () => {
+  it("shows dialog when server returns entries", async () => {
     mockCustomInstance.mockResolvedValueOnce({ data: MOCK_CHANGELOG });
 
     render(<ChangelogDialog />);
@@ -48,21 +38,21 @@ describe("ChangelogDialog", () => {
     expect(screen.getByText("Got it")).toBeInTheDocument();
   });
 
-  it("does not show dialog when localStorage version matches", async () => {
-    localStorage.setItem("mailassist-last-seen-version", "1.2.0");
-    mockCustomInstance.mockResolvedValueOnce({ data: MOCK_CHANGELOG });
+  it("does not show dialog when server returns empty entries", async () => {
+    mockCustomInstance.mockResolvedValueOnce({ data: MOCK_CHANGELOG_EMPTY });
 
     render(<ChangelogDialog />);
 
-    // Wait for the fetch to complete, then verify no dialog
     await waitFor(() => {
       expect(mockCustomInstance).toHaveBeenCalled();
     });
     expect(screen.queryByText("What's New")).not.toBeInTheDocument();
   });
 
-  it("saves version to localStorage on dismiss", async () => {
+  it("calls dismiss endpoint on dismiss", async () => {
     mockCustomInstance.mockResolvedValueOnce({ data: MOCK_CHANGELOG });
+    // Mock the dismiss POST call
+    mockCustomInstance.mockResolvedValueOnce({ status: "ok" });
 
     const { userEvent } = await import("@testing-library/user-event");
     const user = userEvent.setup();
@@ -75,7 +65,7 @@ describe("ChangelogDialog", () => {
 
     await user.click(screen.getByText("Got it"));
 
-    expect(localStorage.getItem("mailassist-last-seen-version")).toBe("1.2.0");
+    expect(mockCustomInstance).toHaveBeenCalledWith("/api/changelog/dismiss", { method: "POST" });
   });
 
   it("handles API error gracefully without crashing", async () => {
@@ -83,7 +73,6 @@ describe("ChangelogDialog", () => {
 
     render(<ChangelogDialog />);
 
-    // Wait for the fetch to settle
     await waitFor(() => {
       expect(mockCustomInstance).toHaveBeenCalled();
     });
