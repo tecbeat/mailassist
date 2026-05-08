@@ -125,6 +125,15 @@ async def get_changelog(
         raise HTTPException(status_code=404, detail="Changelog not found")
 
     since_version = await _get_last_seen(db, user_id)
+
+    # User already dismissed the current version — nothing new to show.
+    if since_version == settings.version:
+        return {
+            "version": settings.version,
+            "since_version": since_version,
+            "entries": {},
+        }
+
     content = _CHANGELOG_PATH.read_text(encoding="utf-8")
     all_entries = _parse_changelog(content)
     entries = _entries_since(all_entries, since_version)
