@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.18.2-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.18.2-beta) - 2026-05-08
+
+### 🐛 Bug Fixes
+
+- *(notifications)* Emit AIProcessingCompleteEvent before Phase 4 IMAP actions - ([c0b51e9](https://git.teccave.de/tecbeat/mailassist/commit/c0b51e981ce96be52572e2248d8dd74c1f67d49b))
+
+### 🧪 Testing
+
+- Mock event bus in Phase 4 error test - ([9c2d289](https://git.teccave.de/tecbeat/mailassist/commit/9c2d289d49cd88a522c48d19864e9f4427d090fa))
+
 ## [2.18.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.18.1-beta) - 2026-05-08
 
 ### 🐛 Bug Fixes
