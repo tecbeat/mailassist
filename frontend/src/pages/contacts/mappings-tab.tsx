@@ -236,7 +236,7 @@ export function MappingsTab({ onContactSelect }: { onContactSelect?: (contact: C
 
   return (
     <>
-    <Card>
+    <Card className="flex flex-col">
       <CardHeader>
         <CardTitle>Match Emails and Contacts</CardTitle>
         <CardDescription>
@@ -244,8 +244,8 @@ export function MappingsTab({ onContactSelect }: { onContactSelect?: (contact: C
           are written back to the CardDAV address book.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 md:grid-cols-2">
+      <CardContent className="flex-1 flex flex-col">
+        <div className="grid gap-4 md:grid-cols-2 flex-1">
           <ContactListColumn
             contacts={filteredContacts}
             contactForSender={contactForSender}
