@@ -89,8 +89,7 @@ export function DashboardApprovalsSection() {
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium truncate">{a.mail_subject}</span>
-                      <Badge variant={actionConfig.variant} className="shrink-0 gap-1">
-                        {actionConfig.icon}
+                      <Badge variant={actionConfig.variant} className="shrink-0">
                         {actionConfig.label}
                       </Badge>
                     </div>
