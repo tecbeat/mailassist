@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     from pydantic import BaseModel
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from app.models import MailAccount
     from app.plugins.auto_reply import AutoReplyResponse
     from app.plugins.calendar_extraction import CalendarEventResponse
     from app.plugins.contacts import ContactAssignmentResponse
@@ -601,6 +602,23 @@ async def _persist_plugin_result(
             db=db,
         )
 
+        # Upload draft to IMAP Drafts folder
+        if resp_ar.should_reply and resp_ar.draft_body:
+            from app.services.draft_upload import upload_draft_to_imap
+
+            account = await _load_mail_account(db, account_id)
+            if account:
+                await upload_draft_to_imap(
+                    account=account,
+                    user_id=user_id,
+                    mail_uid=mail_uid,
+                    draft_body=resp_ar.draft_body,
+                    original_subject=context.subject,
+                    original_from=context.sender,
+                    original_message_id=context.headers.get("message-id"),
+                    original_references=None,
+                )
+
     elif plugin.name == "contacts":
         resp_ct: ContactAssignmentResponse = ai_response  # type: ignore[assignment]
         await save_contact_assignment(
@@ -632,6 +650,17 @@ async def _persist_plugin_result(
             source="ai",
             db=db,
         )
+
+
+async def _load_mail_account(db: AsyncSession, account_id: UUID) -> MailAccount | None:
+    """Load a mail account by ID for IMAP operations."""
+    from sqlalchemy import select
+
+    from app.models import MailAccount as _MailAccount
+
+    stmt = select(_MailAccount).where(_MailAccount.id == account_id)
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
 
 
 async def _create_approval(

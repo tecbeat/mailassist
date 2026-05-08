@@ -356,6 +356,25 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 reasoning=data.get("reasoning"),
                 own_session=True,
             )
+
+            # Upload draft to IMAP Drafts folder
+            draft_body = data.get("draft_body")
+            if data.get("should_reply") and draft_body:
+                from app.services.draft_upload import upload_draft_to_imap
+
+                async with get_session_ctx() as db2:
+                    account = await _get_account(db2, approval.mail_account_id)
+                if account:
+                    await upload_draft_to_imap(
+                        account=account,
+                        user_id=approval.user_id,
+                        mail_uid=approval.mail_uid,
+                        draft_body=draft_body,
+                        original_subject=approval.mail_subject,
+                        original_from=approval.mail_from,
+                        original_message_id=None,
+                        original_references=None,
+                    )
         elif fn == "contacts":
             await save_contact_assignment(
                 user_id=approval.user_id,
