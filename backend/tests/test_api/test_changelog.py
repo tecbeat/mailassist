@@ -1,16 +1,18 @@
 """Tests for the changelog API endpoint (Issue #109).
 
-Verifies changelog parsing, endpoint responses, and health version field.
+Verifies changelog parsing, endpoint responses, health version field,
+and the ``_entries_since`` helper used for server-side last-seen filtering.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
 import pytest
 
-from app.api.changelog import _parse_changelog, get_changelog
+from app.api.changelog import _entries_since, _parse_changelog, get_changelog
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -57,6 +59,34 @@ class TestParseChangelog:
         assert _parse_changelog("# Changelog\n\nSome text without versions.") == {}
 
 
+class TestEntriesSince:
+    """Unit tests for ``_entries_since``."""
+
+    def test_returns_empty_when_no_entries(self) -> None:
+        assert _entries_since({}, "1.0.0") == {}
+
+    def test_returns_latest_when_since_is_none(self) -> None:
+        entries = _parse_changelog(SAMPLE_CHANGELOG)
+        result = _entries_since(entries, None)
+        assert list(result.keys()) == ["1.2.0"]
+
+    def test_returns_latest_when_since_not_found(self) -> None:
+        entries = _parse_changelog(SAMPLE_CHANGELOG)
+        result = _entries_since(entries, "0.0.1")
+        assert list(result.keys()) == ["1.2.0"]
+
+    def test_returns_newer_entries_only(self) -> None:
+        entries = _parse_changelog(SAMPLE_CHANGELOG)
+        result = _entries_since(entries, "1.1.0")
+        assert list(result.keys()) == ["1.2.0"]
+        assert "1.1.0" not in result
+
+    def test_returns_empty_when_already_on_latest(self) -> None:
+        entries = _parse_changelog(SAMPLE_CHANGELOG)
+        result = _entries_since(entries, "1.2.0")
+        assert result == {}
+
+
 class TestChangelogEndpoint:
     """Tests for GET /api/changelog."""
 
@@ -64,19 +94,59 @@ class TestChangelogEndpoint:
         """Returns version and entries when enabled and file exists."""
         changelog_file = tmp_path / "CHANGELOG.md"
         changelog_file.write_text(SAMPLE_CHANGELOG)
+        user_id = uuid4()
 
         with (
             patch("app.api.changelog._CHANGELOG_PATH", changelog_file),
             patch("app.api.changelog.get_settings") as mock_settings,
+            patch("app.api.changelog._get_last_seen", new_callable=AsyncMock, return_value=None) as mock_last_seen,
+        ):
+            mock_settings.return_value.enable_changelog = True
+            mock_settings.return_value.version = "1.2.0"
+            mock_db = AsyncMock()
+
+            result = await get_changelog(user_id=user_id, db=mock_db)
+
+        mock_last_seen.assert_awaited_once_with(mock_db, user_id)
+        assert result["version"] == "1.2.0"
+        # No last_seen → only latest entry
+        assert "1.2.0" in result["entries"]
+        assert "1.1.0" not in result["entries"]
+
+    async def test_changelog_returns_diff_since_last_seen(self, tmp_path: Path) -> None:
+        """Returns only entries newer than the user's last seen version."""
+        changelog_file = tmp_path / "CHANGELOG.md"
+        changelog_file.write_text(SAMPLE_CHANGELOG)
+
+        with (
+            patch("app.api.changelog._CHANGELOG_PATH", changelog_file),
+            patch("app.api.changelog.get_settings") as mock_settings,
+            patch("app.api.changelog._get_last_seen", new_callable=AsyncMock, return_value="1.1.0"),
         ):
             mock_settings.return_value.enable_changelog = True
             mock_settings.return_value.version = "1.2.0"
 
-            result = await get_changelog()
+            result = await get_changelog(user_id=uuid4(), db=AsyncMock())
 
-        assert result["version"] == "1.2.0"
         assert "1.2.0" in result["entries"]
         assert "1.1.0" not in result["entries"]
+
+    async def test_changelog_returns_empty_when_up_to_date(self, tmp_path: Path) -> None:
+        """Returns no entries when user has already seen the latest."""
+        changelog_file = tmp_path / "CHANGELOG.md"
+        changelog_file.write_text(SAMPLE_CHANGELOG)
+
+        with (
+            patch("app.api.changelog._CHANGELOG_PATH", changelog_file),
+            patch("app.api.changelog.get_settings") as mock_settings,
+            patch("app.api.changelog._get_last_seen", new_callable=AsyncMock, return_value="1.2.0"),
+        ):
+            mock_settings.return_value.enable_changelog = True
+            mock_settings.return_value.version = "1.2.0"
+
+            result = await get_changelog(user_id=uuid4(), db=AsyncMock())
+
+        assert result["entries"] == {}
 
     async def test_changelog_disabled_raises_404(self) -> None:
         """Returns 404 when ENABLE_CHANGELOG=false."""
@@ -86,7 +156,7 @@ class TestChangelogEndpoint:
             mock_settings.return_value.enable_changelog = False
 
             with pytest.raises(HTTPException) as exc_info:
-                await get_changelog()
+                await get_changelog(user_id=uuid4(), db=AsyncMock())
             assert exc_info.value.status_code == 404
 
     async def test_changelog_missing_file_raises_404(self, tmp_path: Path) -> None:
@@ -100,7 +170,7 @@ class TestChangelogEndpoint:
             mock_settings.return_value.enable_changelog = True
 
             with pytest.raises(HTTPException) as exc_info:
-                await get_changelog()
+                await get_changelog(user_id=uuid4(), db=AsyncMock())
             assert exc_info.value.status_code == 404
 
 

@@ -4,8 +4,6 @@ import { Check, Sparkles } from "lucide-react";
 import { AppDialog } from "@/components/app-dialog";
 import { customInstance } from "@/services/client";
 
-const STORAGE_KEY = "mailassist-last-seen-version";
-
 interface ChangelogResponse {
   version: string;
   entries: Record<string, string>;
@@ -82,8 +80,7 @@ export function ChangelogDialog() {
       .then((res) => {
         if (cancelled) return;
         const changelog = res.data;
-        const lastSeen = localStorage.getItem(STORAGE_KEY);
-        if (lastSeen !== changelog.version) {
+        if (Object.keys(changelog.entries).length > 0) {
           setData(changelog);
           setOpen(true);
         }
@@ -99,18 +96,15 @@ export function ChangelogDialog() {
 
   const handleDismiss = () => {
     if (data) {
-      localStorage.setItem(STORAGE_KEY, data.version);
+      customInstance("/api/changelog/dismiss", { method: "POST" }).catch(() => {
+        // Best-effort — if the server is unreachable the dialog simply
+        // re-appears on the next page load.
+      });
     }
     setOpen(false);
   };
 
   if (!data) return null;
-
-  // Show entries for the current version, or all entries if current version not found
-  const currentEntry = data.entries[data.version];
-  const entriesToShow = currentEntry
-    ? { [data.version]: currentEntry }
-    : data.entries;
 
   return (
     <AppDialog
@@ -131,8 +125,11 @@ export function ChangelogDialog() {
       contentClassName="min-h-[360px] flex flex-col"
     >
       <div className="overflow-y-auto flex-1 pr-2">
-        {Object.entries(entriesToShow).map(([version, content]) => (
+        {Object.entries(data.entries).map(([version, content]) => (
           <div key={version}>
+            <h3 className="text-sm font-semibold text-muted-foreground mb-2">
+              {version.startsWith("v") ? version : `v${version}`}
+            </h3>
             <ChangelogContent markdown={content} />
           </div>
         ))}
