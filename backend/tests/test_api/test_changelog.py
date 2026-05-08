@@ -76,7 +76,7 @@ class TestChangelogEndpoint:
 
         assert result["version"] == "1.2.0"
         assert "1.2.0" in result["entries"]
-        assert "1.1.0" in result["entries"]
+        assert "1.1.0" not in result["entries"]
 
     async def test_changelog_disabled_raises_404(self) -> None:
         """Returns 404 when ENABLE_CHANGELOG=false."""

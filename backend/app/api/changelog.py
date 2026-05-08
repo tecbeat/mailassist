@@ -64,6 +64,10 @@ async def get_changelog() -> dict[str, object]:
         raise HTTPException(status_code=404, detail="Changelog not found")
 
     content = _CHANGELOG_PATH.read_text(encoding="utf-8")
-    entries = _parse_changelog(content)
+    all_entries = _parse_changelog(content)
 
-    return {"version": settings.version, "entries": entries}
+    # Only return the entry matching the current version
+    version = settings.version
+    entries = {version: all_entries[version]} if version in all_entries else {}
+
+    return {"version": version, "entries": entries}
