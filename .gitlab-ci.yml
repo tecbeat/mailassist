@@ -16,6 +16,20 @@ templater:
   rules:
     - when: never
 
+test_build_image:
+  needs:
+    - job: versioner
+      artifacts: true
+    - job: changelogger
+      artifacts: true
+
+build_image:
+  needs:
+    - job: versioner
+      artifacts: true
+    - job: changelogger
+      artifacts: true
+
 render_pages:
   stage: prepare
   image: node:24-slim@sha256:03eae3ef7e88a9de535496fb488d67e02b9d96a063a8967bae657744ecd513f2
