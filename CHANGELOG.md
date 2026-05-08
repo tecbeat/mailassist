@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.16.2-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.16.2-beta) - 2026-05-08
+
+### 🐛 Bug Fixes
+
+- Remove icon from dashboard approval badge to match standard badge style - ([3905417](https://git.teccave.de/tecbeat/mailassist/commit/3905417bdddde94e377acff54a943ecf23ee5300))
+
 ## [2.16.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.16.1-beta) - 2026-05-07
 
 ### 🐛 Bug Fixes
