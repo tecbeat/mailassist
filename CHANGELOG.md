@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.18.3-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.18.3-beta) - 2026-05-09
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update ghcr.io/astral-sh/uv docker tag to v0.11.12 - ([847ddc4](https://git.teccave.de/tecbeat/mailassist/commit/847ddc456c2de2c3706a9be03672ee502b365c3b))
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Update gitlab-ci - ([5335e6f](https://git.teccave.de/tecbeat/mailassist/commit/5335e6f1556fbcc5071c9f052769358a7a8c1e13))
+
 ## [2.18.2-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.18.2-beta) - 2026-05-08
 
 ### 🐛 Bug Fixes
