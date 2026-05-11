@@ -32,7 +32,7 @@ build_image:
 
 render_pages:
   stage: prepare
-  image: node:24-slim@sha256:f96cade014243001e5c18f1befaf0bf44564f7cf358287ef691114dcb04b173b
+  image: node:24-slim@sha256:24dc26ef1e3c3690f27ebc4136c9c186c3133b25563ae4d7f0692e4d1fe5db0e
   needs: []
   script:
     - cd docs && npm ci && npx docusaurus build --out-dir ../public
@@ -45,7 +45,7 @@ render_pages:
 
 backend_lint:
   stage: lint
-  image: python:3.14-slim@sha256:aee3b1c52ce756c42ee4ad90437ae49d87fa87fc2f09c17895f098b67f081a8d
+  image: python:3.14-slim@sha256:1697e8e8d39bf168e177ac6b5fdab6df86d81cfc24dae17dfb96cfc3ef76b4dd
   needs: []
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
@@ -65,7 +65,7 @@ backend_lint:
 
 backend_typecheck:
   stage: lint
-  image: python:3.14-slim@sha256:aee3b1c52ce756c42ee4ad90437ae49d87fa87fc2f09c17895f098b67f081a8d
+  image: python:3.14-slim@sha256:1697e8e8d39bf168e177ac6b5fdab6df86d81cfc24dae17dfb96cfc3ef76b4dd
   needs: []
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
@@ -84,7 +84,7 @@ backend_typecheck:
 
 backend_unittest:
   stage: unittest
-  image: python:3.14-slim@sha256:aee3b1c52ce756c42ee4ad90437ae49d87fa87fc2f09c17895f098b67f081a8d
+  image: python:3.14-slim@sha256:1697e8e8d39bf168e177ac6b5fdab6df86d81cfc24dae17dfb96cfc3ef76b4dd
   needs: []
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
@@ -130,7 +130,7 @@ frontend_unittest:
 
 backend_migration_test:
   stage: systemtest
-  image: python:3.14-slim@sha256:aee3b1c52ce756c42ee4ad90437ae49d87fa87fc2f09c17895f098b67f081a8d
+  image: python:3.14-slim@sha256:1697e8e8d39bf168e177ac6b5fdab6df86d81cfc24dae17dfb96cfc3ef76b4dd
   needs: []
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
