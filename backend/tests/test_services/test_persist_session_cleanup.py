@@ -112,13 +112,11 @@ async def test_save_calendar_event_flushes_and_expunges_before_caldav_sync():
     ):
         await save_calendar_event(
             user_id=uuid.uuid4(),
-            account_id=uuid.uuid4(),
-            mail_uid="test-uid-123",
-            mail_subject="Team Meeting Invite",
             has_event=True,
             title="Team Meeting",
             start=datetime(2024, 6, 1, 10, 0, tzinfo=UTC),
             end=datetime(2024, 6, 1, 11, 0, tzinfo=UTC),
+            mail_id=uuid.uuid4(),
             own_session=True,
         )
 

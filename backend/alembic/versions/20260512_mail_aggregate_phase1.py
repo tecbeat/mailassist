@@ -119,21 +119,23 @@ def upgrade() -> None:
         # For most tables the join is on (mail_account_id, mail_uid).
         # tracked_emails has a unique constraint on (mail_account_id, mail_uid, current_folder),
         # so we pick the most recently updated tracked_email if multiple folders exist.
-        conn.execute(
-            sa.text(f"""
-                UPDATE {table_name} AS p
-                SET mail_id = te.id
-                FROM (
-                    SELECT DISTINCT ON (mail_account_id, mail_uid)
-                        id, mail_account_id, mail_uid
-                    FROM tracked_emails
-                    ORDER BY mail_account_id, mail_uid, updated_at DESC
-                ) AS te
-                WHERE p.mail_account_id = te.mail_account_id
-                  AND p.{uid_col} = te.mail_uid
-                  AND p.mail_id IS NULL
-            """)
-        )
+        # Skip backfill if legacy columns were already removed (fresh DB with current models).
+        if _column_exists(conn, table_name, "mail_account_id"):
+            conn.execute(
+                sa.text(f"""
+                    UPDATE {table_name} AS p
+                    SET mail_id = te.id
+                    FROM (
+                        SELECT DISTINCT ON (mail_account_id, mail_uid)
+                            id, mail_account_id, mail_uid
+                        FROM tracked_emails
+                        ORDER BY mail_account_id, mail_uid, updated_at DESC
+                    ) AS te
+                    WHERE p.mail_account_id = te.mail_account_id
+                      AND p.{uid_col} = te.mail_uid
+                      AND p.mail_id IS NULL
+                """)
+            )
 
         # Report orphans.
         result = conn.execute(sa.text(f"SELECT COUNT(*) FROM {table_name} WHERE mail_id IS NULL"))

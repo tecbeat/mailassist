@@ -72,9 +72,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_column("user_settings", "approval_mode_otp")
-    op.drop_index("ix_extracted_otp_codes_active", table_name="extracted_otp_codes")
-    op.drop_index("ix_extracted_otp_codes_expires_at", table_name="extracted_otp_codes")
-    op.drop_index("ix_extracted_otp_codes_mail_account_id", table_name="extracted_otp_codes")
-    op.drop_index("ix_extracted_otp_codes_user_id", table_name="extracted_otp_codes")
+    conn = op.get_bind()
+    conn.execute(sa.text("ALTER TABLE user_settings DROP COLUMN IF EXISTS approval_mode_otp"))
     op.drop_table("extracted_otp_codes")

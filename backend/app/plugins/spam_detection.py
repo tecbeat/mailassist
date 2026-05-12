@@ -7,10 +7,13 @@ sufficient confidence, remaining plugins are skipped.
 
 from typing import Any, ClassVar
 
+import structlog
 from pydantic import BaseModel, Field
 
 from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
+
+logger = structlog.get_logger()
 
 
 class SpamDetectionResponse(BaseModel):
@@ -79,13 +82,15 @@ class SpamDetectionPlugin(AIFunctionPlugin[SpamDetectionResponse]):
 
         from app.models.mail import SpamDetectionResult
 
-        if mail_id is not None:
-            stmt = select(SpamDetectionResult).where(SpamDetectionResult.mail_id == mail_id)
-        else:
-            stmt = select(SpamDetectionResult).where(
-                SpamDetectionResult.mail_account_id == account_id,
-                SpamDetectionResult.mail_uid == mail_uid,
+        if mail_id is None:
+            logger.warning(
+                "load_notification_context called without mail_id",
+                plugin="spam_detection",
+                account_id=str(account_id),
+                mail_uid=mail_uid,
             )
+            return {}
+        stmt = select(SpamDetectionResult).where(SpamDetectionResult.mail_id == mail_id)
         result = await db.execute(stmt)
         spam = result.scalar_one_or_none()
         if spam:

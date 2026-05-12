@@ -9,6 +9,7 @@ Uses ``imap-tools`` for all IMAP operations, wrapped in
 """
 
 import asyncio
+import contextlib
 import json
 import re
 from collections.abc import AsyncIterator
@@ -726,23 +727,30 @@ async def search_uids(
     conn: ImapConnection,
     folder: str = "INBOX",
     criteria: str = "UNSEEN",
-) -> list[str]:
+) -> tuple[list[str], int | None]:
     """Search for message UIDs in a folder.
 
-    Returns a list of UID strings matching the criteria.
+    Returns a tuple of (uid_list, uidvalidity).  The UIDVALIDITY value
+    is read from the SELECT response that ``folder.set()`` issues
+    internally.  It is ``None`` when imap-tools does not expose it.
+
     Uses imap-tools' native UID search which returns real UIDs directly
     (no sequence-number-to-UID resolution needed).
     """
 
-    def _search() -> list[str]:
+    def _search() -> tuple[list[str], int | None]:
         conn.mailbox.folder.set(folder)
+        uidvalidity: int | None = None
+        with contextlib.suppress(Exception):
+            uidvalidity = getattr(conn.mailbox.folder, "uid_validity", None)
         if criteria == "UNSEEN":
-            return conn.mailbox.uids(AND(seen=False))
+            uids = conn.mailbox.uids(AND(seen=False))
         elif criteria == "ALL":
-            return conn.mailbox.uids("ALL")
+            uids = conn.mailbox.uids("ALL")
         else:
             # Pass raw IMAP search criteria string
-            return conn.mailbox.uids(criteria)
+            uids = conn.mailbox.uids(criteria)
+        return uids, uidvalidity
 
     return await asyncio.to_thread(_search)
 

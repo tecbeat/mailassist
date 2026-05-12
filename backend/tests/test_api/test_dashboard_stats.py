@@ -24,8 +24,7 @@ class TestWithoutSummaryQueryCompilation:
             .select_from(TrackedEmail)
             .outerjoin(
                 EmailSummary,
-                (TrackedEmail.mail_account_id == EmailSummary.mail_account_id)
-                & (TrackedEmail.mail_uid == EmailSummary.mail_uid),
+                TrackedEmail.id == EmailSummary.mail_id,
             )
             .where(
                 TrackedEmail.status == TrackedEmailStatus.COMPLETED,
@@ -53,8 +52,7 @@ class TestWithoutSummaryQueryCompilation:
             select(func.count(TrackedEmail.id))
             .outerjoin(
                 EmailSummary,
-                (TrackedEmail.mail_account_id == EmailSummary.mail_account_id)
-                & (TrackedEmail.mail_uid == EmailSummary.mail_uid),
+                TrackedEmail.id == EmailSummary.mail_id,
             )
             .where(
                 TrackedEmail.status == TrackedEmailStatus.COMPLETED,

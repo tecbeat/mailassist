@@ -42,9 +42,7 @@ def upgrade() -> None:
 
     for table in TABLES:
         # Delete orphan rows that could not be backfilled in Phase 1
-        result = conn.execute(
-            sa.text(f"DELETE FROM {table} WHERE mail_id IS NULL")  # noqa: S608
-        )
+        result = conn.execute(sa.text(f"DELETE FROM {table} WHERE mail_id IS NULL"))
         if result.rowcount:
             print(f"  {table}: deleted {result.rowcount} orphan rows")
 

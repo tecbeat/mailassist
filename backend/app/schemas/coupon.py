@@ -10,10 +10,8 @@ class ExtractedCouponResponse(BaseModel):
     """Response schema for an extracted coupon."""
 
     id: UUID
-    mail_account_id: UUID
-    mail_uid: str
-    sender_email: str | None = None
-    mail_subject: str | None = None
+    subject: str | None = None
+    sender: str | None = None
     code: str | None = None
     description: str | None = None
     store: str | None = None

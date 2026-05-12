@@ -10,11 +10,9 @@ class DetectedNewsletterResponse(BaseModel):
     """Response schema for a detected newsletter."""
 
     id: UUID
-    mail_account_id: UUID
-    mail_uid: str
     newsletter_name: str
     sender_address: str
-    mail_subject: str | None = None
+    subject: str | None = None
     unsubscribe_url: str | None = None
     has_unsubscribe: bool
     created_at: datetime

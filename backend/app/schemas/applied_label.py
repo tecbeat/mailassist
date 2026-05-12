@@ -10,10 +10,8 @@ class AppliedLabelResponse(BaseModel):
     """Response schema for an applied label record."""
 
     id: UUID
-    mail_account_id: UUID
-    mail_uid: str
-    mail_subject: str | None = None
-    mail_from: str | None = None
+    subject: str | None = None
+    sender: str | None = None
     label: str
     is_new_label: bool
     created_at: datetime

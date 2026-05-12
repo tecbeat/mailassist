@@ -28,7 +28,7 @@ from app.models.base import Base
 if TYPE_CHECKING:
     from app.models.contacts import Contact
     from app.models.reprocessing import FolderChangeLog, LabelChangeLog
-    from app.models.rules import Approval, Rule
+    from app.models.rules import Rule
     from app.models.user import User
 
 
@@ -111,40 +111,11 @@ class MailAccount(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="mail_accounts")
-    approvals: Mapped[list["Approval"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
     rules: Mapped[list["Rule"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
-    extracted_coupons: Mapped[list["ExtractedCoupon"]] = relationship(
-        back_populates="mail_account", cascade="all, delete-orphan"
-    )
-    detected_newsletters: Mapped[list["DetectedNewsletter"]] = relationship(
-        back_populates="mail_account", cascade="all, delete-orphan"
-    )
-    ai_drafts: Mapped[list["AIDraft"]] = relationship(back_populates="mail_account", cascade="all, delete-orphan")
-    email_summaries: Mapped[list["EmailSummary"]] = relationship(
-        back_populates="mail_account", cascade="all, delete-orphan"
-    )
     label_change_logs: Mapped[list["LabelChangeLog"]] = relationship(
         back_populates="mail_account", cascade="all, delete-orphan"
     )
     folder_change_logs: Mapped[list["FolderChangeLog"]] = relationship(
-        back_populates="mail_account", cascade="all, delete-orphan"
-    )
-    applied_labels: Mapped[list["AppliedLabel"]] = relationship(
-        back_populates="mail_account", cascade="all, delete-orphan"
-    )
-    assigned_folders: Mapped[list["AssignedFolder"]] = relationship(
-        back_populates="mail_account", cascade="all, delete-orphan"
-    )
-    calendar_events: Mapped[list["CalendarEvent"]] = relationship(
-        back_populates="mail_account", cascade="all, delete-orphan"
-    )
-    auto_reply_records: Mapped[list["AutoReplyRecord"]] = relationship(
-        back_populates="mail_account", cascade="all, delete-orphan"
-    )
-    contact_assignments: Mapped[list["ContactAssignment"]] = relationship(
-        back_populates="mail_account", cascade="all, delete-orphan"
-    )
-    extracted_otp_codes: Mapped[list["ExtractedOtpCode"]] = relationship(
         back_populates="mail_account", cascade="all, delete-orphan"
     )
 
@@ -166,11 +137,9 @@ class AIDraft(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
     mail_id: Mapped[UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
-    original_mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     original_message_id: Mapped[str] = mapped_column(String(500), nullable=False)
     draft_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     draft_message_id: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -180,14 +149,12 @@ class AIDraft(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="ai_drafts")
-    mail_account: Mapped["MailAccount"] = relationship(back_populates="ai_drafts")
     tracked_email: Mapped["TrackedEmail | None"] = relationship(back_populates="ai_draft", foreign_keys=[mail_id])
 
     __table_args__ = (
-        UniqueConstraint("user_id", "mail_account_id", "original_mail_uid", name="uq_draft_user_account_mail"),
+        UniqueConstraint("user_id", "mail_id", name="uq_draft_user_mail_id"),
         Index("ix_ai_drafts_user_id", "user_id"),
         Index("ix_ai_drafts_status", "status"),
-        Index("ix_ai_drafts_mail_account_id", "mail_account_id"),
         Index("ix_ai_drafts_mail_id", "mail_id"),
     )
 
@@ -199,14 +166,9 @@ class EmailSummary(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
     mail_id: Mapped[UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
-    mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
-    mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
-    mail_from: Mapped[str | None] = mapped_column(String(320), nullable=True)
-    mail_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     key_points: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     urgency: Mapped[UrgencyLevel] = mapped_column(
@@ -223,15 +185,11 @@ class EmailSummary(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="email_summaries")
-    mail_account: Mapped["MailAccount"] = relationship(back_populates="email_summaries")
     tracked_email: Mapped["TrackedEmail | None"] = relationship(back_populates="email_summary", foreign_keys=[mail_id])
 
     __table_args__ = (
-        UniqueConstraint("user_id", "mail_account_id", "mail_uid", name="uq_summary_user_account_mail"),
+        UniqueConstraint("user_id", "mail_id", name="uq_summary_user_mail_id"),
         Index("ix_email_summaries_user_id", "user_id"),
-        Index("ix_email_summaries_mail_uid", "mail_uid"),
-        Index("ix_email_summaries_mail_account_id", "mail_account_id"),
-        Index("ix_email_summaries_mail_date", "mail_date"),
         Index("ix_email_summaries_mail_id", "mail_id"),
     )
 
@@ -243,14 +201,11 @@ class DetectedNewsletter(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
     mail_id: Mapped[UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
-    mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     newsletter_name: Mapped[str] = mapped_column(String(200), nullable=False)
     sender_address: Mapped[str] = mapped_column(String(320), nullable=False)
-    mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
     unsubscribe_url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     has_unsubscribe: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
@@ -260,12 +215,10 @@ class DetectedNewsletter(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="detected_newsletters")
-    mail_account: Mapped["MailAccount"] = relationship(back_populates="detected_newsletters")
     tracked_email: Mapped["TrackedEmail | None"] = relationship(back_populates="newsletter", foreign_keys=[mail_id])
 
     __table_args__ = (
         Index("ix_detected_newsletters_user_id", "user_id"),
-        Index("ix_detected_newsletters_mail_account_id", "mail_account_id"),
         Index("ix_detected_newsletters_sender_address", "sender_address"),
         Index("ix_detected_newsletters_mail_id", "mail_id"),
     )
@@ -278,13 +231,9 @@ class ExtractedCoupon(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
     mail_id: Mapped[UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
-    mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
-    sender_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
-    mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
     code: Mapped[str | None] = mapped_column(String(100), nullable=True)
     description: Mapped[str | None] = mapped_column(String(300), nullable=True)
     store: Mapped[str | None] = mapped_column(String(200), nullable=True)
@@ -298,7 +247,6 @@ class ExtractedCoupon(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="extracted_coupons")
-    mail_account: Mapped["MailAccount"] = relationship(back_populates="extracted_coupons")
     tracked_email: Mapped["TrackedEmail | None"] = relationship(
         back_populates="extracted_coupons_rel", foreign_keys=[mail_id]
     )
@@ -306,7 +254,6 @@ class ExtractedCoupon(Base):
     __table_args__ = (
         Index("ix_extracted_coupons_user_id", "user_id"),
         Index("ix_extracted_coupons_expires_at", "expires_at"),
-        Index("ix_extracted_coupons_mail_account_id", "mail_account_id"),
         Index("ix_extracted_coupons_active", "is_used", postgresql_where=text("is_used = false")),
         Index("ix_extracted_coupons_mail_id", "mail_id"),
     )
@@ -319,13 +266,9 @@ class ExtractedOtpCode(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
     mail_id: Mapped[UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
-    mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
-    sender_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
-    mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
     code: Mapped[str] = mapped_column(String(2000), nullable=False)
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     service: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -340,14 +283,12 @@ class ExtractedOtpCode(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="extracted_otp_codes")
-    mail_account: Mapped["MailAccount"] = relationship(back_populates="extracted_otp_codes")
     tracked_email: Mapped["TrackedEmail | None"] = relationship(
         back_populates="extracted_otp_codes_rel", foreign_keys=[mail_id]
     )
 
     __table_args__ = (
         Index("ix_extracted_otp_codes_user_id", "user_id"),
-        Index("ix_extracted_otp_codes_mail_account_id", "mail_account_id"),
         Index("ix_extracted_otp_codes_expires_at", "expires_at"),
         Index("ix_extracted_otp_codes_active", "is_expired", postgresql_where=text("is_expired = false")),
         Index("ix_extracted_otp_codes_mail_id", "mail_id"),
@@ -361,20 +302,15 @@ class AppliedLabel(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
     mail_id: Mapped[UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
-    mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
-    mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
-    mail_from: Mapped[str | None] = mapped_column(String(320), nullable=True)
     label: Mapped[str] = mapped_column(String(200), nullable=False)
     is_new_label: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="applied_labels")
-    mail_account: Mapped["MailAccount"] = relationship(back_populates="applied_labels")
     tracked_email: Mapped["TrackedEmail | None"] = relationship(
         back_populates="applied_labels_rel", foreign_keys=[mail_id]
     )
@@ -382,7 +318,6 @@ class AppliedLabel(Base):
     __table_args__ = (
         Index("ix_applied_labels_user_id", "user_id"),
         Index("ix_applied_labels_label", "label"),
-        Index("ix_applied_labels_mail_account_id", "mail_account_id"),
         Index("ix_applied_labels_mail_id", "mail_id"),
     )
 
@@ -394,13 +329,9 @@ class AssignedFolder(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
     mail_id: Mapped[UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
-    mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
-    mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
-    mail_from: Mapped[str | None] = mapped_column(String(320), nullable=True)
     folder: Mapped[str] = mapped_column(String(500), nullable=False)
     confidence: Mapped[float | None] = mapped_column(nullable=True)
     reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
@@ -409,16 +340,14 @@ class AssignedFolder(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="assigned_folders")
-    mail_account: Mapped["MailAccount"] = relationship(back_populates="assigned_folders")
     tracked_email: Mapped["TrackedEmail | None"] = relationship(
         back_populates="assigned_folder", foreign_keys=[mail_id]
     )
 
     __table_args__ = (
-        UniqueConstraint("mail_account_id", "mail_uid", name="uq_assigned_folder_account_uid"),
+        UniqueConstraint("mail_id", name="uq_assigned_folder_mail_id"),
         Index("ix_assigned_folders_user_id", "user_id"),
         Index("ix_assigned_folders_folder", "folder"),
-        Index("ix_assigned_folders_mail_account_id", "mail_account_id"),
         Index("ix_assigned_folders_mail_id", "mail_id"),
     )
 
@@ -430,13 +359,9 @@ class CalendarEvent(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
     mail_id: Mapped[UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
-    mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
-    mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
-    mail_from: Mapped[str | None] = mapped_column(String(320), nullable=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -453,14 +378,12 @@ class CalendarEvent(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="calendar_events")
-    mail_account: Mapped["MailAccount"] = relationship(back_populates="calendar_events")
     tracked_email: Mapped["TrackedEmail | None"] = relationship(
         back_populates="calendar_events_rel", foreign_keys=[mail_id]
     )
 
     __table_args__ = (
         Index("ix_calendar_events_user_id", "user_id"),
-        Index("ix_calendar_events_mail_account_id", "mail_account_id"),
         Index("ix_calendar_events_mail_id", "mail_id"),
     )
 
@@ -472,13 +395,9 @@ class AutoReplyRecord(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
     mail_id: Mapped[UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
-    mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
-    mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
-    mail_from: Mapped[str | None] = mapped_column(String(320), nullable=True)
     draft_body: Mapped[str] = mapped_column(Text, nullable=False)
     tone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     reasoning: Mapped[str | None] = mapped_column(String(300), nullable=True)
@@ -489,12 +408,10 @@ class AutoReplyRecord(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="auto_reply_records")
-    mail_account: Mapped["MailAccount"] = relationship(back_populates="auto_reply_records")
     tracked_email: Mapped["TrackedEmail | None"] = relationship(back_populates="auto_reply", foreign_keys=[mail_id])
 
     __table_args__ = (
         Index("ix_auto_reply_records_user_id", "user_id"),
-        Index("ix_auto_reply_records_mail_account_id", "mail_account_id"),
         Index("ix_auto_reply_records_mail_id", "mail_id"),
     )
 
@@ -512,13 +429,9 @@ class ContactAssignment(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
     mail_id: Mapped[UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
-    mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
-    mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
-    mail_from: Mapped[str | None] = mapped_column(String(320), nullable=True)
     contact_id: Mapped[UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True
     )
@@ -530,7 +443,6 @@ class ContactAssignment(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="contact_assignments")
-    mail_account: Mapped["MailAccount"] = relationship(back_populates="contact_assignments")
     contact: Mapped["Contact | None"] = relationship()
     tracked_email: Mapped["TrackedEmail | None"] = relationship(
         back_populates="contact_assignment", foreign_keys=[mail_id]
@@ -538,9 +450,7 @@ class ContactAssignment(Base):
 
     __table_args__ = (
         Index("ix_contact_assignments_user_id", "user_id"),
-        Index("ix_contact_assignments_mail_account_id", "mail_account_id"),
         Index("ix_contact_assignments_contact_id", "contact_id"),
-        Index("ix_contact_assignments_mail_uid", "mail_account_id", "mail_uid"),
         Index("ix_contact_assignments_mail_id", "mail_id"),
     )
 
@@ -552,13 +462,9 @@ class SpamDetectionResult(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
     mail_id: Mapped[UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
-    mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
-    mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
-    mail_from: Mapped[str | None] = mapped_column(String(320), nullable=True)
     is_spam: Mapped[bool] = mapped_column(Boolean, nullable=False)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -570,13 +476,11 @@ class SpamDetectionResult(Base):
 
     # Relationships
     user: Mapped["User"] = relationship()
-    mail_account: Mapped["MailAccount"] = relationship()
     tracked_email: Mapped["TrackedEmail | None"] = relationship(back_populates="spam_result", foreign_keys=[mail_id])
 
     __table_args__ = (
-        UniqueConstraint("user_id", "mail_account_id", "mail_uid", name="uq_spam_result_user_account_mail"),
+        UniqueConstraint("user_id", "mail_id", name="uq_spam_result_user_mail_id"),
         Index("ix_spam_detection_results_user_id", "user_id"),
-        Index("ix_spam_detection_results_mail_account_id", "mail_account_id"),
         Index("ix_spam_detection_results_is_spam", "is_spam"),
         Index("ix_spam_detection_results_mail_id", "mail_id"),
     )

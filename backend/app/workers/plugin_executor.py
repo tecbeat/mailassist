@@ -392,14 +392,11 @@ async def _handle_blocklist(
             outcome.actions_taken = action_result.actions_taken
             await save_spam_detection(
                 user_id=UUID(context.user_id),
-                account_id=UUID(context.account_id),
-                mail_uid=context.mail_uid,
-                mail_subject=context.subject,
-                mail_from=context.sender,
                 is_spam=True,
                 confidence=1.0,
                 reason="Sender on blocklist",
                 source="blocklist",
+                mail_id=UUID(context.mail_id),
                 db=db,
             )
         else:
@@ -481,18 +478,15 @@ async def _persist_plugin_result(
     """Persist the AI result for a plugin running in auto mode."""
     user_id = UUID(context.user_id)
     account_id = UUID(context.account_id)
-    mail_uid = context.mail_uid
-    mail_id = UUID(context.mail_id) if context.mail_id else None
+    if not context.mail_id:
+        log.error("persist_plugin_result_no_mail_id", plugin=plugin.name)
+        return
+    mail_id = UUID(context.mail_id)
 
     if plugin.name == "email_summary":
         resp: EmailSummaryResponse = ai_response  # type: ignore[assignment]
         await save_email_summary(
             user_id=user_id,
-            account_id=account_id,
-            mail_uid=mail_uid,
-            mail_subject=context.subject,
-            mail_from=context.sender,
-            mail_date=context.date,
             summary=resp.summary,
             key_points=resp.key_points,
             urgency=resp.urgency,
@@ -506,12 +500,9 @@ async def _persist_plugin_result(
         resp_nl: NewsletterDetectionResponse = ai_response  # type: ignore[assignment]
         await save_newsletter(
             user_id=user_id,
-            account_id=account_id,
-            mail_uid=mail_uid,
             is_newsletter=resp_nl.is_newsletter,
             newsletter_name=resp_nl.newsletter_name or "Unknown",
             sender_address=context.sender,
-            mail_subject=context.subject,
             unsubscribe_url=resp_nl.unsubscribe_url,
             has_unsubscribe=resp_nl.has_unsubscribe,
             mail_id=mail_id,
@@ -522,12 +513,8 @@ async def _persist_plugin_result(
         resp_cp: CouponExtractionResponse = ai_response  # type: ignore[assignment]
         await save_coupons(
             user_id=user_id,
-            account_id=account_id,
-            mail_uid=mail_uid,
             has_coupons=resp_cp.has_coupons,
             coupons=[c.model_dump() for c in resp_cp.coupons] if resp_cp.coupons else [],
-            sender_email=context.sender,
-            mail_subject=context.subject,
             mail_id=mail_id,
             db=db,
         )
@@ -536,12 +523,8 @@ async def _persist_plugin_result(
         resp_otp: OtpExtractionResponse = ai_response  # type: ignore[assignment]
         await save_otp(
             user_id=user_id,
-            account_id=account_id,
-            mail_uid=mail_uid,
             has_codes=resp_otp.has_codes,
             codes=[c.model_dump() for c in resp_otp.codes] if resp_otp.codes else [],
-            sender_email=context.sender,
-            mail_subject=context.subject,
             mail_id=mail_id,
             db=db,
         )
@@ -550,10 +533,6 @@ async def _persist_plugin_result(
         resp_lbl: LabelingResponse = ai_response  # type: ignore[assignment]
         await save_applied_labels(
             user_id=user_id,
-            account_id=account_id,
-            mail_uid=mail_uid,
-            mail_subject=context.subject,
-            mail_from=context.sender,
             labels=resp_lbl.labels,
             existing_labels=set(context.existing_labels) if context.existing_labels else None,
             mail_id=mail_id,
@@ -564,10 +543,6 @@ async def _persist_plugin_result(
         resp_cat: SmartFolderResponse = ai_response  # type: ignore[assignment]
         await save_assigned_folder(
             user_id=user_id,
-            account_id=account_id,
-            mail_uid=mail_uid,
-            mail_subject=context.subject,
-            mail_from=context.sender,
             folder=resp_cat.folder,
             confidence=resp_cat.confidence,
             reason=resp_cat.reason,
@@ -580,10 +555,6 @@ async def _persist_plugin_result(
         resp_cal: CalendarEventResponse = ai_response  # type: ignore[assignment]
         await save_calendar_event(
             user_id=user_id,
-            account_id=account_id,
-            mail_uid=mail_uid,
-            mail_subject=context.subject,
-            mail_from=context.sender,
             has_event=resp_cal.has_event,
             title=resp_cal.title,
             start=resp_cal.start,
@@ -599,10 +570,6 @@ async def _persist_plugin_result(
         resp_ar: AutoReplyResponse = ai_response  # type: ignore[assignment]
         await save_auto_reply(
             user_id=user_id,
-            account_id=account_id,
-            mail_uid=mail_uid,
-            mail_subject=context.subject,
-            mail_from=context.sender,
             should_reply=resp_ar.should_reply,
             draft_body=resp_ar.draft_body,
             tone=resp_ar.tone,
@@ -620,7 +587,7 @@ async def _persist_plugin_result(
                 await upload_draft_to_imap(
                     account=account,
                     user_id=user_id,
-                    mail_uid=mail_uid,
+                    mail_uid=context.mail_uid,
                     draft_body=resp_ar.draft_body,
                     original_subject=context.subject,
                     original_from=context.sender,
@@ -632,10 +599,7 @@ async def _persist_plugin_result(
         resp_ct: ContactAssignmentResponse = ai_response  # type: ignore[assignment]
         await save_contact_assignment(
             user_id=user_id,
-            account_id=account_id,
-            mail_uid=mail_uid,
-            mail_subject=context.subject,
-            mail_from=context.sender,
+            sender_email=context.sender,
             contact_id=resp_ct.contact_id,
             contact_name=resp_ct.contact_name,
             confidence=resp_ct.confidence,
@@ -650,10 +614,6 @@ async def _persist_plugin_result(
         resp_sd: SpamDetectionResponse = ai_response  # type: ignore[assignment]
         await save_spam_detection(
             user_id=user_id,
-            account_id=account_id,
-            mail_uid=mail_uid,
-            mail_subject=context.subject,
-            mail_from=context.sender,
             is_spam=resp_sd.is_spam,
             confidence=resp_sd.confidence,
             reason=resp_sd.reason,
@@ -686,9 +646,7 @@ async def _create_approval(
     """Create an approval record for an AI action that requires user confirmation."""
     approval = Approval(
         user_id=user_id,
-        mail_account_id=account_id,
         function_type=plugin.name,
-        mail_uid=context.mail_uid,
         mail_subject=context.subject[:998],
         mail_from=context.sender[:320],
         proposed_action={
@@ -698,7 +656,7 @@ async def _create_approval(
         ai_reasoning=action_result.approval_summary or plugin.get_approval_summary(ai_response),
         ai_response_data=ai_response.model_dump(mode="json"),
         mail_date=parse_date_field(context.date) if context.date else None,
-        mail_id=UUID(context.mail_id) if context.mail_id else None,
+        mail_id=UUID(context.mail_id),
         expires_at=datetime.now(UTC) + timedelta(days=get_settings().approval_expiry_days),
     )
     db.add(approval)
@@ -721,16 +679,14 @@ async def _create_manual_input_approval(
     """
     approval = Approval(
         user_id=user_id,
-        mail_account_id=account_id,
         function_type=plugin.name,
-        mail_uid=context.mail_uid,
         mail_subject=context.subject[:998],
         mail_from=context.sender[:320],
         proposed_action={"actions": [], "error": error},
         ai_reasoning=f"Plugin {plugin.display_name} failed: {error}",
         ai_response_data=None,
         mail_date=parse_date_field(context.date) if context.date else None,
-        mail_id=UUID(context.mail_id) if context.mail_id else None,
+        mail_id=UUID(context.mail_id),
         status=ApprovalStatus.MANUAL_INPUT,
         expires_at=datetime.now(UTC) + timedelta(days=get_settings().approval_expiry_days),
     )

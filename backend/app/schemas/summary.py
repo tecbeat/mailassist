@@ -11,11 +11,9 @@ class EmailSummaryResponse(BaseModel):
     """Response schema for an email summary."""
 
     id: UUID
-    mail_account_id: UUID
-    mail_uid: str
-    mail_subject: str | None = None
-    mail_from: str | None = None
-    mail_date: datetime | None = None
+    subject: str | None = None
+    sender: str | None = None
+    received_at: datetime | None = None
     summary: str
     key_points: list[str]
     urgency: str

@@ -280,7 +280,7 @@ async def _poll_folder(
     account_id = str(account.id)
 
     try:
-        uids = await search_uids(conn, folder=folder, criteria=search_criterion)
+        uids, uidvalidity = await search_uids(conn, folder=folder, criteria=search_criterion)
     except Exception:
         logger.warning(
             "folder_search_failed",
@@ -299,6 +299,34 @@ async def _poll_folder(
             initial_scan=is_initial_scan,
         )
         return 0
+
+    # Detect UIDVALIDITY changes: if stored rows for this folder have a
+    # different uidvalidity, UIDs are no longer reliable.  Log a warning;
+    # dedup via Message-ID in the processor handles relinking.
+    if uidvalidity is not None:
+        async with get_session_ctx() as db:
+            from sqlalchemy import distinct
+
+            stmt = (
+                select(distinct(TrackedEmail.uidvalidity))
+                .where(
+                    TrackedEmail.mail_account_id == UUID(account_id),
+                    TrackedEmail.current_folder == folder,
+                    TrackedEmail.uidvalidity.is_not(None),
+                    TrackedEmail.uidvalidity != uidvalidity,
+                )
+                .limit(1)
+            )
+            result = await db.execute(stmt)
+            old_val = result.scalar_one_or_none()
+            if old_val is not None:
+                logger.warning(
+                    "uidvalidity_changed",
+                    account_id=account_id,
+                    folder=folder,
+                    old_uidvalidity=old_val,
+                    new_uidvalidity=uidvalidity,
+                )
 
     # Filter out UIDs already tracked (server-side, per-folder)
     # Short DB session for the diff query
@@ -373,6 +401,7 @@ async def _poll_folder(
                 batch,
                 envelopes,
                 current_folder=folder,
+                uidvalidity=uidvalidity,
             )
         total_inserted += inserted
 
@@ -447,11 +476,12 @@ async def _insert_tracked_batch(
     envelopes: dict[str, tuple[str | None, str | None, datetime | None]],
     *,
     current_folder: str = "INBOX",
+    uidvalidity: int | None = None,
 ) -> int:
     """Bulk-insert tracked_emails rows using INSERT ... ON CONFLICT DO NOTHING.
 
     Splits into sub-batches to stay under PostgreSQL's 32,767 bind-parameter
-    limit (11 columns per row → max ~2,900 rows per statement).
+    limit (14 columns per row → max ~2,340 rows per statement).
 
     Returns the number of rows actually inserted (excludes conflicts).
     """
@@ -473,12 +503,15 @@ async def _insert_tracked_batch(
                 "received_at": received_at,
                 "retry_count": 0,
                 "current_folder": current_folder,
+                "uidvalidity": uidvalidity,
+                "first_seen_uid": uid,
+                "first_seen_folder": current_folder,
                 "created_at": now,
                 "updated_at": now,
             }
         )
 
-    # 11 columns per row; 32_767 // 11 = 2978, use 2000 for safety margin
+    # 14 columns per row; 32_767 // 14 = 2340, use 2000 for safety margin
     max_rows_per_insert = 2000
     total_inserted = 0
 

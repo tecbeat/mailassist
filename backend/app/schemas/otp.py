@@ -10,10 +10,8 @@ class ExtractedOtpCodeResponse(BaseModel):
     """Response schema for an extracted OTP code."""
 
     id: UUID
-    mail_account_id: UUID
-    mail_uid: str
-    sender_email: str | None = None
-    mail_subject: str | None = None
+    subject: str | None = None
+    sender: str | None = None
     code: str
     description: str | None = None
     service: str | None = None

@@ -67,3 +67,8 @@ Create a brand-new `mails` table and keep `tracked_emails` as a processing queue
 - Frontend API responses include `mail_id` (UUID) alongside `mail_uid` (string). Clients should migrate to `mail_id` over time.
 - Migration must backfill `mail_id` on all existing plugin rows by joining to `tracked_emails` on `(mail_account_id, mail_uid)`.
 - Reprocessing uses `INSERT ... ON CONFLICT (mail_id) DO UPDATE` — no more duplicate rows.
+
+## Exclusions
+
+- **`label_change_logs` / `folder_change_logs`** are intentionally excluded from the `mail_id` FK migration. They track label/folder changes across accounts, not individual mail processing results. Their identity is `(mail_account_id, mail_uid)` which is correct for their purpose (auditing IMAP-level actions).
+- **`Approval.mail_subject` / `mail_from` / `mail_date`** are retained as immutable snapshots. The approval queue must display mail context even if the TrackedEmail is deleted or the mail has been purged from IMAP.

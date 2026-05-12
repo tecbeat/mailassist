@@ -21,6 +21,7 @@ from app.api.deps import (
     sanitize_like,
 )
 from app.models import EmailSummary
+from app.models.mail import TrackedEmail
 from app.schemas.summary import (
     EmailSummaryListResponse,
     EmailSummaryResponse,
@@ -45,8 +46,12 @@ async def list_summaries(
     """List email summaries with pagination and optional filters."""
     uid = user_id
 
-    # Base query
-    base_stmt = select(EmailSummary).where(EmailSummary.user_id == uid)
+    # Base query - join TrackedEmail for subject/sender/date filtering
+    base_stmt = (
+        select(EmailSummary)
+        .join(TrackedEmail, EmailSummary.mail_id == TrackedEmail.id)
+        .where(EmailSummary.user_id == uid)
+    )
 
     if urgency:
         base_stmt = base_stmt.where(EmailSummary.urgency == urgency)
@@ -55,14 +60,14 @@ async def list_summaries(
     if search:
         pattern = f"%{sanitize_like(search)}%"
         base_stmt = base_stmt.where(
-            EmailSummary.mail_subject.ilike(pattern)
-            | EmailSummary.mail_from.ilike(pattern)
+            TrackedEmail.subject.ilike(pattern)
+            | TrackedEmail.sender.ilike(pattern)
             | EmailSummary.summary.ilike(pattern)
         )
 
-    # Sort by mail_date (actual email date), falling back to created_at for records without a mail_date
+    # Sort by received_at (actual email date), falling back to created_at for records without it
     sort_col = case(
-        (EmailSummary.mail_date.is_not(None), EmailSummary.mail_date),
+        (TrackedEmail.received_at.is_not(None), TrackedEmail.received_at),
         else_=EmailSummary.created_at,
     )
     order_col = resolve_sort_order(

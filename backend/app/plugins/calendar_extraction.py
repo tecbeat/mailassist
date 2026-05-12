@@ -9,10 +9,13 @@ Runs sixth in the pipeline (execution_order=60).
 from datetime import UTC, datetime
 from typing import Any
 
+import structlog
 from pydantic import BaseModel, Field, field_validator
 
 from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
+
+logger = structlog.get_logger()
 
 
 class CalendarEventResponse(BaseModel):
@@ -135,13 +138,15 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
 
         from app.models.mail import CalendarEvent
 
-        if mail_id is not None:
-            stmt = select(CalendarEvent).where(CalendarEvent.mail_id == mail_id)
-        else:
-            stmt = select(CalendarEvent).where(
-                CalendarEvent.mail_account_id == account_id,
-                CalendarEvent.mail_uid == mail_uid,
+        if mail_id is None:
+            logger.warning(
+                "load_notification_context called without mail_id",
+                plugin="calendar_extraction",
+                account_id=str(account_id),
+                mail_uid=mail_uid,
             )
+            return {}
+        stmt = select(CalendarEvent).where(CalendarEvent.mail_id == mail_id)
         result = await db.execute(stmt)
         cal = result.scalar_one_or_none()
         if cal:

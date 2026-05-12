@@ -8,10 +8,13 @@ a draft in the IMAP Drafts folder.
 
 from typing import Any
 
+import structlog
 from pydantic import BaseModel, Field
 
 from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
+
+logger = structlog.get_logger()
 
 
 class AutoReplyResponse(BaseModel):
@@ -100,13 +103,15 @@ class AutoReplyPlugin(AIFunctionPlugin[AutoReplyResponse]):
 
         from app.models.mail import AutoReplyRecord
 
-        if mail_id is not None:
-            stmt = select(AutoReplyRecord).where(AutoReplyRecord.mail_id == mail_id)
-        else:
-            stmt = select(AutoReplyRecord).where(
-                AutoReplyRecord.mail_account_id == account_id,
-                AutoReplyRecord.mail_uid == mail_uid,
+        if mail_id is None:
+            logger.warning(
+                "load_notification_context called without mail_id",
+                plugin="auto_reply",
+                account_id=str(account_id),
+                mail_uid=mail_uid,
             )
+            return {}
+        stmt = select(AutoReplyRecord).where(AutoReplyRecord.mail_id == mail_id)
         result = await db.execute(stmt)
         reply = result.scalar_one_or_none()
         if reply:

@@ -8,10 +8,13 @@ Runs fifth in the pipeline (execution_order=50).
 import re
 from typing import Any
 
+import structlog
 from pydantic import BaseModel, Field, field_validator
 
 from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
+
+logger = structlog.get_logger()
 
 
 class Coupon(BaseModel):
@@ -102,13 +105,15 @@ class CouponExtractionPlugin(AIFunctionPlugin[CouponExtractionResponse]):
 
         from app.models.mail import ExtractedCoupon
 
-        if mail_id is not None:
-            stmt = select(ExtractedCoupon).where(ExtractedCoupon.mail_id == mail_id)
-        else:
-            stmt = select(ExtractedCoupon).where(
-                ExtractedCoupon.mail_account_id == account_id,
-                ExtractedCoupon.mail_uid == mail_uid,
+        if mail_id is None:
+            logger.warning(
+                "load_notification_context called without mail_id",
+                plugin="coupon_extraction",
+                account_id=str(account_id),
+                mail_uid=mail_uid,
             )
+            return {}
+        stmt = select(ExtractedCoupon).where(ExtractedCoupon.mail_id == mail_id)
         result = await db.execute(stmt)
         coupons = result.scalars().all()
         if not coupons:

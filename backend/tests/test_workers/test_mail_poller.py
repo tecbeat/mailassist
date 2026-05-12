@@ -102,7 +102,7 @@ async def test_poller_uses_search_uids_and_fetch_envelopes():
         patch("app.workers.mail_poller.get_session_ctx", _mock_get_session_ctx()),
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
-        mock_search.return_value = ["501", "502", "503"]
+        mock_search.return_value = (["501", "502", "503"], 12345)
         mock_get_new.return_value = ["501", "502", "503"]
         mock_envelopes.return_value = {
             "501": ("Subject A", None, None),
@@ -169,7 +169,7 @@ async def test_poller_subtracts_already_tracked_uids():
         patch("app.workers.mail_poller.get_session_ctx", _mock_get_session_ctx()),
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
-        mock_search.return_value = ["100", "200", "300", "400"]
+        mock_search.return_value = (["100", "200", "300", "400"], 12345)
         mock_get_new.return_value = ["200", "400"]
         mock_envelopes.return_value = {
             "200": (None, None, None),
@@ -202,7 +202,7 @@ async def test_poller_handles_empty_mailbox():
         patch("app.workers.mail_poller.get_session_ctx", _mock_get_session_ctx()),
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
-        mock_search.return_value = []
+        mock_search.return_value = ([], 12345)
         mock_timed.return_value.__aenter__ = AsyncMock()
         mock_timed.return_value.__aexit__ = AsyncMock(return_value=False)
 
@@ -240,7 +240,7 @@ async def test_normal_polling_uses_inbox_all():
         patch("app.workers.mail_poller.get_session_ctx", _mock_get_session_ctx()),
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
-        mock_search.return_value = ["10"]
+        mock_search.return_value = (["10"], 12345)
         mock_get_new.return_value = ["10"]
         mock_envelopes.return_value = {"10": (None, None, None)}
         mock_timed.return_value.__aenter__ = AsyncMock()
@@ -269,7 +269,7 @@ async def test_initial_scan_skipped_when_scan_existing_false():
         patch("app.workers.mail_poller.get_session_ctx", _mock_get_session_ctx()),
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
-        mock_search.return_value = ["20", "21"]
+        mock_search.return_value = (["20", "21"], 12345)
         mock_get_new.return_value = ["20", "21"]
         mock_envelopes.return_value = {"20": (None, None, None), "21": (None, None, None)}
         mock_timed.return_value.__aenter__ = AsyncMock()
@@ -307,7 +307,7 @@ async def test_initial_scan_iterates_all_folders():
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["INBOX", "Sent", "Archive", "Trash", "Spam"]
-        mock_search.return_value = ["100"]
+        mock_search.return_value = (["100"], 12345)
         mock_get_new.return_value = ["100"]
         mock_envelopes.return_value = {"100": (None, None, None)}
         mock_timed.return_value.__aenter__ = AsyncMock()
@@ -333,6 +333,10 @@ async def test_initial_scan_iterates_all_folders():
         # Verify current_folder kwarg is set correctly for each call
         insert_folders = [c[1].get("current_folder") for c in mock_insert.call_args_list]
         assert insert_folders == ["INBOX", "Sent", "Archive"]
+
+        # Verify uidvalidity kwarg is passed
+        for call in mock_insert.call_args_list:
+            assert call[1].get("uidvalidity") == 12345
 
 
 @pytest.mark.asyncio
@@ -389,7 +393,7 @@ async def test_initial_scan_sets_correct_current_folder():
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["Archive"]
-        mock_search.return_value = ["50"]
+        mock_search.return_value = (["50"], 12345)
         mock_get_new.return_value = ["50"]
         mock_envelopes.return_value = {"50": (None, None, None)}
         mock_timed.return_value.__aenter__ = AsyncMock()
@@ -523,7 +527,7 @@ async def test_initial_scan_passes_folder_to_get_new_uids():
         patch("app.workers.mail_poller.update_account_sync_status", new_callable=AsyncMock),
     ):
         mock_list.return_value = ["INBOX", "Sent"]
-        mock_search.return_value = ["77"]
+        mock_search.return_value = (["77"], 12345)
         mock_get_new.return_value = ["77"]
         mock_envelopes.return_value = {"77": (None, None, None)}
         mock_timed.return_value.__aenter__ = AsyncMock()

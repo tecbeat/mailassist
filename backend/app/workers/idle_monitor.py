@@ -324,7 +324,7 @@ async def _search_and_insert_new(
     Returns the number of newly inserted rows.
     """
     try:
-        uids = await search_uids(conn, folder="INBOX", criteria="ALL")
+        uids, uidvalidity = await search_uids(conn, folder="INBOX", criteria="ALL")
     except Exception:
         logger.warning("idle_search_failed", account_id=account_id)
         return 0
@@ -377,6 +377,7 @@ async def _search_and_insert_new(
             UUID(user_id),
             UUID(account_id),
             new_uids,
+            uidvalidity=uidvalidity,
         )
 
     if inserted:
@@ -391,6 +392,8 @@ async def _insert_tracked_uids(
     user_id: UUID,
     mail_account_id: UUID,
     uids: list[str],
+    *,
+    uidvalidity: int | None = None,
 ) -> int:
     """Insert new UIDs into tracked_emails as pending.
 
@@ -409,13 +412,16 @@ async def _insert_tracked_uids(
             "status": TrackedEmailStatus.QUEUED,
             "retry_count": 0,
             "current_folder": "INBOX",
+            "uidvalidity": uidvalidity,
+            "first_seen_uid": uid,
+            "first_seen_folder": "INBOX",
             "created_at": now,
             "updated_at": now,
         }
         for uid in uids
     ]
 
-    # 8 columns per row; 32_767 // 8 = 4095, use 2000 for safety margin
+    # 11 columns per row; 32_767 // 11 = 2978, use 2000 for safety margin
     max_rows_per_insert = 2000
     total_inserted = 0
 

@@ -139,9 +139,7 @@ async def handle_ai_processing_complete(event: Event) -> None:
 
             # Load TrackedEmail for context (subject, sender)
             if event.mail_id is not None:
-                mail_result = await db.execute(
-                    select(TrackedEmail).where(TrackedEmail.id == event.mail_id)
-                )
+                mail_result = await db.execute(select(TrackedEmail).where(TrackedEmail.id == event.mail_id))
             else:
                 mail_result = await db.execute(
                     select(TrackedEmail).where(
@@ -229,15 +227,13 @@ async def handle_ai_processing_complete(event: Event) -> None:
                 # Mark email summary as notified to prevent duplicates
                 from app.models.mail import EmailSummary
 
-                if event.mail_id is not None:
-                    summary_stmt = select(EmailSummary).where(EmailSummary.mail_id == event.mail_id)
+                mail_id = event.mail_id or (tracked_email.id if tracked_email else None)
+                if mail_id is not None:
+                    summary_stmt = select(EmailSummary).where(EmailSummary.mail_id == mail_id)
+                    summary_result = await db.execute(summary_stmt)
                 else:
-                    summary_stmt = select(EmailSummary).where(
-                        EmailSummary.mail_account_id == event.account_id,
-                        EmailSummary.mail_uid == event.mail_uid,
-                    )
-                summary_result = await db.execute(summary_stmt)
-                summary = summary_result.scalar_one_or_none()
+                    summary_result = None
+                summary = summary_result.scalar_one_or_none() if summary_result is not None else None
                 if summary:
                     summary.notified = True
                     await db.commit()

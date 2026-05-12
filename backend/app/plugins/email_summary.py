@@ -8,10 +8,13 @@ and optionally forwarded via notification if filter rules match.
 
 from typing import Annotated, Any
 
+import structlog
 from pydantic import BaseModel, Field, StringConstraints
 
 from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
+
+logger = structlog.get_logger()
 
 
 class EmailSummaryResponse(BaseModel):
@@ -88,13 +91,15 @@ class EmailSummaryPlugin(AIFunctionPlugin[EmailSummaryResponse]):
 
         from app.models.mail import EmailSummary
 
-        if mail_id is not None:
-            stmt = select(EmailSummary).where(EmailSummary.mail_id == mail_id)
-        else:
-            stmt = select(EmailSummary).where(
-                EmailSummary.mail_account_id == account_id,
-                EmailSummary.mail_uid == mail_uid,
+        if mail_id is None:
+            logger.warning(
+                "load_notification_context called without mail_id",
+                plugin="email_summary",
+                account_id=str(account_id),
+                mail_uid=mail_uid,
             )
+            return {}
+        stmt = select(EmailSummary).where(EmailSummary.mail_id == mail_id)
         result = await db.execute(stmt)
         summary = result.scalar_one_or_none()
         if summary:
