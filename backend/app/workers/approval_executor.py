@@ -269,6 +269,7 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 urgency=data.get("urgency", "medium"),
                 action_required=data.get("action_required", False),
                 action_description=data.get("action_description"),
+                mail_id=approval.mail_id,
                 own_session=True,
             )
         elif fn == "newsletter_detection":
@@ -282,6 +283,7 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 mail_subject=approval.mail_subject,
                 unsubscribe_url=data.get("unsubscribe_url"),
                 has_unsubscribe=data.get("has_unsubscribe", False),
+                mail_id=approval.mail_id,
                 own_session=True,
             )
         elif fn == "coupon_extraction":
@@ -293,6 +295,7 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 coupons=data.get("coupons", []),
                 sender_email=approval.mail_from,
                 mail_subject=approval.mail_subject,
+                mail_id=approval.mail_id,
                 own_session=True,
             )
         elif fn == "otp_extraction":
@@ -304,6 +307,7 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 codes=data.get("codes", []),
                 sender_email=approval.mail_from,
                 mail_subject=approval.mail_subject,
+                mail_id=approval.mail_id,
                 own_session=True,
             )
         elif fn == "labeling":
@@ -314,6 +318,7 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 mail_subject=approval.mail_subject,
                 mail_from=approval.mail_from,
                 labels=data.get("labels", []),
+                mail_id=approval.mail_id,
                 own_session=True,
             )
         elif fn == "smart_folder":
@@ -326,6 +331,7 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 folder=data.get("folder", "INBOX"),
                 confidence=data.get("confidence"),
                 reason=data.get("reason"),
+                mail_id=approval.mail_id,
                 own_session=True,
             )
         elif fn == "calendar_extraction":
@@ -342,6 +348,7 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 location=data.get("location"),
                 description=data.get("description"),
                 is_all_day=data.get("is_all_day", False),
+                mail_id=approval.mail_id,
                 own_session=True,
             )
         elif fn == "auto_reply":
@@ -355,6 +362,7 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 draft_body=data.get("draft_body"),
                 tone=data.get("tone"),
                 reasoning=data.get("reasoning"),
+                mail_id=approval.mail_id,
                 own_session=True,
             )
 
@@ -389,6 +397,7 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 reasoning=data.get("reasoning"),
                 is_new_contact_suggestion=data.get("is_new_contact_suggestion", False),
                 auto_writeback=True,
+                mail_id=approval.mail_id,
                 own_session=True,
             )
     except Exception:

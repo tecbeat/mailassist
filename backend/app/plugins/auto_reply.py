@@ -92,18 +92,22 @@ class AutoReplyPlugin(AIFunctionPlugin[AutoReplyResponse]):
         db: Any,
         account_id: Any,
         mail_uid: str,
+        *,
+        mail_id: Any = None,
     ) -> dict[str, Any]:
         """Load auto-reply data from the database for notification context."""
         from sqlalchemy import select
 
         from app.models.mail import AutoReplyRecord
 
-        result = await db.execute(
-            select(AutoReplyRecord).where(
+        if mail_id is not None:
+            stmt = select(AutoReplyRecord).where(AutoReplyRecord.mail_id == mail_id)
+        else:
+            stmt = select(AutoReplyRecord).where(
                 AutoReplyRecord.mail_account_id == account_id,
                 AutoReplyRecord.mail_uid == mail_uid,
             )
-        )
+        result = await db.execute(stmt)
         reply = result.scalar_one_or_none()
         if reply:
             return {

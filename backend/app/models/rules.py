@@ -23,7 +23,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 
 if TYPE_CHECKING:
-    from app.models.mail import MailAccount
+    from app.models.mail import MailAccount, TrackedEmail
     from app.models.user import User
 
 
@@ -43,6 +43,9 @@ class Approval(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
+    mail_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=True
+    )
     function_type: Mapped[str] = mapped_column(String(50), nullable=False)
     mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     mail_subject: Mapped[str] = mapped_column(String(998), nullable=False)
@@ -60,6 +63,7 @@ class Approval(Base):
     # Relationships
     user: Mapped["User"] = relationship(back_populates="approvals")
     mail_account: Mapped["MailAccount"] = relationship(back_populates="approvals")
+    tracked_email: Mapped["TrackedEmail | None"] = relationship(foreign_keys=[mail_id])
 
     __table_args__ = (
         UniqueConstraint(
@@ -70,6 +74,7 @@ class Approval(Base):
         Index("ix_approvals_mail_account_id", "mail_account_id"),
         Index("ix_approvals_expires_at", "expires_at"),
         Index("ix_approvals_function_type", "function_type"),
+        Index("ix_approvals_mail_id", "mail_id"),
     )
 
 

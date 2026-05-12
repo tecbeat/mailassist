@@ -482,6 +482,7 @@ async def _persist_plugin_result(
     user_id = UUID(context.user_id)
     account_id = UUID(context.account_id)
     mail_uid = context.mail_uid
+    mail_id = UUID(context.mail_id) if context.mail_id else None
 
     if plugin.name == "email_summary":
         resp: EmailSummaryResponse = ai_response  # type: ignore[assignment]
@@ -497,6 +498,7 @@ async def _persist_plugin_result(
             urgency=resp.urgency,
             action_required=resp.action_required,
             action_description=resp.action_description,
+            mail_id=mail_id,
             db=db,
         )
 
@@ -512,6 +514,7 @@ async def _persist_plugin_result(
             mail_subject=context.subject,
             unsubscribe_url=resp_nl.unsubscribe_url,
             has_unsubscribe=resp_nl.has_unsubscribe,
+            mail_id=mail_id,
             db=db,
         )
 
@@ -525,6 +528,7 @@ async def _persist_plugin_result(
             coupons=[c.model_dump() for c in resp_cp.coupons] if resp_cp.coupons else [],
             sender_email=context.sender,
             mail_subject=context.subject,
+            mail_id=mail_id,
             db=db,
         )
 
@@ -538,6 +542,7 @@ async def _persist_plugin_result(
             codes=[c.model_dump() for c in resp_otp.codes] if resp_otp.codes else [],
             sender_email=context.sender,
             mail_subject=context.subject,
+            mail_id=mail_id,
             db=db,
         )
 
@@ -551,6 +556,7 @@ async def _persist_plugin_result(
             mail_from=context.sender,
             labels=resp_lbl.labels,
             existing_labels=set(context.existing_labels) if context.existing_labels else None,
+            mail_id=mail_id,
             db=db,
         )
 
@@ -566,6 +572,7 @@ async def _persist_plugin_result(
             confidence=resp_cat.confidence,
             reason=resp_cat.reason,
             existing_folders=set(context.existing_folders) if context.existing_folders else None,
+            mail_id=mail_id,
             db=db,
         )
 
@@ -584,6 +591,7 @@ async def _persist_plugin_result(
             location=resp_cal.location,
             description=resp_cal.description,
             is_all_day=resp_cal.is_all_day,
+            mail_id=mail_id,
             db=db,
         )
 
@@ -599,6 +607,7 @@ async def _persist_plugin_result(
             draft_body=resp_ar.draft_body,
             tone=resp_ar.tone,
             reasoning=resp_ar.reasoning,
+            mail_id=mail_id,
             db=db,
         )
 
@@ -633,6 +642,7 @@ async def _persist_plugin_result(
             reasoning=resp_ct.reasoning,
             is_new_contact_suggestion=resp_ct.is_new_contact_suggestion,
             auto_writeback=True,
+            mail_id=mail_id,
             db=db,
         )
 
@@ -648,6 +658,7 @@ async def _persist_plugin_result(
             confidence=resp_sd.confidence,
             reason=resp_sd.reason,
             source="ai",
+            mail_id=mail_id,
             db=db,
         )
 
@@ -687,6 +698,7 @@ async def _create_approval(
         ai_reasoning=action_result.approval_summary or plugin.get_approval_summary(ai_response),
         ai_response_data=ai_response.model_dump(mode="json"),
         mail_date=parse_date_field(context.date) if context.date else None,
+        mail_id=UUID(context.mail_id) if context.mail_id else None,
         expires_at=datetime.now(UTC) + timedelta(days=get_settings().approval_expiry_days),
     )
     db.add(approval)
@@ -718,6 +730,7 @@ async def _create_manual_input_approval(
         ai_reasoning=f"Plugin {plugin.display_name} failed: {error}",
         ai_response_data=None,
         mail_date=parse_date_field(context.date) if context.date else None,
+        mail_id=UUID(context.mail_id) if context.mail_id else None,
         status=ApprovalStatus.MANUAL_INPUT,
         expires_at=datetime.now(UTC) + timedelta(days=get_settings().approval_expiry_days),
     )

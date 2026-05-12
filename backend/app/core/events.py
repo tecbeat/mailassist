@@ -86,6 +86,10 @@ class AIProcessingCompleteEvent(Event):
     current_folder: str = "INBOX"
     plugins_executed: list[str] = field(default_factory=list)
     approvals_created: int = 0
+    # Stable UUID identity of the TrackedEmail row (Phase 2, #158).
+    # Present for all new events; None only during the transition period
+    # for events emitted before the upgrade.
+    mail_id: UUID | None = None
 
 
 @dataclass

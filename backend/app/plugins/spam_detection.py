@@ -71,18 +71,22 @@ class SpamDetectionPlugin(AIFunctionPlugin[SpamDetectionResponse]):
         db: Any,
         account_id: Any,
         mail_uid: str,
+        *,
+        mail_id: Any = None,
     ) -> dict[str, Any]:
         """Load spam detection data from the database for notification context."""
         from sqlalchemy import select
 
         from app.models.mail import SpamDetectionResult
 
-        result = await db.execute(
-            select(SpamDetectionResult).where(
+        if mail_id is not None:
+            stmt = select(SpamDetectionResult).where(SpamDetectionResult.mail_id == mail_id)
+        else:
+            stmt = select(SpamDetectionResult).where(
                 SpamDetectionResult.mail_account_id == account_id,
                 SpamDetectionResult.mail_uid == mail_uid,
             )
-        )
+        result = await db.execute(stmt)
         spam = result.scalar_one_or_none()
         if spam:
             return {

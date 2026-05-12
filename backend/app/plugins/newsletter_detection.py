@@ -85,18 +85,22 @@ class NewsletterDetectionPlugin(AIFunctionPlugin[NewsletterDetectionResponse]):
         db: Any,
         account_id: Any,
         mail_uid: str,
+        *,
+        mail_id: Any = None,
     ) -> dict[str, Any]:
         """Load newsletter detection data from the database for notification context."""
         from sqlalchemy import select
 
         from app.models.mail import DetectedNewsletter
 
-        result = await db.execute(
-            select(DetectedNewsletter).where(
+        if mail_id is not None:
+            stmt = select(DetectedNewsletter).where(DetectedNewsletter.mail_id == mail_id)
+        else:
+            stmt = select(DetectedNewsletter).where(
                 DetectedNewsletter.mail_account_id == account_id,
                 DetectedNewsletter.mail_uid == mail_uid,
             )
-        )
+        result = await db.execute(stmt)
         newsletter = result.scalar_one_or_none()
         if newsletter:
             return {

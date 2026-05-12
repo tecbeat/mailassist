@@ -123,6 +123,8 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
         db: Any,
         account_id: Any,
         mail_uid: str,
+        *,
+        mail_id: Any = None,
     ) -> dict[str, Any]:
         """Load calendar event data from the database for notification context.
 
@@ -133,12 +135,14 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
 
         from app.models.mail import CalendarEvent
 
-        result = await db.execute(
-            select(CalendarEvent).where(
+        if mail_id is not None:
+            stmt = select(CalendarEvent).where(CalendarEvent.mail_id == mail_id)
+        else:
+            stmt = select(CalendarEvent).where(
                 CalendarEvent.mail_account_id == account_id,
                 CalendarEvent.mail_uid == mail_uid,
             )
-        )
+        result = await db.execute(stmt)
         cal = result.scalar_one_or_none()
         if cal:
             start_str = cal.start.isoformat() if cal.start else ""

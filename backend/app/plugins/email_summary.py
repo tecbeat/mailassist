@@ -80,18 +80,22 @@ class EmailSummaryPlugin(AIFunctionPlugin[EmailSummaryResponse]):
         db: Any,
         account_id: Any,
         mail_uid: str,
+        *,
+        mail_id: Any = None,
     ) -> dict[str, Any]:
         """Load email summary data from the database for notification context."""
         from sqlalchemy import select
 
         from app.models.mail import EmailSummary
 
-        result = await db.execute(
-            select(EmailSummary).where(
+        if mail_id is not None:
+            stmt = select(EmailSummary).where(EmailSummary.mail_id == mail_id)
+        else:
+            stmt = select(EmailSummary).where(
                 EmailSummary.mail_account_id == account_id,
                 EmailSummary.mail_uid == mail_uid,
             )
-        )
+        result = await db.execute(stmt)
         summary = result.scalar_one_or_none()
         if summary:
             return {

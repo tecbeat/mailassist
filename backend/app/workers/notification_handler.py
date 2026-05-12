@@ -54,6 +54,8 @@ async def _load_plugin_context(
     event_type: str,
     account_id: UUID,
     mail_uid: str,
+    *,
+    mail_id: UUID | None = None,
 ) -> dict[str, Any]:
     """Load plugin-specific notification context from the plugin registry.
 
@@ -65,7 +67,7 @@ async def _load_plugin_context(
     for plugin in registry.get_all_plugins():
         if plugin.notification_event_type == event_type:
             try:
-                return await plugin.load_notification_context(db, account_id, mail_uid)
+                return await plugin.load_notification_context(db, account_id, mail_uid, mail_id=mail_id)
             except Exception:
                 logger.warning("plugin_context_load_failed", event_type=event_type, plugin=plugin.name)
                 return {}
@@ -136,13 +138,18 @@ async def handle_ai_processing_complete(event: Event) -> None:
                 return
 
             # Load TrackedEmail for context (subject, sender)
-            mail_result = await db.execute(
-                select(TrackedEmail).where(
-                    TrackedEmail.mail_account_id == event.account_id,
-                    TrackedEmail.mail_uid == event.mail_uid,
-                    TrackedEmail.current_folder == event.current_folder,
+            if event.mail_id is not None:
+                mail_result = await db.execute(
+                    select(TrackedEmail).where(TrackedEmail.id == event.mail_id)
                 )
-            )
+            else:
+                mail_result = await db.execute(
+                    select(TrackedEmail).where(
+                        TrackedEmail.mail_account_id == event.account_id,
+                        TrackedEmail.mail_uid == event.mail_uid,
+                        TrackedEmail.current_folder == event.current_folder,
+                    )
+                )
             tracked_email = mail_result.scalars().first()
 
             # Load MailAccount for account name
@@ -196,6 +203,7 @@ async def handle_ai_processing_complete(event: Event) -> None:
                     event_type,
                     event.account_id,
                     event.mail_uid,
+                    mail_id=event.mail_id,
                 )
                 context = {**base_context, **plugin_ctx}
                 custom_tpl = custom_templates.get(event_type)
@@ -221,12 +229,14 @@ async def handle_ai_processing_complete(event: Event) -> None:
                 # Mark email summary as notified to prevent duplicates
                 from app.models.mail import EmailSummary
 
-                summary_result = await db.execute(
-                    select(EmailSummary).where(
+                if event.mail_id is not None:
+                    summary_stmt = select(EmailSummary).where(EmailSummary.mail_id == event.mail_id)
+                else:
+                    summary_stmt = select(EmailSummary).where(
                         EmailSummary.mail_account_id == event.account_id,
                         EmailSummary.mail_uid == event.mail_uid,
                     )
-                )
+                summary_result = await db.execute(summary_stmt)
                 summary = summary_result.scalar_one_or_none()
                 if summary:
                     summary.notified = True

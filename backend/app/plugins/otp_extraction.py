@@ -95,6 +95,8 @@ class OtpExtractionPlugin(AIFunctionPlugin[OtpExtractionResponse]):
         db: Any,
         account_id: Any,
         mail_uid: str,
+        *,
+        mail_id: Any = None,
     ) -> dict[str, Any]:
         """Load OTP data from the database for notification context.
 
@@ -104,12 +106,14 @@ class OtpExtractionPlugin(AIFunctionPlugin[OtpExtractionResponse]):
 
         from app.models.mail import ExtractedOtpCode
 
-        result = await db.execute(
-            select(ExtractedOtpCode).where(
+        if mail_id is not None:
+            stmt = select(ExtractedOtpCode).where(ExtractedOtpCode.mail_id == mail_id)
+        else:
+            stmt = select(ExtractedOtpCode).where(
                 ExtractedOtpCode.mail_account_id == account_id,
                 ExtractedOtpCode.mail_uid == mail_uid,
             )
-        )
+        result = await db.execute(stmt)
         otp_codes = result.scalars().all()
         if not otp_codes:
             return {}

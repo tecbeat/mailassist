@@ -700,6 +700,7 @@ async def _process_mail_inner(
             current_folder=current_folder,
             plugins_executed=pipeline_result.plugins_executed,
             approvals_created=pipeline_result.approvals_created,
+            mail_id=pipeline_result.mail_id,
         )
     )
 

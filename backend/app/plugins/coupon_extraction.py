@@ -91,6 +91,8 @@ class CouponExtractionPlugin(AIFunctionPlugin[CouponExtractionResponse]):
         db: Any,
         account_id: Any,
         mail_uid: str,
+        *,
+        mail_id: Any = None,
     ) -> dict[str, Any]:
         """Load coupon data from the database for notification context.
 
@@ -100,12 +102,14 @@ class CouponExtractionPlugin(AIFunctionPlugin[CouponExtractionResponse]):
 
         from app.models.mail import ExtractedCoupon
 
-        result = await db.execute(
-            select(ExtractedCoupon).where(
+        if mail_id is not None:
+            stmt = select(ExtractedCoupon).where(ExtractedCoupon.mail_id == mail_id)
+        else:
+            stmt = select(ExtractedCoupon).where(
                 ExtractedCoupon.mail_account_id == account_id,
                 ExtractedCoupon.mail_uid == mail_uid,
             )
-        )
+        result = await db.execute(stmt)
         coupons = result.scalars().all()
         if not coupons:
             return {}
