@@ -43,8 +43,8 @@ class Approval(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
-    mail_id: Mapped[UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=True
+    mail_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
     function_type: Mapped[str] = mapped_column(String(50), nullable=False)
     mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)

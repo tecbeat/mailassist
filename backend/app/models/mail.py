@@ -167,8 +167,8 @@ class AIDraft(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
-    mail_id: Mapped[UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=True
+    mail_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
     original_mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     original_message_id: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -200,8 +200,8 @@ class EmailSummary(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
-    mail_id: Mapped[UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=True
+    mail_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
     mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
@@ -244,8 +244,8 @@ class DetectedNewsletter(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
-    mail_id: Mapped[UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=True
+    mail_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
     mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     newsletter_name: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -279,8 +279,8 @@ class ExtractedCoupon(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
-    mail_id: Mapped[UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=True
+    mail_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
     mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     sender_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
@@ -320,8 +320,8 @@ class ExtractedOtpCode(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
-    mail_id: Mapped[UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=True
+    mail_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
     mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     sender_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
@@ -362,8 +362,8 @@ class AppliedLabel(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
-    mail_id: Mapped[UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=True
+    mail_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
     mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
@@ -395,8 +395,8 @@ class AssignedFolder(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
-    mail_id: Mapped[UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=True
+    mail_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
     mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
@@ -431,8 +431,8 @@ class CalendarEvent(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
-    mail_id: Mapped[UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=True
+    mail_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
     mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
@@ -473,8 +473,8 @@ class AutoReplyRecord(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
-    mail_id: Mapped[UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=True
+    mail_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
     mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
@@ -513,8 +513,8 @@ class ContactAssignment(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
-    mail_id: Mapped[UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=True
+    mail_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
     mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)
@@ -553,8 +553,8 @@ class SpamDetectionResult(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     mail_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("mail_accounts.id"), nullable=False)
-    mail_id: Mapped[UUID | None] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=True
+    mail_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("tracked_emails.id", ondelete="CASCADE"), nullable=False
     )
     mail_uid: Mapped[str] = mapped_column(String(100), nullable=False)
     mail_subject: Mapped[str | None] = mapped_column(String(998), nullable=True)

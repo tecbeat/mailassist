@@ -30,16 +30,22 @@ build_image:
     - job: changelogger
       artifacts: true
 
-render_pages:
-  stage: prepare
+pages:
+  stage: deploy
   image: node:24-slim@sha256:24dc26ef1e3c3690f27ebc4136c9c186c3133b25563ae4d7f0692e4d1fe5db0e
   needs: []
   script:
-    - cd docs && npm ci && npx docusaurus build --out-dir ../public
+    - |
+      cd docs
+      npm ci
+      if [ "$CI_COMMIT_REF_NAME" = "$CI_DEFAULT_BRANCH" ]; then
+        npx docusaurus build --out-dir ../public
+      else
+        DOCUSAURUS_BASE_URL="/mailassist/$CI_COMMIT_REF_SLUG/" npx docusaurus build --out-dir "../public/$CI_COMMIT_REF_SLUG"
+      fi
   artifacts:
     paths:
       - public
-    expire_in: 1 day
   tags:
     - teccave
 

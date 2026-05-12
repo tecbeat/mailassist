@@ -132,7 +132,7 @@ async def save_email_summary(
     urgency: str | UrgencyLevel = UrgencyLevel.MEDIUM,
     action_required: bool = False,
     action_description: str | None = None,
-    mail_id: UUID | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -194,7 +194,7 @@ async def save_newsletter(
     mail_subject: str | None = None,
     unsubscribe_url: str | None = None,
     has_unsubscribe: bool = False,
-    mail_id: UUID | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -250,7 +250,7 @@ async def save_coupons(
     coupons: list[dict[str, Any]],
     sender_email: str | None = None,
     mail_subject: str | None = None,
-    mail_id: UUID | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -304,7 +304,7 @@ async def save_applied_labels(
     mail_from: str | None = None,
     labels: list[str],
     existing_labels: set[str] | None = None,
-    mail_id: UUID | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -349,7 +349,7 @@ async def save_assigned_folder(
     confidence: float | None = None,
     reason: str | None = None,
     existing_folders: set[str] | None = None,
-    mail_id: UUID | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -473,7 +473,7 @@ async def save_calendar_event(
     location: str | None = None,
     description: str | None = None,
     is_all_day: bool = False,
-    mail_id: UUID | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -529,7 +529,7 @@ async def save_auto_reply(
     draft_body: str | None = None,
     tone: str | None = None,
     reasoning: str | None = None,
-    mail_id: UUID | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -577,7 +577,7 @@ async def save_contact_assignment(
     reasoning: str | None = None,
     is_new_contact_suggestion: bool = False,
     auto_writeback: bool = False,
-    mail_id: UUID | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -632,7 +632,7 @@ async def save_spam_detection(
     confidence: float,
     reason: str | None = None,
     source: str = "ai",
-    mail_id: UUID | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -687,7 +687,7 @@ async def save_otp(
     codes: list[dict[str, Any]],
     sender_email: str | None = None,
     mail_subject: str | None = None,
-    mail_id: UUID | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
