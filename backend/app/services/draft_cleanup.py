@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.models import AIDraft, DraftStatus, MailAccount
+from app.models import AIDraft, DraftStatus, MailAccount, TrackedEmail
 from app.services.mail import ImapConnection, imap_connection, resolve_folder
 
 logger = structlog.get_logger()
@@ -39,10 +39,14 @@ async def cleanup_drafts_for_account(
     """
     stats = {"superseded": 0, "deleted": 0, "expired": 0, "errors": 0}
 
-    # Fetch active drafts for this account
-    stmt = select(AIDraft).where(
-        AIDraft.mail_account_id == account.id,
-        AIDraft.status == DraftStatus.ACTIVE,
+    # Fetch active drafts for this account (join through TrackedEmail)
+    stmt = (
+        select(AIDraft)
+        .join(TrackedEmail, AIDraft.mail_id == TrackedEmail.id)
+        .where(
+            TrackedEmail.mail_account_id == account.id,
+            AIDraft.status == DraftStatus.ACTIVE,
+        )
     )
     result = await db.execute(stmt)
     active_drafts = result.scalars().all()

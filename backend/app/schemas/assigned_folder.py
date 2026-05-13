@@ -10,10 +10,8 @@ class AssignedFolderResponse(BaseModel):
     """Response schema for an assigned folder record."""
 
     id: UUID
-    mail_account_id: UUID
-    mail_uid: str
-    mail_subject: str | None = None
-    mail_from: str | None = None
+    subject: str | None = None
+    sender: str | None = None
     folder: str
     confidence: float | None = None
     reason: str | None = None

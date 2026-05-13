@@ -46,7 +46,7 @@ async def report_spam(
         db,
         user_id=user_id,
         mail_account_id=data.mail_account_id,
-        mail_uid=data.mail_id,
+        mail_uid=data.mail_uid,
         sender_email=data.sender_email,
         subject=data.subject,
     )

@@ -136,11 +136,18 @@ async def reject_action(
 
     # Spam rejection: re-process through the rest of the pipeline
     if approval.function_type == "spam_detection":
-        await _enqueue_spam_reprocess(
-            user_id,
-            str(approval.mail_account_id),
-            approval.mail_uid,
-        )
+        # Load the tracked email to get mail_account_id and mail_uid
+        from app.models import TrackedEmail
+
+        te_stmt = select(TrackedEmail).where(TrackedEmail.id == approval.mail_id)
+        te_result = await db.execute(te_stmt)
+        tracked = te_result.scalar_one_or_none()
+        if tracked:
+            await _enqueue_spam_reprocess(
+                user_id,
+                str(tracked.mail_account_id),
+                tracked.mail_uid,
+            )
 
     return ApprovalResponse.model_validate(approval)
 

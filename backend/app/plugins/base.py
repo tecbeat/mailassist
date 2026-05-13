@@ -55,6 +55,9 @@ class MailContext:
     user_contacts: list[dict[str, Any]] | None = None
     technical_indicators: dict[str, Any] | None = None
     calendar_include_past_events: bool = False
+    # Stable UUID identity of the TrackedEmail row (Phase 2, #158).
+    # None when running in test contexts without a real DB row.
+    mail_id: str | None = None
 
 
 @dataclass
@@ -258,6 +261,8 @@ class AIFunctionPlugin[ResponseT: BaseModel](ABC):
         db: Any,
         account_id: Any,
         mail_uid: str,
+        *,
+        mail_id: Any = None,
     ) -> dict[str, Any]:
         """Load notification context directly from the database.
 
@@ -268,6 +273,7 @@ class AIFunctionPlugin[ResponseT: BaseModel](ABC):
             db: AsyncSession
             account_id: UUID of the mail account
             mail_uid: UID of the processed email
+            mail_id: UUID of the TrackedEmail aggregate (preferred lookup key)
         """
         return {}
 

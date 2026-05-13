@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.database import get_session_ctx
@@ -44,7 +44,6 @@ logger = structlog.get_logger()
 # Field length limits (must match DB column constraints)
 # ---------------------------------------------------------------------------
 
-_LEN_MAIL_SUBJECT = 998
 _LEN_EMAIL_ADDRESS = 320
 _LEN_LABEL = 200
 _LEN_REASON = 500
@@ -122,16 +121,12 @@ def parse_date_field(value: str | datetime) -> datetime | None:
 async def save_email_summary(
     *,
     user_id: UUID,
-    account_id: UUID,
-    mail_uid: str,
-    mail_subject: str | None = None,
-    mail_from: str | None = None,
-    mail_date: str | datetime | None = None,
     summary: str,
     key_points: list[str],
     urgency: str | UrgencyLevel = UrgencyLevel.MEDIUM,
     action_required: bool = False,
     action_description: str | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -139,18 +134,13 @@ async def save_email_summary(
 
     Uses INSERT ... ON CONFLICT DO UPDATE so re-processing the same
     mail simply overwrites the previous summary instead of raising a
-    ``UniqueViolationError`` on ``uq_summary_user_account_mail``.
+    ``UniqueViolationError`` on ``uq_summary_user_mail_id``.
     """
     now = datetime.now(UTC)
-    parsed_mail_date = parse_date_field(mail_date) if mail_date is not None else None
     values = {
         "id": uuid4(),
         "user_id": user_id,
-        "mail_account_id": account_id,
-        "mail_uid": mail_uid,
-        "mail_subject": _trunc(mail_subject, _LEN_MAIL_SUBJECT),
-        "mail_from": _trunc(mail_from, _LEN_EMAIL_ADDRESS),
-        "mail_date": parsed_mail_date,
+        "mail_id": mail_id,
         "summary": summary,
         "key_points": key_points,
         "urgency": urgency,
@@ -161,16 +151,14 @@ async def save_email_summary(
     }
 
     # Columns to overwrite on conflict (everything except PK + created_at)
-    update_cols = {
-        k: v for k, v in values.items() if k not in ("id", "user_id", "mail_account_id", "mail_uid", "created_at")
-    }
+    update_cols = {k: v for k, v in values.items() if k not in ("id", "user_id", "created_at")}
     update_cols["updated_at"] = now
 
     stmt = (
         pg_insert(EmailSummary)
         .values(**values)
         .on_conflict_do_update(
-            constraint="uq_summary_user_account_mail",
+            constraint="uq_summary_user_mail_id",
             set_=update_cols,
         )
     )
@@ -178,47 +166,58 @@ async def save_email_summary(
     async with _persist(own_session, db) as session:
         await session.execute(stmt)
 
-    logger.info("email_summary_saved", mail_uid=mail_uid, urgency=urgency)
+    logger.info("email_summary_saved", mail_id=str(mail_id), urgency=urgency)
 
 
 async def save_newsletter(
     *,
     user_id: UUID,
-    account_id: UUID,
-    mail_uid: str,
     is_newsletter: bool,
     newsletter_name: str = "Unknown",
     sender_address: str = "unknown",
-    mail_subject: str | None = None,
     unsubscribe_url: str | None = None,
     has_unsubscribe: bool = False,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
-    """Persist a detected newsletter.
+    """Persist a detected newsletter (upsert on mail_id).
 
     If ``is_newsletter`` is False, this is a no-op.
     """
     if not is_newsletter:
         return
 
-    record = DetectedNewsletter(
-        user_id=user_id,
-        mail_account_id=account_id,
-        mail_uid=mail_uid,
-        newsletter_name=newsletter_name or "Unknown",
-        sender_address=sender_address[:_LEN_EMAIL_ADDRESS] if sender_address else "unknown",
-        mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
-        unsubscribe_url=unsubscribe_url,
-        has_unsubscribe=has_unsubscribe,
+    now = datetime.now(UTC)
+    values = {
+        "id": uuid4(),
+        "user_id": user_id,
+        "mail_id": mail_id,
+        "newsletter_name": newsletter_name or "Unknown",
+        "sender_address": sender_address[:_LEN_EMAIL_ADDRESS] if sender_address else "unknown",
+        "unsubscribe_url": unsubscribe_url,
+        "has_unsubscribe": has_unsubscribe,
+        "created_at": now,
+        "updated_at": now,
+    }
+    update_cols = {k: v for k, v in values.items() if k not in ("id", "user_id", "created_at")}
+    update_cols["updated_at"] = now
+
+    stmt = (
+        pg_insert(DetectedNewsletter)
+        .values(**values)
+        .on_conflict_do_update(
+            constraint="uq_newsletter_mail_id",
+            set_=update_cols,
+        )
     )
 
     async with _persist(own_session, db) as session:
-        session.add(record)
+        await session.execute(stmt)
 
     logger.info(
         "newsletter_saved",
-        mail_uid=mail_uid,
+        mail_id=str(mail_id),
         newsletter_name=newsletter_name,
         has_unsubscribe=has_unsubscribe,
     )
@@ -240,12 +239,9 @@ def _parse_coupon_expiry(raw: str | None) -> datetime | None:
 async def save_coupons(
     *,
     user_id: UUID,
-    account_id: UUID,
-    mail_uid: str,
     has_coupons: bool,
     coupons: list[dict[str, Any]],
-    sender_email: str | None = None,
-    mail_subject: str | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -270,10 +266,7 @@ async def save_coupons(
         records.append(
             ExtractedCoupon(
                 user_id=user_id,
-                mail_account_id=account_id,
-                mail_uid=mail_uid,
-                sender_email=_trunc(sender_email, _LEN_EMAIL_ADDRESS),
-                mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
+                mail_id=mail_id,
                 code=_trunc(code, _LEN_CODE),
                 description=description[:300] if description else None,
                 store=_trunc(store, _LEN_STORE),
@@ -283,21 +276,20 @@ async def save_coupons(
         )
 
     async with _persist(own_session, db) as session:
+        # Delete existing coupons for this mail to prevent duplicates on reprocess
+        await session.execute(delete(ExtractedCoupon).where(ExtractedCoupon.mail_id == mail_id))
         for record in records:
             session.add(record)
 
-    logger.info("coupons_saved", mail_uid=mail_uid, count=len(records))
+    logger.info("coupons_saved", mail_id=str(mail_id), count=len(records))
 
 
 async def save_applied_labels(
     *,
     user_id: UUID,
-    account_id: UUID,
-    mail_uid: str,
-    mail_subject: str | None = None,
-    mail_from: str | None = None,
     labels: list[str],
     existing_labels: set[str] | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -314,59 +306,50 @@ async def save_applied_labels(
         records.append(
             AppliedLabel(
                 user_id=user_id,
-                mail_account_id=account_id,
-                mail_uid=mail_uid,
-                mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
-                mail_from=_trunc(mail_from, _LEN_EMAIL_ADDRESS),
+                mail_id=mail_id,
                 label=_trunc_required(lbl, _LEN_LABEL),
                 is_new_label=lbl.lower() not in existing_set,
             )
         )
 
     async with _persist(own_session, db) as session:
+        # Delete existing labels for this mail to prevent duplicates on reprocess
+        await session.execute(delete(AppliedLabel).where(AppliedLabel.mail_id == mail_id))
         for record in records:
             session.add(record)
 
-    logger.info("applied_labels_saved", mail_uid=mail_uid, count=len(records))
+    logger.info("applied_labels_saved", mail_id=str(mail_id), count=len(records))
 
 
 async def save_assigned_folder(
     *,
     user_id: UUID,
-    account_id: UUID,
-    mail_uid: str,
-    mail_subject: str | None = None,
-    mail_from: str | None = None,
     folder: str,
     confidence: float | None = None,
     reason: str | None = None,
     existing_folders: set[str] | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
-    """Persist an assigned folder record (upsert on account+uid)."""
+    """Persist an assigned folder record (upsert on mail_id)."""
     existing_set = {f.lower() for f in (existing_folders or set())}
     values = {
         "id": uuid4(),
         "user_id": user_id,
-        "mail_account_id": account_id,
-        "mail_uid": mail_uid,
-        "mail_subject": _trunc(mail_subject, _LEN_MAIL_SUBJECT),
-        "mail_from": _trunc(mail_from, _LEN_EMAIL_ADDRESS),
+        "mail_id": mail_id,
         "folder": _trunc_required(folder, _LEN_FOLDER),
         "confidence": confidence,
         "reason": _trunc(reason, _LEN_REASON),
         "is_new_folder": folder.lower() not in existing_set,
         "created_at": datetime.now(UTC),
     }
-    update_cols = {
-        k: v for k, v in values.items() if k not in ("id", "user_id", "mail_account_id", "mail_uid", "created_at")
-    }
+    update_cols = {k: v for k, v in values.items() if k not in ("id", "user_id", "created_at")}
     stmt = (
         pg_insert(AssignedFolder)
         .values(**values)
         .on_conflict_do_update(
-            constraint="uq_assigned_folder_account_uid",
+            constraint="uq_assigned_folder_mail_id",
             set_=update_cols,
         )
     )
@@ -374,7 +357,7 @@ async def save_assigned_folder(
     async with _persist(own_session, db) as session:
         await session.execute(stmt)
 
-    logger.info("assigned_folder_saved", mail_uid=mail_uid, folder=folder)
+    logger.info("assigned_folder_saved", mail_id=str(mail_id), folder=folder)
 
 
 async def _sync_event_to_caldav(record: CalendarEvent) -> None:
@@ -452,10 +435,6 @@ async def _sync_event_to_caldav(record: CalendarEvent) -> None:
 async def save_calendar_event(
     *,
     user_id: UUID,
-    account_id: UUID,
-    mail_uid: str,
-    mail_subject: str | None = None,
-    mail_from: str | None = None,
     has_event: bool,
     title: str | None = None,
     start: str | datetime | None = None,
@@ -463,6 +442,7 @@ async def save_calendar_event(
     location: str | None = None,
     description: str | None = None,
     is_all_day: bool = False,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -479,28 +459,50 @@ async def save_calendar_event(
     parsed_start = parse_date_field(start) if start is not None else None
     parsed_end = parse_date_field(end) if end is not None else None
 
-    record = CalendarEvent(
-        user_id=user_id,
-        mail_account_id=account_id,
-        mail_uid=mail_uid,
-        mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
-        mail_from=_trunc(mail_from, _LEN_EMAIL_ADDRESS),
-        title=title[:300],
-        start=parsed_start,
-        end=parsed_end,
-        location=_trunc(location, _LEN_LOCATION),
-        description=description[:2000] if description else None,
-        is_all_day=is_all_day,
+    now = datetime.now(UTC)
+    values = {
+        "id": uuid4(),
+        "user_id": user_id,
+        "mail_id": mail_id,
+        "title": title[:300],
+        "start": parsed_start,
+        "end": parsed_end,
+        "location": _trunc(location, _LEN_LOCATION),
+        "description": description[:2000] if description else None,
+        "is_all_day": is_all_day,
+        "created_at": now,
+        "updated_at": now,
+    }
+    update_cols = {k: v for k, v in values.items() if k not in ("id", "user_id", "created_at")}
+    update_cols["updated_at"] = now
+
+    stmt = (
+        pg_insert(CalendarEvent)
+        .values(**values)
+        .on_conflict_do_update(
+            constraint="uq_calendar_event_mail_id",
+            set_=update_cols,
+        )
+        .returning(CalendarEvent.__table__)
     )
 
     async with _persist(own_session, db) as session:
-        session.add(record)
-        await session.flush()  # write to DB before detaching
-        # Expunge before the session commits so the commit cannot expire record's
-        # attributes — preventing DetachedInstanceError in _sync_event_to_caldav.
-        session.expunge(record)
+        result = await session.execute(stmt)
+        row = result.fetchone()
+        # Build a detached record for CalDAV sync
+        record = CalendarEvent(
+            id=row.id if row else values["id"],
+            user_id=user_id,
+            mail_id=mail_id,
+            title=values["title"],
+            start=parsed_start,
+            end=parsed_end,
+            location=values["location"],
+            description=values["description"],
+            is_all_day=is_all_day,
+        )
 
-    logger.info("calendar_event_saved", mail_uid=mail_uid, title=title)
+    logger.info("calendar_event_saved", mail_id=str(mail_id), title=title)
 
     # --- CalDAV push ---
     await _sync_event_to_caldav(record)
@@ -509,64 +511,71 @@ async def save_calendar_event(
 async def save_auto_reply(
     *,
     user_id: UUID,
-    account_id: UUID,
-    mail_uid: str,
-    mail_subject: str | None = None,
-    mail_from: str | None = None,
     should_reply: bool,
     draft_body: str | None = None,
     tone: str | None = None,
     reasoning: str | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
-    """Persist an auto-reply record.
+    """Persist an auto-reply record (upsert on mail_id).
 
     If ``should_reply`` is False or ``draft_body`` is missing, this is a no-op.
     """
     if not should_reply or not draft_body:
         logger.debug(
             "auto_reply_skipped_persistence",
-            mail_uid=mail_uid,
+            mail_id=str(mail_id),
             should_reply=should_reply,
             has_draft_body=bool(draft_body),
         )
         return
 
-    record = AutoReplyRecord(
-        user_id=user_id,
-        mail_account_id=account_id,
-        mail_uid=mail_uid,
-        mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
-        mail_from=_trunc(mail_from, _LEN_EMAIL_ADDRESS),
-        draft_body=draft_body[:5000],
-        tone=_trunc(tone, _LEN_TONE),
-        reasoning=reasoning[:300] if reasoning else None,
+    now = datetime.now(UTC)
+    values = {
+        "id": uuid4(),
+        "user_id": user_id,
+        "mail_id": mail_id,
+        "draft_body": draft_body[:5000],
+        "tone": _trunc(tone, _LEN_TONE),
+        "reasoning": reasoning[:300] if reasoning else None,
+        "created_at": now,
+        "updated_at": now,
+    }
+    update_cols = {k: v for k, v in values.items() if k not in ("id", "user_id", "created_at")}
+    update_cols["updated_at"] = now
+
+    stmt = (
+        pg_insert(AutoReplyRecord)
+        .values(**values)
+        .on_conflict_do_update(
+            constraint="uq_auto_reply_mail_id",
+            set_=update_cols,
+        )
     )
 
     async with _persist(own_session, db) as session:
-        session.add(record)
+        await session.execute(stmt)
 
-    logger.info("auto_reply_saved", mail_uid=mail_uid)
+    logger.info("auto_reply_saved", mail_id=str(mail_id))
 
 
 async def save_contact_assignment(
     *,
     user_id: UUID,
-    account_id: UUID,
-    mail_uid: str,
-    mail_subject: str | None = None,
-    mail_from: str | None = None,
     contact_id: str | None = None,
     contact_name: str,
     confidence: float,
     reasoning: str | None = None,
     is_new_contact_suggestion: bool = False,
     auto_writeback: bool = False,
+    sender_email: str | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
-    """Persist an AI contact assignment record.
+    """Persist an AI contact assignment record (upsert on mail_id).
 
     Args:
         auto_writeback: If True, automatically add the sender email to the
@@ -574,48 +583,55 @@ async def save_contact_assignment(
             user's plugin approval mode is ``auto`` **or** when the assignment
             was explicitly approved by the user.
     """
-    record = ContactAssignment(
-        user_id=user_id,
-        mail_account_id=account_id,
-        mail_uid=mail_uid,
-        mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
-        mail_from=_trunc(mail_from, _LEN_EMAIL_ADDRESS),
-        contact_id=UUID(contact_id) if contact_id else None,
-        contact_name=_trunc_required(contact_name, _LEN_CONTACT_NAME),
-        confidence=confidence,
-        reasoning=_trunc(reasoning, _LEN_REASONING),
-        is_new_contact_suggestion=is_new_contact_suggestion,
+    now = datetime.now(UTC)
+    values = {
+        "id": uuid4(),
+        "user_id": user_id,
+        "mail_id": mail_id,
+        "contact_id": UUID(contact_id) if contact_id else None,
+        "contact_name": _trunc_required(contact_name, _LEN_CONTACT_NAME),
+        "confidence": confidence,
+        "reasoning": _trunc(reasoning, _LEN_REASONING),
+        "is_new_contact_suggestion": is_new_contact_suggestion,
+        "created_at": now,
+    }
+    update_cols = {k: v for k, v in values.items() if k not in ("id", "user_id", "created_at")}
+
+    stmt = (
+        pg_insert(ContactAssignment)
+        .values(**values)
+        .on_conflict_do_update(
+            constraint="uq_contact_assignment_mail_id",
+            set_=update_cols,
+        )
     )
 
     async with _persist(own_session, db) as session:
-        session.add(record)
+        await session.execute(stmt)
 
     logger.info(
         "contact_assignment_saved",
-        mail_uid=mail_uid,
+        mail_id=str(mail_id),
         contact_name=contact_name,
         is_new=is_new_contact_suggestion,
     )
 
     # Auto-add sender email to the assigned contact (DB + CardDAV + cache).
     # Only when explicitly allowed (auto mode or user-approved assignment).
-    if auto_writeback and contact_id and mail_from and not is_new_contact_suggestion:
+    if auto_writeback and contact_id and sender_email and not is_new_contact_suggestion:
         from app.services.contacts.writeback import auto_add_sender_email
 
-        await auto_add_sender_email(user_id, UUID(contact_id), mail_from)
+        await auto_add_sender_email(user_id, UUID(contact_id), sender_email)
 
 
 async def save_spam_detection(
     *,
     user_id: UUID,
-    account_id: UUID,
-    mail_uid: str,
-    mail_subject: str | None = None,
-    mail_from: str | None = None,
     is_spam: bool,
     confidence: float,
     reason: str | None = None,
     source: str = "ai",
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -628,10 +644,7 @@ async def save_spam_detection(
     values = {
         "id": uuid4(),
         "user_id": user_id,
-        "mail_account_id": account_id,
-        "mail_uid": mail_uid,
-        "mail_subject": _trunc(mail_subject, _LEN_MAIL_SUBJECT),
-        "mail_from": _trunc(mail_from, _LEN_EMAIL_ADDRESS),
+        "mail_id": mail_id,
         "is_spam": is_spam,
         "confidence": confidence,
         "reason": _trunc(reason, _LEN_REASON),
@@ -640,16 +653,14 @@ async def save_spam_detection(
         "updated_at": now,
     }
 
-    update_cols = {
-        k: v for k, v in values.items() if k not in ("id", "user_id", "mail_account_id", "mail_uid", "created_at")
-    }
+    update_cols = {k: v for k, v in values.items() if k not in ("id", "user_id", "created_at")}
     update_cols["updated_at"] = now
 
     stmt = (
         pg_insert(SpamDetectionResult)
         .values(**values)
         .on_conflict_do_update(
-            constraint="uq_spam_result_user_account_mail",
+            constraint="uq_spam_result_user_mail_id",
             set_=update_cols,
         )
     )
@@ -657,18 +668,15 @@ async def save_spam_detection(
     async with _persist(own_session, db) as session:
         await session.execute(stmt)
 
-    logger.info("spam_detection_saved", mail_uid=mail_uid, is_spam=is_spam, source=source)
+    logger.info("spam_detection_saved", mail_id=str(mail_id), is_spam=is_spam, source=source)
 
 
 async def save_otp(
     *,
     user_id: UUID,
-    account_id: UUID,
-    mail_uid: str,
     has_codes: bool,
     codes: list[dict[str, Any]],
-    sender_email: str | None = None,
-    mail_subject: str | None = None,
+    mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
@@ -709,10 +717,7 @@ async def save_otp(
         records.append(
             ExtractedOtpCode(
                 user_id=user_id,
-                mail_account_id=account_id,
-                mail_uid=mail_uid,
-                sender_email=_trunc(sender_email, _LEN_EMAIL_ADDRESS),
-                mail_subject=_trunc(mail_subject, _LEN_MAIL_SUBJECT),
+                mail_id=mail_id,
                 code=_trunc_required(code, _LEN_OTP_CODE),
                 description=_trunc(description, _LEN_OTP_DESCRIPTION),
                 service=_trunc(service, _LEN_OTP_SERVICE),
@@ -723,7 +728,9 @@ async def save_otp(
         )
 
     async with _persist(own_session, db) as session:
+        # Delete existing OTP codes for this mail to prevent duplicates on reprocess
+        await session.execute(delete(ExtractedOtpCode).where(ExtractedOtpCode.mail_id == mail_id))
         for record in records:
             session.add(record)
 
-    logger.info("otp_codes_saved", mail_uid=mail_uid, count=len(records))
+    logger.info("otp_codes_saved", mail_id=str(mail_id), count=len(records))

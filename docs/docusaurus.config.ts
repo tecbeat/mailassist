@@ -11,8 +11,8 @@ const config: Config = {
     v4: true,
   },
 
-  url: 'https://tecbeat.gitlab.io',
-  baseUrl: '/mailassist/',
+  url: 'https://tecbeat.pages.teccave.de',
+  baseUrl: process.env.DOCUSAURUS_BASE_URL || '/mailassist/',
 
   organizationName: 'tecbeat',
   projectName: 'mailassist',

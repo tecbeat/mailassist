@@ -36,6 +36,7 @@ from app.models import (
     CalDAVConfig,
     LabelChangeLog,
     MailAccount,
+    TrackedEmail,
     UserSettings,
 )
 from app.models.mail import CompletionReason
@@ -112,6 +113,8 @@ class PipelineResult:
     # ID of the provider that caused a transient error (used by
     # mail_processor to pause the correct provider).
     failed_provider_id: str | None = None
+    # UUID of the TrackedEmail aggregate (used for mail_id FK in events).
+    mail_id: UUID | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -481,6 +484,14 @@ async def run_ai_pipeline(
     existing_labels_result = await db.execute(existing_labels_stmt)
     existing_labels = [row[0] for row in existing_labels_result.all()]
 
+    # --- Resolve mail aggregate ID ---
+    tracked_stmt = select(TrackedEmail.id).where(
+        TrackedEmail.mail_account_id == UUID(account_id),
+        TrackedEmail.mail_uid == mail_uid,
+    )
+    tracked_result = await db.execute(tracked_stmt)
+    tracked_email_id = tracked_result.scalar_one_or_none()
+
     # --- Build mail context ---
     excluded = {f.lower() for f in (account.excluded_folders or [])}
     filtered_folders = [f for f in fetched.imap_folders if f.lower() not in excluded]
@@ -520,7 +531,10 @@ async def run_ai_pipeline(
         contact=contact_data,
         user_contacts=user_contacts_data,
         technical_indicators=technical_indicators,
+        mail_id=str(tracked_email_id) if tracked_email_id else None,
     )
+
+    result.mail_id = tracked_email_id
 
     # --- Load CalDAV config for calendar past-events setting ---
     caldav_stmt = select(CalDAVConfig).where(CalDAVConfig.user_id == UUID(user_id))
@@ -859,6 +873,7 @@ async def _evaluate_rules(
             account_id=UUID(account_id),
             mail_uid=mail_uid,
             actions_taken=rule_result.actions_taken if rule_result else [],
+            mail_id=UUID(context.mail_id) if context.mail_id else None,
         )
     )
 

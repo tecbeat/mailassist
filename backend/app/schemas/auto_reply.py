@@ -10,10 +10,8 @@ class AutoReplyRecordResponse(BaseModel):
     """Response schema for an auto-reply record."""
 
     id: UUID
-    mail_account_id: UUID
-    mail_uid: str
-    mail_subject: str | None = None
-    mail_from: str | None = None
+    subject: str | None = None
+    sender: str | None = None
     draft_body: str
     tone: str | None = None
     reasoning: str | None = None

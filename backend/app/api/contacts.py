@@ -18,6 +18,7 @@ from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get
 from app.core.redis import get_cache_client
 from app.core.security import get_encryption
 from app.models import CardDAVConfig, Contact, ContactAssignment, EmailSummary, UserSettings
+from app.models.mail import TrackedEmail
 from app.schemas.contacts import (
     AssignEmailRequest,
     AssignEmailResponse,
@@ -221,7 +222,7 @@ async def list_all_senders(
 ) -> list[SenderResponse]:
     """List unique email addresses: senders from emails AND contact emails.
 
-    Returns every unique ``mail_from`` from ``email_summaries`` for this
+    Returns every unique sender from ``tracked_emails`` (via ``email_summaries``) for this
     user, together with the mail count and the contact ID if the sender
     is already assigned to a contact.  Additionally includes all email
     addresses stored in contacts that have never appeared as a sender
@@ -234,23 +235,24 @@ async def list_all_senders(
     uid = user_id
     search_term = search.strip().lower()
 
-    # All unique senders with mail count
+    # All unique senders with mail count (via TrackedEmail)
     stmt = (
         select(
-            func.lower(EmailSummary.mail_from).label("email_address"),
+            func.lower(TrackedEmail.sender).label("email_address"),
             func.count().label("mail_count"),
         )
+        .join(TrackedEmail, EmailSummary.mail_id == TrackedEmail.id)
         .where(
             EmailSummary.user_id == uid,
-            EmailSummary.mail_from.isnot(None),
-            EmailSummary.mail_from != "",
+            TrackedEmail.sender.isnot(None),
+            TrackedEmail.sender != "",
         )
-        .group_by(func.lower(EmailSummary.mail_from))
+        .group_by(func.lower(TrackedEmail.sender))
         .order_by(func.count().desc())
     )
 
     if search_term:
-        stmt = stmt.where(func.lower(EmailSummary.mail_from).contains(search_term))
+        stmt = stmt.where(func.lower(TrackedEmail.sender).contains(search_term))
 
     result = await db.execute(stmt)
     rows = result.all()
@@ -337,9 +339,10 @@ async def extract_contact_from_sender(
     # Fetch up to 10 most recent summaries from this sender
     stmt = (
         select(EmailSummary)
+        .join(TrackedEmail, EmailSummary.mail_id == TrackedEmail.id)
         .where(
             EmailSummary.user_id == uid,
-            func.lower(EmailSummary.mail_from) == sender_lower,
+            func.lower(TrackedEmail.sender) == sender_lower,
         )
         .order_by(EmailSummary.created_at.desc())
         .limit(10)
@@ -369,9 +372,9 @@ async def extract_contact_from_sender(
     engine = get_template_engine()
     mails_data = [
         {
-            "mail_from": s.mail_from,
-            "mail_subject": s.mail_subject,
-            "mail_date": s.mail_date,
+            "mail_from": s.tracked_email.sender if s.tracked_email else None,
+            "mail_subject": s.tracked_email.subject if s.tracked_email else None,
+            "mail_date": s.tracked_email.received_at if s.tracked_email else None,
             "summary": s.summary or "",
             "key_points": s.key_points or [],
         }
@@ -507,14 +510,44 @@ async def create_contact(
 # to avoid FastAPI matching the literal segment as a {contact_id} UUID.
 
 
-@router.get("/assignment/{account_id}/{mail_uid}")
+@router.get("/assignment/{account_id}/{mail_uid}", deprecated=True)
 async def get_mail_contact(
     account_id: UUID,
     mail_uid: str,
     db: DbSession,
     user_id: CurrentUserId,
 ) -> ContactAssignmentSchema | None:
-    """Get the AI-assigned contact for a specific mail.
+    """Get the AI-assigned contact for a specific mail (deprecated, use mail_id variant).
+
+    Returns ``None`` (HTTP 200 with ``null`` body) when no assignment exists.
+    """
+    from app.models import TrackedEmail
+
+    stmt = (
+        select(ContactAssignment)
+        .join(TrackedEmail, ContactAssignment.mail_id == TrackedEmail.id)
+        .where(
+            ContactAssignment.user_id == user_id,
+            TrackedEmail.mail_account_id == account_id,
+            TrackedEmail.mail_uid == mail_uid,
+        )
+        .order_by(ContactAssignment.created_at.desc())
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    assignment = result.scalar_one_or_none()
+    if assignment is None:
+        return None
+    return ContactAssignmentSchema.model_validate(assignment)
+
+
+@router.get("/assignment/by-mail/{mail_id}")
+async def get_mail_contact_by_mail_id(
+    mail_id: UUID,
+    db: DbSession,
+    user_id: CurrentUserId,
+) -> ContactAssignmentSchema | None:
+    """Get the AI-assigned contact for a specific mail by mail_id.
 
     Returns ``None`` (HTTP 200 with ``null`` body) when no assignment exists.
     """
@@ -522,8 +555,7 @@ async def get_mail_contact(
         select(ContactAssignment)
         .where(
             ContactAssignment.user_id == user_id,
-            ContactAssignment.mail_account_id == account_id,
-            ContactAssignment.mail_uid == mail_uid,
+            ContactAssignment.mail_id == mail_id,
         )
         .order_by(ContactAssignment.created_at.desc())
         .limit(1)

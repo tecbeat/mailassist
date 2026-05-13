@@ -97,6 +97,17 @@ async def execute_approved_actions(ctx: dict[str, Any], approval_id: str) -> Non
             log.warning("approval_not_approved", status=approval.status.value)
             return
 
+        # Look up the TrackedEmail to get mail_uid and mail_account_id
+        tracked_stmt = select(TrackedEmail).where(TrackedEmail.id == approval.mail_id)
+        tracked_result = await db.execute(tracked_stmt)
+        tracked_email = tracked_result.scalar_one_or_none()
+        if tracked_email is None:
+            log.error("tracked_email_not_found", mail_id=str(approval.mail_id))
+            return
+
+        mail_uid = tracked_email.mail_uid
+        mail_account_id = tracked_email.mail_account_id
+
         # Prefer user-edited actions over AI-proposed actions.
         # When the user edited structured fields (e.g. folder name),
         # always rebuild IMAP actions from those fields so the commands
@@ -121,36 +132,26 @@ async def execute_approved_actions(ctx: dict[str, Any], approval_id: str) -> Non
             # IMAP actions.  Persist plugin data and mark complete.
             log.info("no_imap_actions", function_type=approval.function_type)
             await _persist_plugin_data(approval)
-            log.info("approved_actions_complete", mail_uid=approval.mail_uid)
+            log.info("approved_actions_complete", mail_id=str(approval.mail_id))
             return
 
         # parse_action (used inside execute_imap_actions and change_logger)
         # handles annotation stripping, so pass raw strings directly.
         actions = raw_actions
 
-        account = await _get_account(db, approval.mail_account_id)
+        account = await _get_account(db, mail_account_id)
         if account is None:
-            log.error("mail_account_not_found", account_id=str(approval.mail_account_id))
+            log.error("mail_account_not_found", account_id=str(mail_account_id))
             return
 
         # Load current folder from tracked email so IMAP actions
         # target the correct mailbox (the mail may have been moved).
-        # Use scalars().first() rather than scalar_one_or_none()
-        # because the same UID number can exist in different folders.
-        current_folder = "INBOX"
-        tracked_stmt = select(TrackedEmail.current_folder).where(
-            TrackedEmail.mail_account_id == approval.mail_account_id,
-            TrackedEmail.mail_uid == approval.mail_uid,
-        )
-        tracked_result = await db.execute(tracked_stmt)
-        tracked_folder = tracked_result.scalars().first()
-        if tracked_folder:
-            current_folder = tracked_folder
+        current_folder = tracked_email.current_folder or "INBOX"
 
         log.info(
             "executing_approved_actions",
             function_type=approval.function_type,
-            mail_uid=approval.mail_uid,
+            mail_uid=mail_uid,
             actions=actions,
             used_edited_actions=approval.edited_actions is not None,
             source_folder=current_folder,
@@ -159,7 +160,7 @@ async def execute_approved_actions(ctx: dict[str, Any], approval_id: str) -> Non
         # Raise on IMAP failure so ARQ retries the job automatically
         move_outcome = await execute_imap_actions(
             account,
-            approval.mail_uid,
+            mail_uid,
             actions,
             source_folder=current_folder,
             propagate_connect_errors=True,
@@ -168,9 +169,7 @@ async def execute_approved_actions(ctx: dict[str, Any], approval_id: str) -> Non
         # Update current_folder (and mail_uid) if the mail was moved
         if move_outcome.folder:
             tracked_update_stmt = select(TrackedEmail).where(
-                TrackedEmail.mail_account_id == approval.mail_account_id,
-                TrackedEmail.mail_uid == approval.mail_uid,
-                TrackedEmail.current_folder == current_folder,
+                TrackedEmail.id == approval.mail_id,
             )
             tracked_update_result = await db.execute(tracked_update_stmt)
             tracked = tracked_update_result.scalar_one_or_none()
@@ -185,10 +184,10 @@ async def execute_approved_actions(ctx: dict[str, Any], approval_id: str) -> Non
                     new_uid=move_outcome.new_uid,
                 )
 
-        await save_new_labels(approval.user_id, approval.mail_account_id, actions)
-        await save_new_folders(approval.user_id, approval.mail_account_id, actions)
+        await save_new_labels(approval.user_id, mail_account_id, actions)
+        await save_new_folders(approval.user_id, mail_account_id, actions)
         await _persist_plugin_data(approval)
-        log.info("approved_actions_complete", mail_uid=approval.mail_uid)
+        log.info("approved_actions_complete", mail_id=str(approval.mail_id))
 
 
 async def handle_spam_rejection(ctx: dict[str, Any], user_id: str, account_id: str, mail_uid: str) -> None:
@@ -259,82 +258,60 @@ async def _persist_plugin_data(approval: Approval) -> None:
         if fn == "email_summary":
             await save_email_summary(
                 user_id=approval.user_id,
-                account_id=approval.mail_account_id,
-                mail_uid=approval.mail_uid,
-                mail_subject=approval.mail_subject,
-                mail_from=approval.mail_from,
-                mail_date=approval.mail_date,
                 summary=data.get("summary", ""),
                 key_points=data.get("key_points", []),
                 urgency=data.get("urgency", "medium"),
                 action_required=data.get("action_required", False),
                 action_description=data.get("action_description"),
+                mail_id=approval.mail_id,
                 own_session=True,
             )
         elif fn == "newsletter_detection":
             await save_newsletter(
                 user_id=approval.user_id,
-                account_id=approval.mail_account_id,
-                mail_uid=approval.mail_uid,
                 is_newsletter=data.get("is_newsletter", False),
                 newsletter_name=data.get("newsletter_name", "Unknown"),
                 sender_address=approval.mail_from or "unknown",
-                mail_subject=approval.mail_subject,
                 unsubscribe_url=data.get("unsubscribe_url"),
                 has_unsubscribe=data.get("has_unsubscribe", False),
+                mail_id=approval.mail_id,
                 own_session=True,
             )
         elif fn == "coupon_extraction":
             await save_coupons(
                 user_id=approval.user_id,
-                account_id=approval.mail_account_id,
-                mail_uid=approval.mail_uid,
                 has_coupons=data.get("has_coupons", False),
                 coupons=data.get("coupons", []),
-                sender_email=approval.mail_from,
-                mail_subject=approval.mail_subject,
+                mail_id=approval.mail_id,
                 own_session=True,
             )
         elif fn == "otp_extraction":
             await save_otp(
                 user_id=approval.user_id,
-                account_id=approval.mail_account_id,
-                mail_uid=approval.mail_uid,
                 has_codes=data.get("has_codes", False),
                 codes=data.get("codes", []),
-                sender_email=approval.mail_from,
-                mail_subject=approval.mail_subject,
+                mail_id=approval.mail_id,
                 own_session=True,
             )
         elif fn == "labeling":
             await save_applied_labels(
                 user_id=approval.user_id,
-                account_id=approval.mail_account_id,
-                mail_uid=approval.mail_uid,
-                mail_subject=approval.mail_subject,
-                mail_from=approval.mail_from,
                 labels=data.get("labels", []),
+                mail_id=approval.mail_id,
                 own_session=True,
             )
         elif fn == "smart_folder":
             await save_assigned_folder(
                 user_id=approval.user_id,
-                account_id=approval.mail_account_id,
-                mail_uid=approval.mail_uid,
-                mail_subject=approval.mail_subject,
-                mail_from=approval.mail_from,
                 folder=data.get("folder", "INBOX"),
                 confidence=data.get("confidence"),
                 reason=data.get("reason"),
+                mail_id=approval.mail_id,
                 own_session=True,
             )
         elif fn == "calendar_extraction":
             await save_calendar_event(
                 user_id=approval.user_id,
-                account_id=approval.mail_account_id,
-                mail_uid=approval.mail_uid,
-                mail_subject=approval.mail_subject,
-                mail_from=approval.mail_from,
                 has_event=data.get("has_event", False),
                 title=data.get("title"),
                 start=data.get("start"),
@@ -342,19 +319,17 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 location=data.get("location"),
                 description=data.get("description"),
                 is_all_day=data.get("is_all_day", False),
+                mail_id=approval.mail_id,
                 own_session=True,
             )
         elif fn == "auto_reply":
             await save_auto_reply(
                 user_id=approval.user_id,
-                account_id=approval.mail_account_id,
-                mail_uid=approval.mail_uid,
-                mail_subject=approval.mail_subject,
-                mail_from=approval.mail_from,
                 should_reply=data.get("should_reply", False),
                 draft_body=data.get("draft_body"),
                 tone=data.get("tone"),
                 reasoning=data.get("reasoning"),
+                mail_id=approval.mail_id,
                 own_session=True,
             )
 
@@ -364,12 +339,15 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 from app.services.draft_upload import upload_draft_to_imap
 
                 async with get_session_ctx() as db2:
-                    account = await _get_account(db2, approval.mail_account_id)
-                if account:
+                    tracked_stmt = select(TrackedEmail).where(TrackedEmail.id == approval.mail_id)
+                    tracked_res = await db2.execute(tracked_stmt)
+                    tracked = tracked_res.scalar_one_or_none()
+                    account = await _get_account(db2, tracked.mail_account_id) if tracked else None
+                if account and tracked:
                     await upload_draft_to_imap(
                         account=account,
                         user_id=approval.user_id,
-                        mail_uid=approval.mail_uid,
+                        mail_uid=tracked.mail_uid,
                         draft_body=draft_body,
                         original_subject=approval.mail_subject,
                         original_from=approval.mail_from,
@@ -379,16 +357,14 @@ async def _persist_plugin_data(approval: Approval) -> None:
         elif fn == "contacts":
             await save_contact_assignment(
                 user_id=approval.user_id,
-                account_id=approval.mail_account_id,
-                mail_uid=approval.mail_uid,
-                mail_subject=approval.mail_subject,
-                mail_from=approval.mail_from,
+                sender_email=approval.mail_from,
                 contact_id=data.get("contact_id"),
                 contact_name=data.get("contact_name", "Unknown"),
                 confidence=data.get("confidence", 0.0),
                 reasoning=data.get("reasoning"),
                 is_new_contact_suggestion=data.get("is_new_contact_suggestion", False),
                 auto_writeback=True,
+                mail_id=approval.mail_id,
                 own_session=True,
             )
     except Exception:

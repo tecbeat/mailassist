@@ -31,8 +31,15 @@ async def cleanup_all_drafts(ctx: dict[str, Any]) -> None:
     expiry_days = settings.draft_expiry_days
 
     async with get_session_ctx() as db:
-        # Find accounts with active drafts
-        stmt = select(AIDraft.mail_account_id).where(AIDraft.status == DraftStatus.ACTIVE).distinct()
+        # Find accounts with active drafts (join through TrackedEmail to get mail_account_id)
+        from app.models.mail import TrackedEmail
+
+        stmt = (
+            select(TrackedEmail.mail_account_id)
+            .join(AIDraft, AIDraft.mail_id == TrackedEmail.id)
+            .where(AIDraft.status == DraftStatus.ACTIVE)
+            .distinct()
+        )
         result = await db.execute(stmt)
         account_ids = [row[0] for row in result.all()]
 

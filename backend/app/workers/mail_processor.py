@@ -190,13 +190,17 @@ async def _update_tracked_metadata(
     subject: str | None,
     sender: str | None,
     received_at: datetime | None,
+    message_id: str | None = None,
     log: structlog.stdlib.BoundLogger,
 ) -> None:
-    """Back-fill subject, sender, and received_at on the TrackedEmail row.
+    """Back-fill subject, sender, received_at, and message_id on the TrackedEmail row.
 
     Called after the raw email is parsed so that metadata is always
     accurate, even when the mail was discovered by the IDLE monitor
     (which does not fetch IMAP envelopes).
+
+    Also ensures ``first_seen_uid`` and ``first_seen_folder`` are set
+    (populated on insert, but back-filled here for older rows).
     """
 
     def _apply(tracked: TrackedEmail) -> None:
@@ -206,6 +210,11 @@ async def _update_tracked_metadata(
             tracked.sender = sender
         if received_at is not None:
             tracked.received_at = received_at
+        if message_id is not None:
+            tracked.message_id = message_id
+        # Back-fill first_seen fields for rows created before these columns existed
+        tracked.first_seen_uid = tracked.first_seen_uid or tracked.mail_uid
+        tracked.first_seen_folder = tracked.first_seen_folder or tracked.current_folder
 
     await _update_tracked_email(
         account_id,
@@ -627,8 +636,39 @@ async def _process_mail_inner(
         subject=parsed.subject,
         sender=parsed.sender,
         received_at=parsed.date,
+        message_id=parsed.message_id,
         log=log,
     )
+
+    # --- Fingerprint fallback: detect duplicate mails via Message-ID ---
+    # After a UIDVALIDITY reset, the same mail may be re-discovered with a
+    # new UID.  The unique partial index on (mail_account_id, message_id)
+    # prevents duplicates at the DB level; here we log a warning for
+    # observability.
+    # NOTE: Fingerprint fallback for mails without a Message-ID header
+    # (hash of subject+sender+date) is a future enhancement.
+    if parsed.message_id:
+        try:
+            async with get_session_ctx() as db:
+                dup_stmt = (
+                    select(TrackedEmail.id)
+                    .where(
+                        TrackedEmail.mail_account_id == UUID(account_id),
+                        TrackedEmail.message_id == parsed.message_id,
+                        TrackedEmail.mail_uid != mail_uid,
+                    )
+                    .limit(1)
+                )
+                result = await db.execute(dup_stmt)
+                dup = result.scalar_one_or_none()
+                if dup is not None:
+                    log.warning(
+                        "duplicate_message_id_detected",
+                        message_id=parsed.message_id,
+                        existing_tracked_id=str(dup),
+                    )
+        except Exception:
+            log.debug("duplicate_message_id_check_failed", exc_info=True)
 
     # --- Phase 3: AI pipeline ---
     # Status is already PROCESSING (set by the scheduler before ARQ dispatch).
@@ -700,6 +740,7 @@ async def _process_mail_inner(
             current_folder=current_folder,
             plugins_executed=pipeline_result.plugins_executed,
             approvals_created=pipeline_result.approvals_created,
+            mail_id=pipeline_result.mail_id,
         )
     )
 

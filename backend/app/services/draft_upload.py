@@ -194,17 +194,31 @@ async def upload_draft_to_imap(
     if draft_uid and original_message_id:
         try:
             async with get_session_ctx() as db:
-                ai_draft = AIDraft(
-                    user_id=user_id,
-                    mail_account_id=account.id,
-                    original_mail_uid=mail_uid,
-                    original_message_id=original_message_id.strip("<>"),
-                    draft_uid=draft_uid,
-                    draft_message_id=draft_message_id,
+                # Look up the TrackedEmail to get mail_id
+                from sqlalchemy import select
+
+                from app.models.mail import TrackedEmail
+
+                te_stmt = select(TrackedEmail.id).where(
+                    TrackedEmail.mail_account_id == account.id,
+                    TrackedEmail.mail_uid == mail_uid,
                 )
-                db.add(ai_draft)
-                await db.commit()
-                log.info("ai_draft_tracked", draft_id=str(ai_draft.id))
+                te_result = await db.execute(te_stmt)
+                tracked_email_id = te_result.scalar_one_or_none()
+
+                if tracked_email_id is None:
+                    log.warning("ai_draft_tracking_skipped_no_tracked_email")
+                else:
+                    ai_draft = AIDraft(
+                        user_id=user_id,
+                        mail_id=tracked_email_id,
+                        original_message_id=original_message_id.strip("<>"),
+                        draft_uid=draft_uid,
+                        draft_message_id=draft_message_id,
+                    )
+                    db.add(ai_draft)
+                    await db.commit()
+                    log.info("ai_draft_tracked", draft_id=str(ai_draft.id))
         except Exception:
             # Non-fatal: draft was uploaded but tracking failed.
             # Cleanup service won't manage it, but user still sees it.

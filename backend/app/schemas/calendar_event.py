@@ -10,10 +10,8 @@ class CalendarEventResponse(BaseModel):
     """Response schema for a calendar event record."""
 
     id: UUID
-    mail_account_id: UUID
-    mail_uid: str
-    mail_subject: str | None = None
-    mail_from: str | None = None
+    subject: str | None = None
+    sender: str | None = None
     title: str
     start: datetime | None = None
     end: datetime | None = None

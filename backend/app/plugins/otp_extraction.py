@@ -7,10 +7,13 @@ Runs fourth in the pipeline (execution_order=45).
 
 from typing import Any
 
+import structlog
 from pydantic import BaseModel, Field, field_validator
 
 from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
+
+logger = structlog.get_logger()
 
 
 class OtpCode(BaseModel):
@@ -95,6 +98,8 @@ class OtpExtractionPlugin(AIFunctionPlugin[OtpExtractionResponse]):
         db: Any,
         account_id: Any,
         mail_uid: str,
+        *,
+        mail_id: Any = None,
     ) -> dict[str, Any]:
         """Load OTP data from the database for notification context.
 
@@ -104,12 +109,16 @@ class OtpExtractionPlugin(AIFunctionPlugin[OtpExtractionResponse]):
 
         from app.models.mail import ExtractedOtpCode
 
-        result = await db.execute(
-            select(ExtractedOtpCode).where(
-                ExtractedOtpCode.mail_account_id == account_id,
-                ExtractedOtpCode.mail_uid == mail_uid,
+        if mail_id is None:
+            logger.warning(
+                "load_notification_context called without mail_id",
+                plugin="otp_extraction",
+                account_id=str(account_id),
+                mail_uid=mail_uid,
             )
-        )
+            return {}
+        stmt = select(ExtractedOtpCode).where(ExtractedOtpCode.mail_id == mail_id)
+        result = await db.execute(stmt)
         otp_codes = result.scalars().all()
         if not otp_codes:
             return {}

@@ -280,7 +280,7 @@ async def _poll_folder(
     account_id = str(account.id)
 
     try:
-        uids = await search_uids(conn, folder=folder, criteria=search_criterion)
+        uids, uidvalidity = await search_uids(conn, folder=folder, criteria=search_criterion)
     except Exception:
         logger.warning(
             "folder_search_failed",
@@ -299,6 +299,44 @@ async def _poll_folder(
             initial_scan=is_initial_scan,
         )
         return 0
+
+    # Detect UIDVALIDITY changes: if stored rows for this folder have a
+    # different uidvalidity, UIDs are no longer reliable.  Log a warning;
+    # dedup via Message-ID in the processor handles relinking.
+    if uidvalidity is not None:
+        async with get_session_ctx() as db:
+            from sqlalchemy import distinct
+
+            stmt = (
+                select(distinct(TrackedEmail.uidvalidity))
+                .where(
+                    TrackedEmail.mail_account_id == UUID(account_id),
+                    TrackedEmail.current_folder == folder,
+                    TrackedEmail.uidvalidity.is_not(None),
+                    TrackedEmail.uidvalidity != uidvalidity,
+                )
+                .limit(1)
+            )
+            result = await db.execute(stmt)
+            old_val = result.scalar_one_or_none()
+            if old_val is not None:
+                logger.warning(
+                    "uidvalidity_changed",
+                    account_id=account_id,
+                    folder=folder,
+                    old_uidvalidity=old_val,
+                    new_uidvalidity=uidvalidity,
+                )
+                # UIDs have been renumbered — try to relink existing
+                # TrackedEmails by matching on Message-ID.
+                relinked = await _relink_uids_by_message_id(conn, account.id, folder, uids, uidvalidity)
+                if relinked:
+                    logger.info(
+                        "uidvalidity_relinked",
+                        account_id=account_id,
+                        folder=folder,
+                        relinked=relinked,
+                    )
 
     # Filter out UIDs already tracked (server-side, per-folder)
     # Short DB session for the diff query
@@ -373,6 +411,7 @@ async def _poll_folder(
                 batch,
                 envelopes,
                 current_folder=folder,
+                uidvalidity=uidvalidity,
             )
         total_inserted += inserted
 
@@ -386,6 +425,61 @@ async def _poll_folder(
     )
 
     return total_inserted
+
+
+async def _relink_uids_by_message_id(
+    conn: ImapConnection,
+    mail_account_id: UUID,
+    folder: str,
+    new_uids: list[str],
+    new_uidvalidity: int,
+) -> int:
+    """Relink existing TrackedEmails after a UIDVALIDITY reset.
+
+    Fetches Message-IDs for the new UIDs, matches them against existing
+    TrackedEmails by ``(mail_account_id, message_id)``, and updates
+    ``mail_uid``, ``current_folder``, and ``uidvalidity`` on the matched
+    rows.  Plugin data stays linked via the stable ``mail_id`` FK.
+
+    Returns the number of rows relinked.
+    """
+    from app.services.mail import fetch_message_ids
+
+    # Fetch Message-IDs in sub-batches
+    uid_to_mid: dict[str, str | None] = {}
+    for i in range(0, len(new_uids), 100):
+        batch = new_uids[i : i + 100]
+        sub = await fetch_message_ids(conn, batch, folder=folder)
+        uid_to_mid.update(sub)
+
+    # Build a mapping of message_id -> new_uid (skip None)
+    mid_to_uid = {mid: uid for uid, mid in uid_to_mid.items() if mid}
+    if not mid_to_uid:
+        return 0
+
+    relinked = 0
+    async with get_session_ctx() as db:
+        # Find existing TrackedEmails with matching message_id but stale UID
+        for mid_batch_start in range(0, len(mid_to_uid), 500):
+            mid_batch = dict(list(mid_to_uid.items())[mid_batch_start : mid_batch_start + 500])
+            stmt = select(TrackedEmail).where(
+                TrackedEmail.mail_account_id == mail_account_id,
+                TrackedEmail.message_id.in_(mid_batch.keys()),
+            )
+            result = await db.execute(stmt)
+            for tracked in result.scalars().all():
+                if tracked.message_id is None:
+                    continue
+                new_uid = mid_batch.get(tracked.message_id)
+                if new_uid and tracked.mail_uid != new_uid:
+                    tracked.mail_uid = new_uid
+                    tracked.current_folder = folder
+                    tracked.uidvalidity = new_uidvalidity
+                    relinked += 1
+        if relinked:
+            await db.flush()
+
+    return relinked
 
 
 async def _get_new_uids(
@@ -447,11 +541,12 @@ async def _insert_tracked_batch(
     envelopes: dict[str, tuple[str | None, str | None, datetime | None]],
     *,
     current_folder: str = "INBOX",
+    uidvalidity: int | None = None,
 ) -> int:
     """Bulk-insert tracked_emails rows using INSERT ... ON CONFLICT DO NOTHING.
 
     Splits into sub-batches to stay under PostgreSQL's 32,767 bind-parameter
-    limit (11 columns per row → max ~2,900 rows per statement).
+    limit (14 columns per row → max ~2,340 rows per statement).
 
     Returns the number of rows actually inserted (excludes conflicts).
     """
@@ -473,12 +568,15 @@ async def _insert_tracked_batch(
                 "received_at": received_at,
                 "retry_count": 0,
                 "current_folder": current_folder,
+                "uidvalidity": uidvalidity,
+                "first_seen_uid": uid,
+                "first_seen_folder": current_folder,
                 "created_at": now,
                 "updated_at": now,
             }
         )
 
-    # 11 columns per row; 32_767 // 11 = 2978, use 2000 for safety margin
+    # 14 columns per row; 32_767 // 14 = 2340, use 2000 for safety margin
     max_rows_per_insert = 2000
     total_inserted = 0
 

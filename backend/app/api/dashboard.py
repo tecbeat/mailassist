@@ -183,8 +183,7 @@ async def get_dashboard_stats(
             .select_from(TrackedEmail)
             .outerjoin(
                 EmailSummary,
-                (TrackedEmail.mail_account_id == EmailSummary.mail_account_id)
-                & (TrackedEmail.mail_uid == EmailSummary.mail_uid),
+                TrackedEmail.id == EmailSummary.mail_id,
             )
             .where(
                 TrackedEmail.user_id == uid,

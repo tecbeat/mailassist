@@ -21,6 +21,7 @@ from app.api.deps import (
     sanitize_like,
 )
 from app.models import AutoReplyRecord
+from app.models.mail import TrackedEmail
 from app.schemas.auto_reply import (
     AutoReplyRecordListResponse,
     AutoReplyRecordResponse,
@@ -44,10 +45,14 @@ async def list_auto_replies(
     """List auto-reply records with pagination and optional search filter."""
     uid = user_id
 
-    base_stmt = select(AutoReplyRecord).where(AutoReplyRecord.user_id == uid)
+    base_stmt = (
+        select(AutoReplyRecord)
+        .join(TrackedEmail, AutoReplyRecord.mail_id == TrackedEmail.id)
+        .where(AutoReplyRecord.user_id == uid)
+    )
 
     if search:
-        base_stmt = base_stmt.where(AutoReplyRecord.mail_subject.ilike(f"%{sanitize_like(search)}%"))
+        base_stmt = base_stmt.where(TrackedEmail.subject.ilike(f"%{sanitize_like(search)}%"))
 
     order_col = resolve_sort_order(
         sort,

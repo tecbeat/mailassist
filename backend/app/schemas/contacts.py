@@ -170,10 +170,8 @@ class ContactAssignmentResponse(BaseModel):
     """Response schema for a contact assignment record."""
 
     id: UUID
-    mail_account_id: UUID
-    mail_uid: str
-    mail_subject: str | None = None
-    mail_from: str | None = None
+    subject: str | None = None
+    sender: str | None = None
     contact_id: UUID | None = None
     contact_name: str
     confidence: float

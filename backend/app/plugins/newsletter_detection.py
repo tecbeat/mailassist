@@ -11,10 +11,13 @@ labeling plugins that run later in the pipeline.
 
 from typing import Any
 
+import structlog
 from pydantic import BaseModel, Field, field_validator
 
 from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext
 from app.plugins.registry import register_plugin
+
+logger = structlog.get_logger()
 
 
 class NewsletterDetectionResponse(BaseModel):
@@ -85,18 +88,24 @@ class NewsletterDetectionPlugin(AIFunctionPlugin[NewsletterDetectionResponse]):
         db: Any,
         account_id: Any,
         mail_uid: str,
+        *,
+        mail_id: Any = None,
     ) -> dict[str, Any]:
         """Load newsletter detection data from the database for notification context."""
         from sqlalchemy import select
 
         from app.models.mail import DetectedNewsletter
 
-        result = await db.execute(
-            select(DetectedNewsletter).where(
-                DetectedNewsletter.mail_account_id == account_id,
-                DetectedNewsletter.mail_uid == mail_uid,
+        if mail_id is None:
+            logger.warning(
+                "load_notification_context called without mail_id",
+                plugin="newsletter_detection",
+                account_id=str(account_id),
+                mail_uid=mail_uid,
             )
-        )
+            return {}
+        stmt = select(DetectedNewsletter).where(DetectedNewsletter.mail_id == mail_id)
+        result = await db.execute(stmt)
         newsletter = result.scalar_one_or_none()
         if newsletter:
             return {

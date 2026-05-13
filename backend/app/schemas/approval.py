@@ -11,9 +11,7 @@ class ApprovalResponse(BaseModel):
     """Response schema for an approval queue entry."""
 
     id: UUID
-    mail_account_id: UUID
     function_type: str
-    mail_uid: str
     mail_subject: str
     mail_from: str
     proposed_action: dict[str, Any]

@@ -113,10 +113,14 @@ async def reset_smart_folder(
     """
     uid = user_id
 
-    # Gather affected mail UIDs *before* deleting the assigned_folders rows
-    af_stmt = select(AssignedFolder.mail_account_id, AssignedFolder.mail_uid).where(
-        AssignedFolder.user_id == uid,
-        AssignedFolder.folder == folder_name,
+    # Gather affected TrackedEmail IDs *before* deleting the assigned_folders rows
+    af_stmt = (
+        select(TrackedEmail.id, TrackedEmail.mail_account_id, TrackedEmail.mail_uid)
+        .join(AssignedFolder, AssignedFolder.mail_id == TrackedEmail.id)
+        .where(
+            AssignedFolder.user_id == uid,
+            AssignedFolder.folder == folder_name,
+        )
     )
     af_rows = (await db.execute(af_stmt)).all()
 
@@ -310,27 +314,29 @@ async def reprocess_smart_folder(
     uid = user_id
 
     # Try smart folder lookup first (via AssignedFolder records)
-    af_stmt = select(AssignedFolder.mail_account_id, AssignedFolder.mail_uid).where(
-        AssignedFolder.user_id == uid,
-        AssignedFolder.folder == folder_name,
+    af_stmt = (
+        select(TrackedEmail.id, TrackedEmail.mail_account_id, TrackedEmail.mail_uid)
+        .join(AssignedFolder, AssignedFolder.mail_id == TrackedEmail.id)
+        .where(
+            AssignedFolder.user_id == uid,
+            AssignedFolder.folder == folder_name,
+        )
     )
     af_rows = (await db.execute(af_stmt)).all()
 
     requeued = 0
 
     if af_rows:
-        # Smart folder path: re-queue by specific mail UIDs
-        account_uids: dict[UUID, set[str]] = {}
-        for row in af_rows:
-            account_uids.setdefault(row.mail_account_id, set()).add(row.mail_uid)
+        # Smart folder path: re-queue by tracked email IDs
+        tracked_ids = [row.id for row in af_rows]
 
-        for acct_id, uids in account_uids.items():
+        for batch_start in range(0, len(tracked_ids), 500):
+            batch = tracked_ids[batch_start : batch_start + 500]
             upd = (
                 sa_update(TrackedEmail)
                 .where(
+                    TrackedEmail.id.in_(batch),
                     TrackedEmail.user_id == uid,
-                    TrackedEmail.mail_account_id == acct_id,
-                    TrackedEmail.mail_uid.in_(uids),
                     TrackedEmail.status == TrackedEmailStatus.COMPLETED,
                 )
                 .values(

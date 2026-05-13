@@ -43,6 +43,7 @@ class MailReceivedEvent(Event):
     user_id: UUID | None = None
     account_id: UUID | None = None
     mail_uid: str = ""
+    mail_id: UUID | None = None
 
 
 @dataclass
@@ -54,6 +55,7 @@ class MailParsedEvent(Event):
     mail_uid: str = ""
     sender: str = ""
     subject: str = ""
+    mail_id: UUID | None = None
 
 
 @dataclass
@@ -64,6 +66,7 @@ class ContactMatchedEvent(Event):
     account_id: UUID | None = None
     mail_uid: str = ""
     contact_id: UUID | None = None
+    mail_id: UUID | None = None
 
 
 @dataclass
@@ -74,6 +77,7 @@ class RulesEvaluatedEvent(Event):
     account_id: UUID | None = None
     mail_uid: str = ""
     actions_taken: list[str] = field(default_factory=list)
+    mail_id: UUID | None = None
 
 
 @dataclass
@@ -86,6 +90,10 @@ class AIProcessingCompleteEvent(Event):
     current_folder: str = "INBOX"
     plugins_executed: list[str] = field(default_factory=list)
     approvals_created: int = 0
+    # Stable UUID identity of the TrackedEmail row (Phase 2, #158).
+    # Present for all new events; None only during the transition period
+    # for events emitted before the upgrade.
+    mail_id: UUID | None = None
 
 
 @dataclass
@@ -102,6 +110,7 @@ class MailProcessingFailedEvent(Event):
     stage: str = ""
     error_type: str = ""
     error_message: str = ""
+    mail_id: UUID | None = None
 
 
 @dataclass
@@ -112,6 +121,7 @@ class NotificationSentEvent(Event):
     account_id: UUID | None = None
     mail_uid: str = ""
     channels: list[str] = field(default_factory=list)
+    mail_id: UUID | None = None
 
 
 @dataclass
