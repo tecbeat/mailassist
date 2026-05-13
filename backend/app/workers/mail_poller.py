@@ -327,6 +327,16 @@ async def _poll_folder(
                     old_uidvalidity=old_val,
                     new_uidvalidity=uidvalidity,
                 )
+                # UIDs have been renumbered — try to relink existing
+                # TrackedEmails by matching on Message-ID.
+                relinked = await _relink_uids_by_message_id(conn, account.id, folder, uids, uidvalidity)
+                if relinked:
+                    logger.info(
+                        "uidvalidity_relinked",
+                        account_id=account_id,
+                        folder=folder,
+                        relinked=relinked,
+                    )
 
     # Filter out UIDs already tracked (server-side, per-folder)
     # Short DB session for the diff query
@@ -415,6 +425,61 @@ async def _poll_folder(
     )
 
     return total_inserted
+
+
+async def _relink_uids_by_message_id(
+    conn: ImapConnection,
+    mail_account_id: UUID,
+    folder: str,
+    new_uids: list[str],
+    new_uidvalidity: int,
+) -> int:
+    """Relink existing TrackedEmails after a UIDVALIDITY reset.
+
+    Fetches Message-IDs for the new UIDs, matches them against existing
+    TrackedEmails by ``(mail_account_id, message_id)``, and updates
+    ``mail_uid``, ``current_folder``, and ``uidvalidity`` on the matched
+    rows.  Plugin data stays linked via the stable ``mail_id`` FK.
+
+    Returns the number of rows relinked.
+    """
+    from app.services.mail import fetch_message_ids
+
+    # Fetch Message-IDs in sub-batches
+    uid_to_mid: dict[str, str | None] = {}
+    for i in range(0, len(new_uids), 100):
+        batch = new_uids[i : i + 100]
+        sub = await fetch_message_ids(conn, batch, folder=folder)
+        uid_to_mid.update(sub)
+
+    # Build a mapping of message_id -> new_uid (skip None)
+    mid_to_uid = {mid: uid for uid, mid in uid_to_mid.items() if mid}
+    if not mid_to_uid:
+        return 0
+
+    relinked = 0
+    async with get_session_ctx() as db:
+        # Find existing TrackedEmails with matching message_id but stale UID
+        for mid_batch_start in range(0, len(mid_to_uid), 500):
+            mid_batch = dict(list(mid_to_uid.items())[mid_batch_start : mid_batch_start + 500])
+            stmt = select(TrackedEmail).where(
+                TrackedEmail.mail_account_id == mail_account_id,
+                TrackedEmail.message_id.in_(mid_batch.keys()),
+            )
+            result = await db.execute(stmt)
+            for tracked in result.scalars().all():
+                if tracked.message_id is None:
+                    continue
+                new_uid = mid_batch.get(tracked.message_id)
+                if new_uid and tracked.mail_uid != new_uid:
+                    tracked.mail_uid = new_uid
+                    tracked.current_folder = folder
+                    tracked.uidvalidity = new_uidvalidity
+                    relinked += 1
+        if relinked:
+            await db.flush()
+
+    return relinked
 
 
 async def _get_new_uids(
