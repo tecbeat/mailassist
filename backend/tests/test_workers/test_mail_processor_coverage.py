@@ -11,6 +11,7 @@ process_mail timeout handling.
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -49,17 +50,18 @@ def _make_tracked(
     return t
 
 
-def _session_ctx(tracked: MagicMock | None) -> MagicMock:
-    """Create a mock get_session_ctx that yields a session returning tracked."""
+def _fake_session_ctx(tracked: MagicMock | None):
+    """Create a fake get_session_ctx that yields a session returning tracked."""
     db = AsyncMock()
     result = MagicMock()
     result.scalar_one_or_none.return_value = tracked
     db.execute.return_value = result
 
-    ctx = AsyncMock()
-    ctx.__aenter__.return_value = db
-    ctx.__aexit__.return_value = False
-    return ctx
+    @asynccontextmanager
+    async def ctx():
+        yield db
+
+    return ctx, db
 
 
 # ---------------------------------------------------------------------------
@@ -68,34 +70,34 @@ def _session_ctx(tracked: MagicMock | None) -> MagicMock:
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.get_session_ctx")
-async def test_update_tracked_email_calls_updater(mock_ctx: MagicMock) -> None:
+async def test_update_tracked_email_calls_updater() -> None:
     from app.workers.mail_processor import _update_tracked_email
 
     tracked = _make_tracked()
-    mock_ctx.return_value = _session_ctx(tracked)
+    ctx_fn, _db = _fake_session_ctx(tracked)
 
     updater = MagicMock()
-    await _update_tracked_email("acc", "100", "INBOX", _log(), updater=updater)
+    with patch(f"{MODULE}.get_session_ctx", ctx_fn):
+        await _update_tracked_email("acc", "100", "INBOX", _log(), updater=updater)
     updater.assert_called_once_with(tracked)
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.get_session_ctx")
-async def test_update_tracked_email_not_found_logs_event(mock_ctx: MagicMock) -> None:
+async def test_update_tracked_email_not_found_logs_event() -> None:
     from app.workers.mail_processor import _update_tracked_email
 
-    mock_ctx.return_value = _session_ctx(None)
+    ctx_fn, _db = _fake_session_ctx(None)
 
     updater = MagicMock()
-    await _update_tracked_email(
-        "acc",
-        "100",
-        "INBOX",
-        _log(),
-        updater=updater,
-        not_found_event="test_not_found",
-    )
+    with patch(f"{MODULE}.get_session_ctx", ctx_fn):
+        await _update_tracked_email(
+            "acc",
+            "100",
+            "INBOX",
+            _log(),
+            updater=updater,
+            not_found_event="test_not_found",
+        )
     updater.assert_not_called()
 
 
@@ -114,28 +116,28 @@ async def test_update_tracked_email_exception_non_fatal(mock_ctx: MagicMock) -> 
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.get_session_ctx")
-async def test_update_tracked_status_sets_all_fields(mock_ctx: MagicMock) -> None:
+async def test_update_tracked_status_sets_all_fields() -> None:
     from app.models import TrackedEmailStatus
     from app.workers.mail_processor import _update_tracked_status
 
     tracked = _make_tracked(status="PROCESSING")
-    mock_ctx.return_value = _session_ctx(tracked)
+    ctx_fn, _db = _fake_session_ctx(tracked)
 
-    await _update_tracked_status(
-        "acc",
-        "100",
-        TrackedEmailStatus.COMPLETED,
-        _log(),
-        current_folder="INBOX",
-        error="some error",
-        error_type=ErrorType.MAIL,
-        plugins_completed=["summary"],
-        plugins_failed=["spam"],
-        plugins_skipped=["calendar"],
-        plugin_results={"summary": {"status": "ok"}},
-        completion_reason=CompletionReason.FULL_PIPELINE,
-    )
+    with patch(f"{MODULE}.get_session_ctx", ctx_fn):
+        await _update_tracked_status(
+            "acc",
+            "100",
+            TrackedEmailStatus.COMPLETED,
+            _log(),
+            current_folder="INBOX",
+            error="some error",
+            error_type=ErrorType.MAIL,
+            plugins_completed=["summary"],
+            plugins_failed=["spam"],
+            plugins_skipped=["calendar"],
+            plugin_results={"summary": {"status": "ok"}},
+            completion_reason=CompletionReason.FULL_PIPELINE,
+        )
 
     assert tracked.status == TrackedEmailStatus.COMPLETED
     assert tracked.last_error == "some error"
@@ -148,22 +150,21 @@ async def test_update_tracked_status_sets_all_fields(mock_ctx: MagicMock) -> Non
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.get_session_ctx")
-async def test_update_tracked_status_increments_retry_on_requeue(mock_ctx: MagicMock) -> None:
+async def test_update_tracked_status_increments_retry_on_requeue() -> None:
     from app.models import TrackedEmailStatus
     from app.workers.mail_processor import _update_tracked_status
 
     tracked = _make_tracked(status="PROCESSING", retry_count=2)
-    # Override status to be an enum-like for comparison
     tracked.status = TrackedEmailStatus.PROCESSING
-    mock_ctx.return_value = _session_ctx(tracked)
+    ctx_fn, _db = _fake_session_ctx(tracked)
 
-    await _update_tracked_status(
-        "acc",
-        "100",
-        TrackedEmailStatus.QUEUED,
-        _log(),
-    )
+    with patch(f"{MODULE}.get_session_ctx", ctx_fn):
+        await _update_tracked_status(
+            "acc",
+            "100",
+            TrackedEmailStatus.QUEUED,
+            _log(),
+        )
     assert tracked.retry_count == 3
 
 
@@ -173,28 +174,28 @@ async def test_update_tracked_status_increments_retry_on_requeue(mock_ctx: Magic
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.get_session_ctx")
-async def test_update_current_folder_sets_folder_and_uid(mock_ctx: MagicMock) -> None:
+async def test_update_current_folder_sets_folder_and_uid() -> None:
     from app.workers.mail_processor import _update_current_folder
 
     tracked = _make_tracked()
-    mock_ctx.return_value = _session_ctx(tracked)
+    ctx_fn, _db = _fake_session_ctx(tracked)
 
-    await _update_current_folder("acc", "100", "INBOX", "Archive", _log(), new_mail_uid="200")
+    with patch(f"{MODULE}.get_session_ctx", ctx_fn):
+        await _update_current_folder("acc", "100", "INBOX", "Archive", _log(), new_mail_uid="200")
 
     assert tracked.current_folder == "Archive"
     assert tracked.mail_uid == "200"
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.get_session_ctx")
-async def test_update_current_folder_no_new_uid(mock_ctx: MagicMock) -> None:
+async def test_update_current_folder_no_new_uid() -> None:
     from app.workers.mail_processor import _update_current_folder
 
     tracked = _make_tracked()
-    mock_ctx.return_value = _session_ctx(tracked)
+    ctx_fn, _db = _fake_session_ctx(tracked)
 
-    await _update_current_folder("acc", "100", "INBOX", "Trash", _log())
+    with patch(f"{MODULE}.get_session_ctx", ctx_fn):
+        await _update_current_folder("acc", "100", "INBOX", "Trash", _log())
     assert tracked.current_folder == "Trash"
 
 
@@ -204,8 +205,7 @@ async def test_update_current_folder_no_new_uid(mock_ctx: MagicMock) -> None:
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.get_session_ctx")
-async def test_fail_queued_mails_executes_bulk_update(mock_ctx: MagicMock) -> None:
+async def test_fail_queued_mails_executes_bulk_update() -> None:
     from app.workers.mail_processor import _fail_queued_mails_for_folder
 
     db = AsyncMock()
@@ -213,12 +213,12 @@ async def test_fail_queued_mails_executes_bulk_update(mock_ctx: MagicMock) -> No
     result.rowcount = 3
     db.execute.return_value = result
 
-    ctx = AsyncMock()
-    ctx.__aenter__.return_value = db
-    ctx.__aexit__.return_value = False
-    mock_ctx.return_value = ctx
+    @asynccontextmanager
+    async def ctx():
+        yield db
 
-    await _fail_queued_mails_for_folder("acc", "INBOX", "folder gone", _log())
+    with patch(f"{MODULE}.get_session_ctx", ctx):
+        await _fail_queued_mails_for_folder("acc", "INBOX", "folder gone", _log())
     db.execute.assert_awaited_once()
 
 
@@ -237,33 +237,33 @@ async def test_fail_queued_mails_exception_non_fatal(mock_ctx: MagicMock) -> Non
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.get_session_ctx")
-async def test_pause_account_sets_pause_fields(mock_ctx: MagicMock) -> None:
+async def test_pause_account_sets_pause_fields() -> None:
     from app.workers.mail_processor import _pause_account
 
     db = AsyncMock()
-    ctx = AsyncMock()
-    ctx.__aenter__.return_value = db
-    ctx.__aexit__.return_value = False
-    mock_ctx.return_value = ctx
 
-    await _pause_account(str(uuid4()), "imap down", _log())
+    @asynccontextmanager
+    async def ctx():
+        yield db
+
+    with patch(f"{MODULE}.get_session_ctx", ctx):
+        await _pause_account(str(uuid4()), "imap down", _log())
     db.execute.assert_awaited_once()
     db.commit.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.get_session_ctx")
-async def test_pause_provider_sets_pause_fields(mock_ctx: MagicMock) -> None:
+async def test_pause_provider_sets_pause_fields() -> None:
     from app.workers.mail_processor import _pause_provider
 
     db = AsyncMock()
-    ctx = AsyncMock()
-    ctx.__aenter__.return_value = db
-    ctx.__aexit__.return_value = False
-    mock_ctx.return_value = ctx
 
-    await _pause_provider(str(uuid4()), "llm down", _log())
+    @asynccontextmanager
+    async def ctx():
+        yield db
+
+    with patch(f"{MODULE}.get_session_ctx", ctx):
+        await _pause_provider(str(uuid4()), "llm down", _log())
     db.execute.assert_awaited_once()
     db.commit.assert_awaited_once()
 

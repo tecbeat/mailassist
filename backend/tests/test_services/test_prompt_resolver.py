@@ -90,10 +90,7 @@ class TestResolvePrompts:
         mock_db.execute.return_value = mock_result
 
         system, user = await resolve_prompts(mock_db, user_id, plugin, engine, context)
-        engine.render.assert_called_once_with(
-            "prompts/labeling.j2", pytest.approx(dict, abs=True) if False else MagicMock
-        )
-        # Actually just check it was called with the right template name
+        engine.render.assert_called_once()
         assert engine.render.call_args[0][0] == "prompts/labeling.j2"
         assert system == "file:prompts/labeling.j2"
         assert "JSON format" in user
