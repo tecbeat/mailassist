@@ -2,11 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.19.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.19.0-beta) - 2026-05-13
+
+### ⛰️  Features
+
+- Add mail_id to all events, fix spam schema naming, add mail_id contacts endpoint (#158) - ([7490adf](https://git.teccave.de/tecbeat/mailassist/commit/7490adf538f92da4b003dcc189d269e42bbb3877))
+- Add duplicate prevention for all plugin persistence functions - ([260c6d2](https://git.teccave.de/tecbeat/mailassist/commit/260c6d2c8f23d7bfb6601765ab9bb8a8d71ed85b))
+- Add UIDVALIDITY recovery via Message-ID relinking - ([8e843e1](https://git.teccave.de/tecbeat/mailassist/commit/8e843e1d6f9a8eb6030db13c6f2448b838de0208))
+- Drop legacy mail_uid/mail_account_id from plugin tables - ([4ab02ce](https://git.teccave.de/tecbeat/mailassist/commit/4ab02ce7fed2ed9003453c2c29009ed376ffaf4b))
+- Deploy Docusaurus to GitLab Pages with per-branch previews - ([f438053](https://git.teccave.de/tecbeat/mailassist/commit/f43805310669cbb950a507e0ab6f29df0124a319))
+- Add mail_id FK to all plugin tables and aggregate columns to tracked_emails - ([edcc429](https://git.teccave.de/tecbeat/mailassist/commit/edcc4297cb654e23d88396ddb1799c71200a9fcf))
+
+### 📚 Documentation
+
+- Add plugin development requirement to ADR - ([3ed79a9](https://git.teccave.de/tecbeat/mailassist/commit/3ed79a90fae67ff521304c6a97e93ccccc2f875b))
+
 ## [2.18.6-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.18.6-beta) - 2026-05-13
 
 ### 🐛 Bug Fixes
 
 - *(deps)* Update python:3.14-slim docker digest to 33ef744 - ([f1ce11e](https://git.teccave.de/tecbeat/mailassist/commit/f1ce11edd477b54e081abfd9f3de726176c8cff9))
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Update gitlab-ci - ([f79733f](https://git.teccave.de/tecbeat/mailassist/commit/f79733f8e8864ff92cbfcc29cb2b51dce064175d))
 
 ## [2.18.5-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.18.5-beta) - 2026-05-11
 
