@@ -272,6 +272,7 @@ def make_mail_context(**kwargs) -> dict:
         "account_email": "me@example.com",
         "existing_labels": [],
         "existing_folders": [],
+        "excluded_folders": [],
         "folder_separator": "/",
         "mail_size": 2048,
         "thread_length": 1,

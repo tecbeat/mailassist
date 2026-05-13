@@ -158,7 +158,7 @@ class TestSaveNewLabels:
             await save_new_labels(user_id, account_id, ["log_new_labels:important, work"])
 
         assert mock_db.add.call_count == 2
-        await mock_db.commit.assert_awaited_once()
+        mock_db.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_commit_failure_logs_exception(self):
@@ -212,7 +212,7 @@ class TestSaveNewFolders:
             )
 
         assert mock_db.add.call_count == 2
-        await mock_db.commit.assert_awaited_once()
+        mock_db.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_commit_failure_logs_exception(self):

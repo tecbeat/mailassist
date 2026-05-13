@@ -122,7 +122,9 @@ class TestSpamDetectionPlugin:
         mock_spam.source = "ai"
 
         db = AsyncMock()
-        db.execute.return_value.scalar_one_or_none.return_value = mock_spam
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_spam
+        db.execute.return_value = mock_result
 
         result = await SpamDetectionPlugin.load_notification_context(db, "acc-1", "uid-1", mail_id="mail-1")
         assert result["is_spam"] is True
@@ -131,7 +133,9 @@ class TestSpamDetectionPlugin:
     @pytest.mark.asyncio
     async def test_load_notification_context_no_result(self) -> None:
         db = AsyncMock()
-        db.execute.return_value.scalar_one_or_none.return_value = None
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        db.execute.return_value = mock_result
 
         result = await SpamDetectionPlugin.load_notification_context(db, "acc-1", "uid-1", mail_id="mail-1")
         assert result == {}

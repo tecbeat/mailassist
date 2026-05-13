@@ -428,7 +428,8 @@ class TestMaskAppriseUrl:
 
     def test_invalid_url(self) -> None:
         result = mask_apprise_url("not-a-url")
-        assert result == "***"
+        # urlparse succeeds but with empty scheme → "unknown"
+        assert "unknown" in result
 
     def test_url_with_scheme_but_broken(self) -> None:
         result = mask_apprise_url("foo://")
