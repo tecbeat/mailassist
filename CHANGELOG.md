@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.19.2-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.19.2-beta) - 2026-05-13
+
+### 🐛 Bug Fixes
+
+- *(ci)* Add script and image to pages:preview:stop job - ([c15394f](https://git.teccave.de/tecbeat/mailassist/commit/c15394fca3c3c4e11205179f1ff652d6d51421ad))
+- *(ci)* Remove unsupported 'tags' key from pages:preview:stop job - ([688cc79](https://git.teccave.de/tecbeat/mailassist/commit/688cc793a27da5ac811d5d3c646531099a938fd6))
+
+### ⚙️ Miscellaneous Tasks
+
+- Add GitLab environment to pages job - ([0a4b711](https://git.teccave.de/tecbeat/mailassist/commit/0a4b711b51c12f25a14317947dbf202d667c7c2c))
+
+## [2.19.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.19.1-beta) - 2026-05-13
+
 ## [2.19.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.19.0-beta) - 2026-05-13
 
 ### ⛰️  Features
