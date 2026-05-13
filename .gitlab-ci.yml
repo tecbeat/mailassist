@@ -326,5 +326,3 @@ pages:preview:stop:
   environment:
     name: documentation/$CI_COMMIT_REF_SLUG
     action: stop
-  tags:
-    - teccave
