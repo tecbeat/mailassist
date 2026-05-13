@@ -72,3 +72,7 @@ Create a brand-new `mails` table and keep `tracked_emails` as a processing queue
 
 - **`label_change_logs` / `folder_change_logs`** are intentionally excluded from the `mail_id` FK migration. They track label/folder changes across accounts, not individual mail processing results. Their identity is `(mail_account_id, mail_uid)` which is correct for their purpose (auditing IMAP-level actions).
 - **`Approval.mail_subject` / `mail_from` / `mail_date`** are retained as immutable snapshots. The approval queue must display mail context even if the TrackedEmail is deleted or the mail has been purged from IMAP.
+
+## Plugin Development Requirement
+
+`TrackedEmail.id` (UUID) — exposed as `mail_id` — is the **only stable identifier** for a mail. All new plugin tables **must** reference it via `ForeignKey("tracked_emails.id", ondelete="CASCADE")`. Never use `(mail_account_id, mail_uid)` as an identity key in plugin data — IMAP UIDs are mutable and will drift on folder moves and UIDVALIDITY resets.
