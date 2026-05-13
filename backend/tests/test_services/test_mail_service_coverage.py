@@ -746,7 +746,7 @@ async def test_search_uids_unseen() -> None:
         return fn(*a, **kw)
 
     with patch("app.services.mail.asyncio.to_thread", side_effect=run_fn):
-        uids, uidval = await search_uids(conn, "INBOX", "UNSEEN")
+        uids, _uidval = await search_uids(conn, "INBOX", "UNSEEN")
     assert uids == ["1", "2"]
 
 

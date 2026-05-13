@@ -96,7 +96,7 @@ RESPONSE_EMPTY_VCARD = """\
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 async def test_carddav_connection_discovery_fails_returns_failure(mock_disc: AsyncMock) -> None:
     from app.services.contacts.sync import test_carddav_connection
 
@@ -107,7 +107,7 @@ async def test_carddav_connection_discovery_fails_returns_failure(mock_disc: Asy
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 async def test_carddav_connection_no_addressbook_returns_all(mock_disc: AsyncMock) -> None:
     from app.services.contacts.sync import test_carddav_connection
 
@@ -119,7 +119,7 @@ async def test_carddav_connection_no_addressbook_returns_all(mock_disc: AsyncMoc
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 async def test_carddav_connection_addressbook_valid_returns_success(mock_disc: AsyncMock) -> None:
     from app.services.contacts.sync import test_carddav_connection
 
@@ -130,7 +130,7 @@ async def test_carddav_connection_addressbook_valid_returns_success(mock_disc: A
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 async def test_carddav_connection_addressbook_invalid_returns_failure(mock_disc: AsyncMock) -> None:
     from app.services.contacts.sync import test_carddav_connection
 
@@ -141,7 +141,7 @@ async def test_carddav_connection_addressbook_invalid_returns_failure(mock_disc:
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 async def test_carddav_connection_addressbook_match_by_display_name(mock_disc: AsyncMock) -> None:
     from app.services.contacts.sync import test_carddav_connection
 
@@ -157,7 +157,7 @@ async def test_carddav_connection_addressbook_match_by_display_name(mock_disc: A
 
 @pytest.mark.asyncio
 @patch(f"{MODULE}._rebuild_email_cache", new_callable=AsyncMock)
-@patch(f"{MODULE}.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 @patch(f"{MODULE}.decrypt_credentials")
 async def test_sync_contacts_full_sync_adds_new_contact(
     mock_creds: MagicMock,
@@ -198,7 +198,7 @@ async def test_sync_contacts_full_sync_adds_new_contact(
 
 @pytest.mark.asyncio
 @patch(f"{MODULE}._rebuild_email_cache", new_callable=AsyncMock)
-@patch(f"{MODULE}.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 @patch(f"{MODULE}.decrypt_credentials")
 async def test_sync_contacts_incremental_deletes_contact(
     mock_creds: MagicMock,
@@ -232,7 +232,7 @@ async def test_sync_contacts_incremental_deletes_contact(
 
 @pytest.mark.asyncio
 @patch(f"{MODULE}._rebuild_email_cache", new_callable=AsyncMock)
-@patch(f"{MODULE}.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 @patch(f"{MODULE}.decrypt_credentials")
 async def test_sync_contacts_updates_existing_contact_different_etag(
     mock_creds: MagicMock,
@@ -272,7 +272,7 @@ async def test_sync_contacts_updates_existing_contact_different_etag(
 
 @pytest.mark.asyncio
 @patch(f"{MODULE}._rebuild_email_cache", new_callable=AsyncMock)
-@patch(f"{MODULE}.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 @patch(f"{MODULE}.decrypt_credentials")
 async def test_sync_contacts_skips_empty_vcard(
     mock_creds: MagicMock,
@@ -305,7 +305,7 @@ async def test_sync_contacts_skips_empty_vcard(
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 @patch(f"{MODULE}.decrypt_credentials")
 async def test_sync_contacts_http_error_raises(
     mock_creds: MagicMock,
@@ -334,7 +334,7 @@ async def test_sync_contacts_http_error_raises(
 
 
 @pytest.mark.asyncio
-@patch(f"{MODULE}.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 @patch(f"{MODULE}.decrypt_credentials")
 async def test_sync_contacts_discovery_failure_raises(
     mock_creds: MagicMock,
@@ -354,7 +354,7 @@ async def test_sync_contacts_discovery_failure_raises(
 
 @pytest.mark.asyncio
 @patch(f"{MODULE}._rebuild_email_cache", new_callable=AsyncMock)
-@patch(f"{MODULE}.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 @patch(f"{MODULE}.decrypt_credentials")
 async def test_sync_contacts_parse_error_increments_errors(
     mock_creds: MagicMock,
@@ -391,7 +391,7 @@ async def test_sync_contacts_parse_error_increments_errors(
 
 @pytest.mark.asyncio
 @patch(f"{MODULE}._rebuild_email_cache", new_callable=AsyncMock)
-@patch(f"{MODULE}.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 @patch(f"{MODULE}.decrypt_credentials")
 async def test_sync_contacts_same_etag_skips_update(
     mock_creds: MagicMock,

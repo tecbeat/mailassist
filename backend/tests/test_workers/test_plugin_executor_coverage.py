@@ -26,34 +26,34 @@ from app.workers.plugin_executor import (
 
 
 def _make_context(**kw):
-    defaults = dict(
-        user_id=str(uuid4()),
-        account_id=str(uuid4()),
-        mail_uid="100",
-        mail_id=str(uuid4()),
-        sender="sender@example.com",
-        sender_name="Sender",
-        recipient="me@example.com",
-        subject="Test",
-        body="body",
-        body_plain="body",
-        body_html="<p>body</p>",
-        headers={"message-id": "<abc@example.com>"},
-        date="2026-01-01T00:00:00Z",
-        has_attachments=False,
-        attachment_names=[],
-        account_name="Acct",
-        account_email="me@example.com",
-        existing_labels=[],
-        existing_folders=[],
-        excluded_folders=[],
-        folder_separator="/",
-        mail_size=1024,
-        thread_length=1,
-        is_reply=False,
-        is_forwarded=False,
-        contact=None,
-    )
+    defaults = {
+        "user_id": str(uuid4()),
+        "account_id": str(uuid4()),
+        "mail_uid": "100",
+        "mail_id": str(uuid4()),
+        "sender": "sender@example.com",
+        "sender_name": "Sender",
+        "recipient": "me@example.com",
+        "subject": "Test",
+        "body": "body",
+        "body_plain": "body",
+        "body_html": "<p>body</p>",
+        "headers": {"message-id": "<abc@example.com>"},
+        "date": "2026-01-01T00:00:00Z",
+        "has_attachments": False,
+        "attachment_names": [],
+        "account_name": "Acct",
+        "account_email": "me@example.com",
+        "existing_labels": [],
+        "existing_folders": [],
+        "excluded_folders": [],
+        "folder_separator": "/",
+        "mail_size": 1024,
+        "thread_length": 1,
+        "is_reply": False,
+        "is_forwarded": False,
+        "contact": None,
+    }
     defaults.update(kw)
     return MailContext(**defaults)
 
@@ -111,7 +111,7 @@ def _base_patches():
             "app.workers.plugin_executor.resolve_prompts", new_callable=AsyncMock, return_value=("sys", "usr")
         ),
         "get_encryption": patch("app.workers.plugin_executor.get_encryption"),
-        "get_template_engine": patch("app.workers.plugin_executor.get_template_engine"),
+        "get_template_engine": patch("app.core.templating.get_template_engine"),
         "call_llm": patch("app.workers.plugin_executor.call_llm", new_callable=AsyncMock),
         "update_provider_health": patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
         "has_actionable": patch("app.workers.plugin_executor.has_actionable_results", return_value=True),
@@ -288,7 +288,7 @@ class TestExecutePluginLLMErrors:
             patch("app.workers.plugin_executor.resolve_plugin_provider", return_value=provider),
             patch("app.workers.plugin_executor.resolve_prompts", new_callable=AsyncMock, return_value=("s", "u")),
             patch("app.workers.plugin_executor.get_encryption"),
-            patch("app.workers.plugin_executor.get_template_engine"),
+            patch("app.core.templating.get_template_engine"),
             patch("app.workers.plugin_executor.call_llm", new_callable=AsyncMock, side_effect=ValueError("bad json")),
         ):
             result = await execute_plugin(
@@ -328,7 +328,7 @@ class TestExecutePluginSuccess:
             patch("app.workers.plugin_executor.resolve_plugin_provider", return_value=provider),
             patch("app.workers.plugin_executor.resolve_prompts", new_callable=AsyncMock, return_value=("s", "u")),
             patch("app.workers.plugin_executor.get_encryption") as enc,
-            patch("app.workers.plugin_executor.get_template_engine"),
+            patch("app.core.templating.get_template_engine"),
             patch("app.workers.plugin_executor.call_llm", new_callable=AsyncMock, return_value=(ai_resp, 100)),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.has_actionable_results", return_value=True),
@@ -369,7 +369,7 @@ class TestExecutePluginSuccess:
             patch("app.workers.plugin_executor.resolve_plugin_provider", return_value=provider),
             patch("app.workers.plugin_executor.resolve_prompts", new_callable=AsyncMock, return_value=("s", "u")),
             patch("app.workers.plugin_executor.get_encryption") as enc,
-            patch("app.workers.plugin_executor.get_template_engine"),
+            patch("app.core.templating.get_template_engine"),
             patch("app.workers.plugin_executor.call_llm", new_callable=AsyncMock, return_value=(ai_resp, 100)),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.has_actionable_results", return_value=True),
@@ -411,7 +411,7 @@ class TestExecutePluginSuccess:
             patch("app.workers.plugin_executor.resolve_plugin_provider", return_value=provider),
             patch("app.workers.plugin_executor.resolve_prompts", new_callable=AsyncMock, return_value=("s", "u")),
             patch("app.workers.plugin_executor.get_encryption") as enc,
-            patch("app.workers.plugin_executor.get_template_engine"),
+            patch("app.core.templating.get_template_engine"),
             patch("app.workers.plugin_executor.call_llm", new_callable=AsyncMock, return_value=(ai_resp, 50)),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.has_actionable_results", return_value=True),
@@ -458,7 +458,7 @@ class TestExecutePluginActionFailure:
             patch("app.workers.plugin_executor.resolve_plugin_provider", return_value=provider),
             patch("app.workers.plugin_executor.resolve_prompts", new_callable=AsyncMock, return_value=("s", "u")),
             patch("app.workers.plugin_executor.get_encryption") as enc,
-            patch("app.workers.plugin_executor.get_template_engine"),
+            patch("app.core.templating.get_template_engine"),
             patch("app.workers.plugin_executor.call_llm", new_callable=AsyncMock, return_value=(ai_resp, 50)),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.has_actionable_results", return_value=False),
@@ -506,7 +506,7 @@ class TestExecutePluginReprompt:
             patch("app.workers.plugin_executor.resolve_plugin_provider", return_value=provider),
             patch("app.workers.plugin_executor.resolve_prompts", new_callable=AsyncMock, return_value=("s", "u")),
             patch("app.workers.plugin_executor.get_encryption") as enc,
-            patch("app.workers.plugin_executor.get_template_engine"),
+            patch("app.core.templating.get_template_engine"),
             patch(
                 "app.workers.plugin_executor.call_llm",
                 new_callable=AsyncMock,
@@ -551,7 +551,7 @@ class TestExecutePluginReprompt:
             patch("app.workers.plugin_executor.resolve_plugin_provider", return_value=provider),
             patch("app.workers.plugin_executor.resolve_prompts", new_callable=AsyncMock, return_value=("s", "u")),
             patch("app.workers.plugin_executor.get_encryption") as enc,
-            patch("app.workers.plugin_executor.get_template_engine"),
+            patch("app.core.templating.get_template_engine"),
             patch(
                 "app.workers.plugin_executor.call_llm",
                 new_callable=AsyncMock,
@@ -601,7 +601,7 @@ class TestExecutePluginSpamShortCircuit:
             patch("app.workers.plugin_executor.resolve_plugin_provider", return_value=provider),
             patch("app.workers.plugin_executor.resolve_prompts", new_callable=AsyncMock, return_value=("s", "u")),
             patch("app.workers.plugin_executor.get_encryption") as enc,
-            patch("app.workers.plugin_executor.get_template_engine"),
+            patch("app.core.templating.get_template_engine"),
             patch("app.workers.plugin_executor.call_llm", new_callable=AsyncMock, return_value=(ai_resp, 50)),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.has_actionable_results", return_value=True),
@@ -647,7 +647,7 @@ class TestHandleTransientError:
             yield mock_health_db
 
         with (
-            patch("app.workers.plugin_executor.get_session", return_value=fake_get_session()),
+            patch("app.core.database.get_session", return_value=fake_get_session()),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.check_ai_circuit_breaker", new_callable=AsyncMock, return_value=False),
         ):
@@ -679,7 +679,7 @@ class TestHandleTransientError:
             yield mock_health_db
 
         with (
-            patch("app.workers.plugin_executor.get_session", return_value=fake_get_session()),
+            patch("app.core.database.get_session", return_value=fake_get_session()),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.check_ai_circuit_breaker", new_callable=AsyncMock, return_value=True),
         ):
@@ -703,7 +703,7 @@ class TestHandleTransientError:
         outcome = PluginOutcome(plugin_name=plugin.name)
         error = TransientLLMError("timeout")
 
-        with patch("app.workers.plugin_executor.get_session", side_effect=RuntimeError("db down")):
+        with patch("app.core.database.get_session", side_effect=RuntimeError("db down")):
             result = await _handle_transient_error(
                 db=AsyncMock(),
                 provider=provider,
@@ -771,7 +771,7 @@ class TestPersistPluginResult:
         with (
             patch("app.workers.plugin_executor.save_auto_reply", new_callable=AsyncMock),
             patch("app.workers.plugin_executor._load_mail_account", new_callable=AsyncMock, return_value=mock_account),
-            patch("app.workers.plugin_executor.upload_draft_to_imap", new_callable=AsyncMock) as mock_upload,
+            patch("app.services.draft_upload.upload_draft_to_imap", new_callable=AsyncMock) as mock_upload,
         ):
             await _persist_plugin_result(
                 db=AsyncMock(),

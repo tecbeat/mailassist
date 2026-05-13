@@ -74,7 +74,7 @@ class TestWriteBackEmailToContact:
             patch(
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
-            patch("app.services.contacts.writeback.discover_dav", side_effect=RuntimeError("boom")),
+            patch("app.services.dav_discovery.discover_dav", side_effect=RuntimeError("boom")),
         ):
             result = await write_back_email_to_contact(db, config, contact, "new@example.com")
 
@@ -93,7 +93,7 @@ class TestWriteBackEmailToContact:
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
             patch(
-                "app.services.contacts.writeback.discover_dav",
+                "app.services.dav_discovery.discover_dav",
                 AsyncMock(return_value=_make_discovery(success=False, addressbook_home="")),
             ),
         ):
@@ -121,7 +121,7 @@ class TestWriteBackEmailToContact:
             patch(
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
-            patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
+            patch("app.services.dav_discovery.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
             result = await write_back_email_to_contact(db, config, contact, "new@example.com")
@@ -158,7 +158,7 @@ class TestWriteBackEmailToContact:
             patch(
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
-            patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
+            patch("app.services.dav_discovery.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
             patch("app.services.contacts.writeback.get_cache_client", return_value=mock_cache),
         ):
@@ -201,7 +201,7 @@ class TestWriteBackEmailToContact:
             patch(
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
-            patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
+            patch("app.services.dav_discovery.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
             patch("app.services.contacts.writeback.get_cache_client", return_value=mock_cache),
         ):
@@ -236,7 +236,7 @@ class TestWriteBackEmailToContact:
             patch(
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
-            patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
+            patch("app.services.dav_discovery.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
             result = await write_back_email_to_contact(db, config, contact, "fail@example.com")
@@ -259,7 +259,7 @@ class TestWriteBackEmailToContact:
             patch(
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
-            patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
+            patch("app.services.dav_discovery.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
             result = await write_back_email_to_contact(db, config, contact, "err@example.com")
@@ -285,7 +285,7 @@ class TestRemoveEmailFromContact:
             patch(
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
-            patch("app.services.contacts.writeback.discover_dav", side_effect=RuntimeError("boom")),
+            patch("app.services.dav_discovery.discover_dav", side_effect=RuntimeError("boom")),
         ):
             result = await remove_email_from_contact(db, config, contact, "a@b.com")
 
@@ -304,7 +304,7 @@ class TestRemoveEmailFromContact:
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
             patch(
-                "app.services.contacts.writeback.discover_dav",
+                "app.services.dav_discovery.discover_dav",
                 AsyncMock(return_value=_make_discovery(success=False, addressbook_home="")),
             ),
         ):
@@ -332,7 +332,7 @@ class TestRemoveEmailFromContact:
             patch(
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
-            patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
+            patch("app.services.dav_discovery.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
             result = await remove_email_from_contact(db, config, contact, "x@y.com")
@@ -362,7 +362,7 @@ class TestRemoveEmailFromContact:
             patch(
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
-            patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
+            patch("app.services.dav_discovery.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
             result = await remove_email_from_contact(db, config, contact, "nothere@example.com")
@@ -400,7 +400,7 @@ class TestRemoveEmailFromContact:
             patch(
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
-            patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
+            patch("app.services.dav_discovery.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
             patch("app.services.contacts.writeback.get_cache_client", return_value=mock_cache),
         ):
@@ -436,7 +436,7 @@ class TestRemoveEmailFromContact:
             patch(
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
-            patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
+            patch("app.services.dav_discovery.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
             result = await remove_email_from_contact(db, config, contact, "rm@example.com")
@@ -470,7 +470,7 @@ class TestRemoveEmailFromContact:
             patch(
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
-            patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
+            patch("app.services.dav_discovery.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
             result = await remove_email_from_contact(db, config, contact, "x@y.com")
@@ -493,7 +493,7 @@ class TestRemoveEmailFromContact:
             patch(
                 "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
             ),
-            patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
+            patch("app.services.dav_discovery.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
             result = await remove_email_from_contact(db, config, contact, "err@example.com")
@@ -525,7 +525,7 @@ class TestAutoAddSenderEmail:
         async def fake_session():
             yield mock_db
 
-        with patch("app.services.contacts.writeback.get_session_ctx", fake_session):
+        with patch("app.core.database.get_session_ctx", fake_session):
             result = await auto_add_sender_email(uuid4(), uuid4(), "a@b.com")
 
         assert result is False
@@ -546,7 +546,7 @@ class TestAutoAddSenderEmail:
         async def fake_session():
             yield mock_db
 
-        with patch("app.services.contacts.writeback.get_session_ctx", fake_session):
+        with patch("app.core.database.get_session_ctx", fake_session):
             result = await auto_add_sender_email(user_id, uuid4(), "a@b.com")
 
         assert result is False
@@ -567,7 +567,7 @@ class TestAutoAddSenderEmail:
         async def fake_session():
             yield mock_db
 
-        with patch("app.services.contacts.writeback.get_session_ctx", fake_session):
+        with patch("app.core.database.get_session_ctx", fake_session):
             result = await auto_add_sender_email(user_id, uuid4(), "A@B.COM")
 
         assert result is True
@@ -600,10 +600,10 @@ class TestAutoAddSenderEmail:
             yield mock_db
 
         with (
-            patch("app.services.contacts.writeback.get_session_ctx", fake_session),
+            patch("app.core.database.get_session_ctx", fake_session),
             patch("app.services.contacts.writeback.write_back_email_to_contact", new_callable=AsyncMock) as mock_wb,
             patch("app.services.contacts.writeback.get_cache_client", return_value=mock_cache),
-            patch("app.services.contacts.writeback.get_settings") as mock_s,
+            patch("app.core.config.get_settings") as mock_s,
         ):
             mock_s.return_value.contact_cache_ttl_seconds = 3600
             result = await auto_add_sender_email(user_id, contact_id, "new@example.com")
@@ -638,9 +638,9 @@ class TestAutoAddSenderEmail:
             yield mock_db
 
         with (
-            patch("app.services.contacts.writeback.get_session_ctx", fake_session),
+            patch("app.core.database.get_session_ctx", fake_session),
             patch("app.services.contacts.writeback.get_cache_client", return_value=mock_cache),
-            patch("app.services.contacts.writeback.get_settings") as mock_s,
+            patch("app.core.config.get_settings") as mock_s,
         ):
             mock_s.return_value.contact_cache_ttl_seconds = 3600
             result = await auto_add_sender_email(user_id, uuid4(), "new@example.com")
@@ -651,7 +651,7 @@ class TestAutoAddSenderEmail:
     async def test_exception_returns_false(self):
         from app.services.contacts.writeback import auto_add_sender_email
 
-        with patch("app.services.contacts.writeback.get_session_ctx", side_effect=RuntimeError("db down")):
+        with patch("app.core.database.get_session_ctx", side_effect=RuntimeError("db down")):
             result = await auto_add_sender_email(uuid4(), uuid4(), "x@y.com")
 
         assert result is False
@@ -683,14 +683,14 @@ class TestAutoAddSenderEmail:
             yield mock_db
 
         with (
-            patch("app.services.contacts.writeback.get_session_ctx", fake_session),
+            patch("app.core.database.get_session_ctx", fake_session),
             patch(
                 "app.services.contacts.writeback.write_back_email_to_contact",
                 new_callable=AsyncMock,
                 side_effect=RuntimeError("writeback boom"),
             ),
             patch("app.services.contacts.writeback.get_cache_client", return_value=mock_cache),
-            patch("app.services.contacts.writeback.get_settings") as mock_s,
+            patch("app.core.config.get_settings") as mock_s,
         ):
             mock_s.return_value.contact_cache_ttl_seconds = 3600
             result = await auto_add_sender_email(user_id, uuid4(), "new@example.com")

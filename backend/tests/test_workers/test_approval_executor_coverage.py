@@ -359,15 +359,8 @@ class TestHandleSpamRejection:
 
         with (
             patch(f"{MODULE}.get_session_ctx", _fake_session_ctx(db)),
-            patch(f"{MODULE}.process_mail", new_callable=AsyncMock) as mock_process,
+            patch("app.workers.mail_processor.process_mail", new_callable=AsyncMock) as mock_process,
         ):
-            # process_mail is imported inside the function, so we patch at module level
-            # Actually it's a lazy import — patch where it'll be looked up
-            with patch("app.workers.mail_processor.process_mail", new_callable=AsyncMock) as _mock_pm:
-                # Re-patch at module level after import
-                pass
-
-            # The function does a lazy import, so let's patch it properly
             await handle_spam_rejection({}, user_id, account_id, mail_uid)
 
             mock_process.assert_awaited_once_with(
@@ -391,7 +384,7 @@ class TestHandleSpamRejection:
 
         with (
             patch(f"{MODULE}.get_session_ctx", _fake_session_ctx(db)),
-            patch(f"{MODULE}.process_mail", new_callable=AsyncMock) as mock_process,
+            patch("app.workers.mail_processor.process_mail", new_callable=AsyncMock) as mock_process,
         ):
             await handle_spam_rejection({}, user_id, account_id, "77")
 
@@ -479,7 +472,7 @@ class TestPersistPluginDataCoverage:
         with (
             patch(f"{MODULE}.save_auto_reply", new_callable=AsyncMock) as mock_save,
             patch(f"{MODULE}.get_session_ctx", _fake_session_ctx(db2)),
-            patch(f"{MODULE}.upload_draft_to_imap", new_callable=AsyncMock) as mock_upload,
+            patch("app.services.draft_upload.upload_draft_to_imap", new_callable=AsyncMock) as mock_upload,
         ):
             await _persist_plugin_data(approval)
             mock_save.assert_awaited_once()

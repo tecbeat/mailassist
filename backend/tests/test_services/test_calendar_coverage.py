@@ -23,7 +23,7 @@ from app.services.calendar import (
 
 
 @pytest.mark.asyncio
-@patch("app.services.calendar.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 async def test_test_caldav_connection_success_no_default_returns_calendars(
     mock_discover: AsyncMock,
 ) -> None:
@@ -46,7 +46,7 @@ async def test_test_caldav_connection_success_no_default_returns_calendars(
 
 
 @pytest.mark.asyncio
-@patch("app.services.calendar.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 async def test_test_caldav_connection_discovery_failure_returns_error(
     mock_discover: AsyncMock,
 ) -> None:
@@ -63,7 +63,7 @@ async def test_test_caldav_connection_discovery_failure_returns_error(
 
 
 @pytest.mark.asyncio
-@patch("app.services.calendar.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 async def test_test_caldav_connection_calendar_not_found_returns_error(
     mock_discover: AsyncMock,
 ) -> None:
@@ -81,7 +81,7 @@ async def test_test_caldav_connection_calendar_not_found_returns_error(
 
 
 @pytest.mark.asyncio
-@patch("app.services.calendar.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 async def test_test_caldav_connection_default_calendar_valid_returns_success(
     mock_discover: AsyncMock,
 ) -> None:
@@ -139,7 +139,7 @@ def test_encrypt_caldav_credentials_encrypts_json(mock_enc: MagicMock) -> None:
 
 @pytest.mark.asyncio
 @patch("app.services.calendar.asyncio.to_thread", new_callable=AsyncMock)
-@patch("app.services.calendar.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 @patch("app.services.calendar.get_settings")
 async def test_create_calendar_event_success_returns_result(
     mock_settings: MagicMock,
@@ -161,7 +161,7 @@ async def test_create_calendar_event_success_returns_result(
 
 @pytest.mark.asyncio
 @patch("app.services.calendar.asyncio.to_thread", new_callable=AsyncMock)
-@patch("app.services.calendar.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 @patch("app.services.calendar.get_settings")
 async def test_create_calendar_event_all_day_uses_date(
     mock_settings: MagicMock,
@@ -180,7 +180,7 @@ async def test_create_calendar_event_all_day_uses_date(
 
 @pytest.mark.asyncio
 @patch("app.services.calendar.asyncio.to_thread", new_callable=AsyncMock)
-@patch("app.services.calendar.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 @patch("app.services.calendar.get_settings")
 async def test_create_calendar_event_exception_raises_external_service_error(
     mock_settings: MagicMock,
@@ -197,7 +197,7 @@ async def test_create_calendar_event_exception_raises_external_service_error(
 
 @pytest.mark.asyncio
 @patch("app.services.calendar.asyncio.to_thread", new_callable=AsyncMock)
-@patch("app.services.calendar.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 @patch("app.services.calendar.get_settings")
 async def test_create_calendar_event_discovery_fails_uses_original_url(
     mock_settings: MagicMock,
@@ -220,7 +220,7 @@ async def test_create_calendar_event_discovery_fails_uses_original_url(
 
 @pytest.mark.asyncio
 @patch("app.services.calendar.asyncio.to_thread", new_callable=AsyncMock)
-@patch("app.services.calendar.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 async def test_delete_caldav_event_success(
     mock_discover: AsyncMock,
     mock_to_thread: AsyncMock,
@@ -235,7 +235,7 @@ async def test_delete_caldav_event_success(
 
 @pytest.mark.asyncio
 @patch("app.services.calendar.asyncio.to_thread", new_callable=AsyncMock)
-@patch("app.services.calendar.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 async def test_delete_caldav_event_exception_raises_external_service_error(
     mock_discover: AsyncMock,
     mock_to_thread: AsyncMock,
@@ -249,7 +249,7 @@ async def test_delete_caldav_event_exception_raises_external_service_error(
 
 @pytest.mark.asyncio
 @patch("app.services.calendar.asyncio.to_thread", new_callable=AsyncMock)
-@patch("app.services.calendar.discover_dav", new_callable=AsyncMock)
+@patch("app.services.dav_discovery.discover_dav", new_callable=AsyncMock)
 async def test_delete_caldav_event_external_error_reraised(
     mock_discover: AsyncMock,
     mock_to_thread: AsyncMock,
