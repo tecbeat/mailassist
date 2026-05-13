@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.18.6-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.18.6-beta) - 2026-05-13
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update python:3.14-slim docker digest to 33ef744 - ([f1ce11e](https://git.teccave.de/tecbeat/mailassist/commit/f1ce11edd477b54e081abfd9f3de726176c8cff9))
+
 ## [2.18.5-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.18.5-beta) - 2026-05-11
 
 ### 🐛 Bug Fixes
