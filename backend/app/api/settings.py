@@ -46,6 +46,7 @@ def _to_response(settings: UserSettings) -> SettingsResponse:
         draft_expiry_hours=settings.draft_expiry_hours,
         max_concurrent_processing=settings.max_concurrent_processing,
         ai_timeout_seconds=settings.ai_timeout_seconds,
+        auto_approve_threshold=settings.auto_approve_threshold,
         approval_modes=ApprovalModes(
             spam=settings.approval_mode_spam,
             labeling=settings.approval_mode_labeling,
@@ -106,6 +107,8 @@ async def update_settings(
         settings.max_concurrent_processing = data.max_concurrent_processing
     if data.ai_timeout_seconds is not None:
         settings.ai_timeout_seconds = data.ai_timeout_seconds
+    if "auto_approve_threshold" in data.model_fields_set:
+        settings.auto_approve_threshold = data.auto_approve_threshold
     if data.plugin_order is not None:
         settings.plugin_order = data.plugin_order
     if data.plugin_provider_map is not None:

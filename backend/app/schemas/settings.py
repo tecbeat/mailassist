@@ -52,6 +52,7 @@ class SettingsResponse(BaseModel):
     draft_expiry_hours: int
     max_concurrent_processing: int
     ai_timeout_seconds: int
+    auto_approve_threshold: float | None = None
     approval_modes: ApprovalModes
     plugin_order: list[str] | None = None
     plugin_provider_map: dict[str, str] | None = None
@@ -78,6 +79,12 @@ class SettingsUpdate(BaseModel):
         ge=10,
         le=600,
         description="Global LLM timeout in seconds (10-600). Per-provider overrides take precedence.",
+    )
+    auto_approve_threshold: float | None = Field(
+        None,
+        ge=0.0,
+        le=1.0,
+        description="Confidence threshold (0.0-1.0) above which actions are auto-approved. Null to disable.",
     )
     approval_modes: ApprovalModesUpdate | None = None
     plugin_order: list[str] | None = None

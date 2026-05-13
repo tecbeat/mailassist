@@ -894,11 +894,14 @@ def _apply_outcome(result: PipelineResult, outcome: PluginOutcome) -> None:
 
     if outcome.completed:
         result.plugins_completed.append(outcome.plugin_name)
+        details = outcome.result_details
+        if outcome.auto_approved:
+            details = {**(details or {}), "auto_approved": True}
         result.plugin_results[outcome.plugin_name] = PluginResultEntry(
             status="completed",
             display_name=outcome.plugin_display_name,
             summary=outcome.result_summary,
-            details=outcome.result_details,
+            details=details,
         )
     elif outcome.failed:
         result.plugins_failed.append(outcome.plugin_name)

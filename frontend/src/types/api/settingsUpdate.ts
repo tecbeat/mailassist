@@ -19,6 +19,8 @@ export interface SettingsUpdate {
   max_concurrent_processing?: number | null;
   /** Global LLM timeout in seconds (10-600). Per-provider overrides take precedence. */
   ai_timeout_seconds?: number | null;
+  /** Confidence threshold (0.0-1.0) above which actions are auto-approved. Null to disable. */
+  auto_approve_threshold?: number | null;
   approval_modes?: ApprovalModesUpdate | null;
   plugin_order?: string[] | null;
   plugin_provider_map?: SettingsUpdatePluginProviderMap;
