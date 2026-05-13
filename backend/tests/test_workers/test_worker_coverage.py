@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # get_redis_settings
 # ---------------------------------------------------------------------------
@@ -209,9 +208,7 @@ async def test_poll_mail_accounts_delegates_and_writes_cron() -> None:
 @pytest.mark.asyncio
 async def test_poll_single_account_delegates() -> None:
     ctx: dict = {}
-    with patch(
-        "app.workers.worker._poll_single", new_callable=AsyncMock
-    ) as m:
+    with patch("app.workers.worker._poll_single", new_callable=AsyncMock) as m:
         from app.workers.worker import poll_single_account
 
         await poll_single_account(ctx, "u1", "a1")

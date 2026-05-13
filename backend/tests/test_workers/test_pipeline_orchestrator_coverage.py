@@ -5,9 +5,8 @@ Covers lines 353-360, 402-414, 439-725, 750-786, 813-838, 852-870, 883-923.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -16,7 +15,6 @@ from app.workers.pipeline_orchestrator import (
     EmailParseError,
     IMAPFolderError,
     PipelineResult,
-    PluginResultEntry,
     _apply_outcome,
     _evaluate_rules,
     _match_contact,
@@ -25,7 +23,6 @@ from app.workers.pipeline_orchestrator import (
     parse_raw_mail,
 )
 from app.workers.plugin_executor import PluginOutcome
-
 
 # ---------------------------------------------------------------------------
 # _apply_outcome
@@ -211,9 +208,7 @@ class TestMatchContact:
             new_callable=AsyncMock,
             return_value=contact,
         ):
-            result = await _match_contact(
-                db, str(uuid4()), str(uuid4()), "uid1", parsed, event_bus, log
-            )
+            result = await _match_contact(db, str(uuid4()), str(uuid4()), "uid1", parsed, event_bus, log)
 
         assert result is not None
         assert result["display_name"] == "Alice"
@@ -234,9 +229,7 @@ class TestMatchContact:
             new_callable=AsyncMock,
             return_value=None,
         ):
-            result = await _match_contact(
-                db, str(uuid4()), str(uuid4()), "uid1", parsed, event_bus, log
-            )
+            result = await _match_contact(db, str(uuid4()), str(uuid4()), "uid1", parsed, event_bus, log)
 
         assert result is None
         event_bus.emit.assert_not_awaited()
@@ -255,9 +248,7 @@ class TestMatchContact:
             new_callable=AsyncMock,
             side_effect=RuntimeError("db error"),
         ):
-            result = await _match_contact(
-                db, str(uuid4()), str(uuid4()), "uid1", parsed, event_bus, log
-            )
+            result = await _match_contact(db, str(uuid4()), str(uuid4()), "uid1", parsed, event_bus, log)
 
         assert result is None
         log.warning.assert_called_once_with("contact_match_failed", sender="bad@example.com")
@@ -289,9 +280,7 @@ class TestEvaluateRules:
             new_callable=AsyncMock,
             return_value=rule_result_mock,
         ):
-            await _evaluate_rules(
-                db, str(uuid4()), str(uuid4()), "uid1", context, event_bus, log, result
-            )
+            await _evaluate_rules(db, str(uuid4()), str(uuid4()), "uid1", context, event_bus, log, result)
 
         assert result.auto_actions == ["move:Archive"]
         event_bus.emit.assert_awaited_once()
@@ -316,9 +305,7 @@ class TestEvaluateRules:
             new_callable=AsyncMock,
             return_value=rule_result_mock,
         ):
-            await _evaluate_rules(
-                db, str(uuid4()), str(uuid4()), "uid1", context, event_bus, log, result
-            )
+            await _evaluate_rules(db, str(uuid4()), str(uuid4()), "uid1", context, event_bus, log, result)
 
         assert result.auto_actions == []
         event_bus.emit.assert_awaited_once()
@@ -338,9 +325,7 @@ class TestEvaluateRules:
             new_callable=AsyncMock,
             side_effect=RuntimeError("boom"),
         ):
-            await _evaluate_rules(
-                db, str(uuid4()), str(uuid4()), "uid1", context, event_bus, log, result
-            )
+            await _evaluate_rules(db, str(uuid4()), str(uuid4()), "uid1", context, event_bus, log, result)
 
         assert result.auto_actions == []
         log.exception.assert_called_once_with("rule_evaluation_failed")
@@ -370,12 +355,14 @@ class TestParseRawMail:
 
     def test_parse_raw_mail_exception_wraps(self) -> None:
         log = MagicMock()
-        with patch(
-            "app.workers.pipeline_orchestrator.parse_email",
-            side_effect=ValueError("bad"),
+        with (
+            patch(
+                "app.workers.pipeline_orchestrator.parse_email",
+                side_effect=ValueError("bad"),
+            ),
+            pytest.raises(EmailParseError, match="email_parse_failed"),
         ):
-            with pytest.raises(EmailParseError, match="email_parse_failed"):
-                parse_raw_mail(b"raw", "uid1", log)
+            parse_raw_mail(b"raw", "uid1", log)
 
     def test_parse_raw_mail_empty_body_logs(self) -> None:
         parsed = MagicMock()
@@ -414,15 +401,17 @@ class TestFetchRawMailFolderError:
         with (
             patch(
                 "app.workers.pipeline_orchestrator.imap_connection",
-                return_value=AsyncMock(__aenter__=AsyncMock(return_value=conn), __aexit__=AsyncMock(return_value=False)),
+                return_value=AsyncMock(
+                    __aenter__=AsyncMock(return_value=conn), __aexit__=AsyncMock(return_value=False)
+                ),
             ),
             patch(
                 "app.workers.pipeline_orchestrator.fetch_raw_message",
                 side_effect=Exception("select failed for folder"),
             ),
+            pytest.raises(IMAPFolderError, match="imap_select_failed"),
         ):
-            with pytest.raises(IMAPFolderError, match="imap_select_failed"):
-                await fetch_raw_mail(account, "uid1", "INBOX", log)
+            await fetch_raw_mail(account, "uid1", "INBOX", log)
 
     @pytest.mark.asyncio
     async def test_mailbox_error_wrapped(self) -> None:
@@ -436,15 +425,17 @@ class TestFetchRawMailFolderError:
         with (
             patch(
                 "app.workers.pipeline_orchestrator.imap_connection",
-                return_value=AsyncMock(__aenter__=AsyncMock(return_value=conn), __aexit__=AsyncMock(return_value=False)),
+                return_value=AsyncMock(
+                    __aenter__=AsyncMock(return_value=conn), __aexit__=AsyncMock(return_value=False)
+                ),
             ),
             patch(
                 "app.workers.pipeline_orchestrator.fetch_raw_message",
                 side_effect=Exception("Mailbox does not exist"),
             ),
+            pytest.raises(IMAPFolderError),
         ):
-            with pytest.raises(IMAPFolderError):
-                await fetch_raw_mail(account, "uid1", "INBOX", log)
+            await fetch_raw_mail(account, "uid1", "INBOX", log)
 
     @pytest.mark.asyncio
     async def test_non_folder_exception_reraises(self) -> None:
@@ -458,15 +449,17 @@ class TestFetchRawMailFolderError:
         with (
             patch(
                 "app.workers.pipeline_orchestrator.imap_connection",
-                return_value=AsyncMock(__aenter__=AsyncMock(return_value=conn), __aexit__=AsyncMock(return_value=False)),
+                return_value=AsyncMock(
+                    __aenter__=AsyncMock(return_value=conn), __aexit__=AsyncMock(return_value=False)
+                ),
             ),
             patch(
                 "app.workers.pipeline_orchestrator.fetch_raw_message",
                 side_effect=Exception("network timeout"),
             ),
+            pytest.raises(Exception, match="network timeout"),
         ):
-            with pytest.raises(Exception, match="network timeout"):
-                await fetch_raw_mail(account, "uid1", "INBOX", log)
+            await fetch_raw_mail(account, "uid1", "INBOX", log)
 
 
 # ---------------------------------------------------------------------------

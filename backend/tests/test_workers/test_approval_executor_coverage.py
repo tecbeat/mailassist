@@ -214,9 +214,9 @@ class TestExecuteApprovedActions:
         tracked_update_result.scalar_one_or_none.return_value = tracked_update_obj
 
         db.execute.side_effect = [
-            approval_result,    # approval lookup
-            tracked_result,     # tracked email lookup
-            account_result,     # account lookup
+            approval_result,  # approval lookup
+            tracked_result,  # tracked email lookup
+            account_result,  # account lookup
             tracked_update_result,  # tracked email update lookup
         ]
 
@@ -363,7 +363,7 @@ class TestHandleSpamRejection:
         ):
             # process_mail is imported inside the function, so we patch at module level
             # Actually it's a lazy import — patch where it'll be looked up
-            with patch("app.workers.mail_processor.process_mail", new_callable=AsyncMock) as mock_pm:
+            with patch("app.workers.mail_processor.process_mail", new_callable=AsyncMock) as _mock_pm:
                 # Re-patch at module level after import
                 pass
 

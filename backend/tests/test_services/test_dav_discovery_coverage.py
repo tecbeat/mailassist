@@ -12,7 +12,6 @@ import httpx
 import pytest
 
 from app.services.dav_discovery import (
-    DavDiscoveryResult,
     _absolute_url,
     _discover_collections,
     _discover_dav_url,
@@ -21,7 +20,6 @@ from app.services.dav_discovery import (
     _propfind,
     discover_dav,
 )
-
 
 # ---------------------------------------------------------------------------
 # _absolute_url
@@ -331,7 +329,9 @@ class TestDiscoverCollections:
         resp.text = xml
         mock_client.request = AsyncMock(return_value=resp)
 
-        result = await _discover_collections(mock_client, "https://nc.example.com/remote.php/dav/addressbooks/users/admin/")
+        result = await _discover_collections(
+            mock_client, "https://nc.example.com/remote.php/dav/addressbooks/users/admin/"
+        )
         assert len(result) == 2
         assert result[0].collection_type == "addressbook"
         assert result[0].display_name == "Contacts"
@@ -406,9 +406,21 @@ class TestDiscoverDav:
     @pytest.mark.asyncio
     async def test_full_success(self):
         with (
-            patch("app.services.dav_discovery._discover_dav_url", new_callable=AsyncMock, return_value="https://nc.example.com/remote.php/dav"),
-            patch("app.services.dav_discovery._discover_principal", new_callable=AsyncMock, return_value="https://nc.example.com/dav/principals/admin/"),
-            patch("app.services.dav_discovery._discover_homesets", new_callable=AsyncMock, return_value=("https://nc.example.com/dav/ab/", "https://nc.example.com/dav/cal/")),
+            patch(
+                "app.services.dav_discovery._discover_dav_url",
+                new_callable=AsyncMock,
+                return_value="https://nc.example.com/remote.php/dav",
+            ),
+            patch(
+                "app.services.dav_discovery._discover_principal",
+                new_callable=AsyncMock,
+                return_value="https://nc.example.com/dav/principals/admin/",
+            ),
+            patch(
+                "app.services.dav_discovery._discover_homesets",
+                new_callable=AsyncMock,
+                return_value=("https://nc.example.com/dav/ab/", "https://nc.example.com/dav/cal/"),
+            ),
             patch("app.services.dav_discovery._discover_collections", new_callable=AsyncMock, return_value=[]),
             patch("app.services.dav_discovery.httpx.AsyncClient") as mock_cls,
         ):
@@ -422,7 +434,11 @@ class TestDiscoverDav:
     @pytest.mark.asyncio
     async def test_no_principal_returns_failure(self):
         with (
-            patch("app.services.dav_discovery._discover_dav_url", new_callable=AsyncMock, return_value="https://nc.example.com/dav"),
+            patch(
+                "app.services.dav_discovery._discover_dav_url",
+                new_callable=AsyncMock,
+                return_value="https://nc.example.com/dav",
+            ),
             patch("app.services.dav_discovery._discover_principal", new_callable=AsyncMock, return_value=None),
             patch("app.services.dav_discovery.httpx.AsyncClient") as mock_cls,
         ):
@@ -457,8 +473,16 @@ class TestDiscoverDav:
     @pytest.mark.asyncio
     async def test_no_collections_message(self):
         with (
-            patch("app.services.dav_discovery._discover_dav_url", new_callable=AsyncMock, return_value="https://nc.example.com/dav"),
-            patch("app.services.dav_discovery._discover_principal", new_callable=AsyncMock, return_value="https://nc.example.com/dav/p/"),
+            patch(
+                "app.services.dav_discovery._discover_dav_url",
+                new_callable=AsyncMock,
+                return_value="https://nc.example.com/dav",
+            ),
+            patch(
+                "app.services.dav_discovery._discover_principal",
+                new_callable=AsyncMock,
+                return_value="https://nc.example.com/dav/p/",
+            ),
             patch("app.services.dav_discovery._discover_homesets", new_callable=AsyncMock, return_value=(None, None)),
             patch("app.services.dav_discovery.httpx.AsyncClient") as mock_cls,
         ):

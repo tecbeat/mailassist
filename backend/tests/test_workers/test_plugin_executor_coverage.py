@@ -15,7 +15,7 @@ import pytest
 import structlog
 
 from app.models.user import ApprovalMode
-from app.plugins.base import ActionResult, MailContext, PipelineContext
+from app.plugins.base import ActionResult, MailContext
 from app.workers.plugin_executor import (
     PluginOutcome,
     _handle_transient_error,
@@ -107,7 +107,9 @@ def _make_user_settings(*, mode=ApprovalMode.AUTO, language="en", timezone="UTC"
 def _base_patches():
     """Return common patches for execute_plugin."""
     return {
-        "resolve_prompts": patch("app.workers.plugin_executor.resolve_prompts", new_callable=AsyncMock, return_value=("sys", "usr")),
+        "resolve_prompts": patch(
+            "app.workers.plugin_executor.resolve_prompts", new_callable=AsyncMock, return_value=("sys", "usr")
+        ),
         "get_encryption": patch("app.workers.plugin_executor.get_encryption"),
         "get_template_engine": patch("app.workers.plugin_executor.get_template_engine"),
         "call_llm": patch("app.workers.plugin_executor.call_llm", new_callable=AsyncMock),
@@ -505,7 +507,11 @@ class TestExecutePluginReprompt:
             patch("app.workers.plugin_executor.resolve_prompts", new_callable=AsyncMock, return_value=("s", "u")),
             patch("app.workers.plugin_executor.get_encryption") as enc,
             patch("app.workers.plugin_executor.get_template_engine"),
-            patch("app.workers.plugin_executor.call_llm", new_callable=AsyncMock, side_effect=[(ai_resp1, 50), (ai_resp2, 30)]),
+            patch(
+                "app.workers.plugin_executor.call_llm",
+                new_callable=AsyncMock,
+                side_effect=[(ai_resp1, 50), (ai_resp2, 30)],
+            ),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.has_actionable_results", return_value=True),
             patch("app.workers.plugin_executor._persist_plugin_result", new_callable=AsyncMock),
@@ -546,7 +552,11 @@ class TestExecutePluginReprompt:
             patch("app.workers.plugin_executor.resolve_prompts", new_callable=AsyncMock, return_value=("s", "u")),
             patch("app.workers.plugin_executor.get_encryption") as enc,
             patch("app.workers.plugin_executor.get_template_engine"),
-            patch("app.workers.plugin_executor.call_llm", new_callable=AsyncMock, side_effect=[(ai_resp, 50), TransientLLMError("retry fail")]),
+            patch(
+                "app.workers.plugin_executor.call_llm",
+                new_callable=AsyncMock,
+                side_effect=[(ai_resp, 50), TransientLLMError("retry fail")],
+            ),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.has_actionable_results", return_value=False),
         ):

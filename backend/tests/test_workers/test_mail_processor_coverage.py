@@ -11,7 +11,6 @@ process_mail timeout handling.
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -90,7 +89,10 @@ async def test_update_tracked_email_not_found_logs_event(mock_ctx: MagicMock) ->
 
     updater = MagicMock()
     await _update_tracked_email(
-        "acc", "100", "INBOX", _log(),
+        "acc",
+        "100",
+        "INBOX",
+        _log(),
         updater=updater,
         not_found_event="test_not_found",
     )
@@ -121,7 +123,10 @@ async def test_update_tracked_status_sets_all_fields(mock_ctx: MagicMock) -> Non
     mock_ctx.return_value = _session_ctx(tracked)
 
     await _update_tracked_status(
-        "acc", "100", TrackedEmailStatus.COMPLETED, _log(),
+        "acc",
+        "100",
+        TrackedEmailStatus.COMPLETED,
+        _log(),
         current_folder="INBOX",
         error="some error",
         error_type=ErrorType.MAIL,
@@ -154,7 +159,10 @@ async def test_update_tracked_status_increments_retry_on_requeue(mock_ctx: Magic
     mock_ctx.return_value = _session_ctx(tracked)
 
     await _update_tracked_status(
-        "acc", "100", TrackedEmailStatus.QUEUED, _log(),
+        "acc",
+        "100",
+        TrackedEmailStatus.QUEUED,
+        _log(),
     )
     assert tracked.retry_count == 3
 
@@ -364,6 +372,7 @@ async def test_process_mail_timeout_requeues(
     mock_status.assert_awaited_once()
     args = mock_status.call_args
     from app.models import TrackedEmailStatus
+
     assert args[0][2] == TrackedEmailStatus.QUEUED
     assert args[1]["error_type"] == ErrorType.TIMEOUT
     mock_clear.assert_awaited_once()
@@ -378,13 +387,9 @@ async def test_process_mail_cancelled_requeues(
     mock_status: AsyncMock,
     mock_clear: AsyncMock,
 ) -> None:
-    import asyncio
 
     from app.workers.mail_processor import process_mail
 
     await process_mail({}, str(uuid4()), str(uuid4()), "100")
     mock_status.assert_awaited_once()
     mock_clear.assert_awaited_once()
-
-
-

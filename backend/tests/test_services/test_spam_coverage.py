@@ -71,7 +71,9 @@ class TestReportAsSpam:
             new_uid: str | None = "200"
 
         with (
-            patch(f"{MODULE}._upsert_blocklist_entry", new_callable=AsyncMock, side_effect=[True, True]) as mock_upsert,
+            patch(
+                f"{MODULE}._upsert_blocklist_entry", new_callable=AsyncMock, side_effect=[True, True]
+            ) as _mock_upsert,
             patch(f"{MODULE}.execute_imap_actions", new_callable=AsyncMock, return_value=_MoveOutcome()) as mock_imap,
         ):
             result = await report_as_spam(db, user_id, account_id, "uid1", "spam@evil.com")

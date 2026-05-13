@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.core.exceptions import ExternalServiceError
-from app.core.types import ConnectionTestResult
 from app.services.calendar import (
     CalendarEventResult,
     create_calendar_event,
@@ -17,7 +16,6 @@ from app.services.calendar import (
     get_caldav_credentials,
     test_caldav_connection,
 )
-
 
 # ---------------------------------------------------------------------------
 # test_caldav_connection
@@ -76,9 +74,7 @@ async def test_test_caldav_connection_calendar_not_found_returns_error(
         calendar_home="https://dav.example.com/cal/",
     )
 
-    result = await test_caldav_connection(
-        "https://dav.example.com", "u", "p", default_calendar="missing"
-    )
+    result = await test_caldav_connection("https://dav.example.com", "u", "p", default_calendar="missing")
 
     assert result.success is False
     assert "'missing' not found" in result.message
@@ -96,9 +92,7 @@ async def test_test_caldav_connection_default_calendar_valid_returns_success(
         calendar_home="https://dav.example.com/cal/",
     )
 
-    result = await test_caldav_connection(
-        "https://dav.example.com", "u", "p", default_calendar="work"
-    )
+    result = await test_caldav_connection("https://dav.example.com", "u", "p", default_calendar="work")
 
     assert result.success is True
     assert "'work' is valid" in result.message
@@ -158,9 +152,7 @@ async def test_create_calendar_event_success_returns_result(
     mock_to_thread.return_value = ("Personal", False, "uid-123")
 
     start = datetime(2025, 6, 1, 10, 0)
-    result = await create_calendar_event(
-        "https://dav.example.com", "u", "p", "Personal", "Meeting", start
-    )
+    result = await create_calendar_event("https://dav.example.com", "u", "p", "Personal", "Meeting", start)
 
     assert isinstance(result, CalendarEventResult)
     assert result.calendar_name == "Personal"
@@ -181,9 +173,7 @@ async def test_create_calendar_event_all_day_uses_date(
     mock_to_thread.return_value = ("Cal", False, "uid-day")
 
     start = datetime(2025, 6, 1)
-    result = await create_calendar_event(
-        "https://d.example.com", "u", "p", "Cal", "Holiday", start, is_all_day=True
-    )
+    result = await create_calendar_event("https://d.example.com", "u", "p", "Cal", "Holiday", start, is_all_day=True)
 
     assert result.title == "Holiday"
 
@@ -202,9 +192,7 @@ async def test_create_calendar_event_exception_raises_external_service_error(
     mock_to_thread.side_effect = ConnectionError("timeout")
 
     with pytest.raises(ExternalServiceError):
-        await create_calendar_event(
-            "https://d.example.com", "u", "p", "Cal", "Oops", datetime(2025, 1, 1)
-        )
+        await create_calendar_event("https://d.example.com", "u", "p", "Cal", "Oops", datetime(2025, 1, 1))
 
 
 @pytest.mark.asyncio
@@ -220,9 +208,7 @@ async def test_create_calendar_event_discovery_fails_uses_original_url(
     mock_discover.return_value = MagicMock(success=False, dav_url=None)
     mock_to_thread.return_value = ("Fallback", False, None)
 
-    result = await create_calendar_event(
-        "https://orig.example.com", "u", "p", "Fallback", "Test", datetime(2025, 1, 1)
-    )
+    result = await create_calendar_event("https://orig.example.com", "u", "p", "Fallback", "Test", datetime(2025, 1, 1))
 
     assert result.calendar_name == "Fallback"
 

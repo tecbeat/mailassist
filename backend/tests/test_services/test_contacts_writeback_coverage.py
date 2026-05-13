@@ -55,7 +55,9 @@ class TestWriteBackEmailToContact:
         config = _make_config()
         contact = _make_contact(emails=["alice@example.com"])
 
-        with patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}):
+        with patch(
+            "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+        ):
             result = await write_back_email_to_contact(db, config, contact, "Alice@Example.com")
 
         assert result is True
@@ -69,7 +71,9 @@ class TestWriteBackEmailToContact:
         contact = _make_contact()
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
             patch("app.services.contacts.writeback.discover_dav", side_effect=RuntimeError("boom")),
         ):
             result = await write_back_email_to_contact(db, config, contact, "new@example.com")
@@ -85,8 +89,13 @@ class TestWriteBackEmailToContact:
         contact = _make_contact()
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
-            patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery(success=False, addressbook_home=""))),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
+            patch(
+                "app.services.contacts.writeback.discover_dav",
+                AsyncMock(return_value=_make_discovery(success=False, addressbook_home="")),
+            ),
         ):
             result = await write_back_email_to_contact(db, config, contact, "new@example.com")
 
@@ -109,7 +118,9 @@ class TestWriteBackEmailToContact:
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
             patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
@@ -144,7 +155,9 @@ class TestWriteBackEmailToContact:
         mock_cache = AsyncMock()
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
             patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
             patch("app.services.contacts.writeback.get_cache_client", return_value=mock_cache),
@@ -185,7 +198,9 @@ class TestWriteBackEmailToContact:
         mock_cache = AsyncMock()
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
             patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
             patch("app.services.contacts.writeback.get_cache_client", return_value=mock_cache),
@@ -218,7 +233,9 @@ class TestWriteBackEmailToContact:
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
             patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
@@ -239,7 +256,9 @@ class TestWriteBackEmailToContact:
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
             patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
@@ -263,7 +282,9 @@ class TestRemoveEmailFromContact:
         contact = _make_contact(emails=["a@b.com"])
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
             patch("app.services.contacts.writeback.discover_dav", side_effect=RuntimeError("boom")),
         ):
             result = await remove_email_from_contact(db, config, contact, "a@b.com")
@@ -279,8 +300,13 @@ class TestRemoveEmailFromContact:
         contact = _make_contact()
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
-            patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery(success=False, addressbook_home=""))),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
+            patch(
+                "app.services.contacts.writeback.discover_dav",
+                AsyncMock(return_value=_make_discovery(success=False, addressbook_home="")),
+            ),
         ):
             result = await remove_email_from_contact(db, config, contact, "x@y.com")
 
@@ -303,7 +329,9 @@ class TestRemoveEmailFromContact:
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
             patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
@@ -331,7 +359,9 @@ class TestRemoveEmailFromContact:
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
             patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
@@ -367,7 +397,9 @@ class TestRemoveEmailFromContact:
         mock_cache = AsyncMock()
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
             patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
             patch("app.services.contacts.writeback.get_cache_client", return_value=mock_cache),
@@ -401,7 +433,9 @@ class TestRemoveEmailFromContact:
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
             patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
@@ -433,7 +467,9 @@ class TestRemoveEmailFromContact:
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
             patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
@@ -454,7 +490,9 @@ class TestRemoveEmailFromContact:
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
         with (
-            patch("app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}),
+            patch(
+                "app.services.contacts.writeback.decrypt_credentials", return_value={"username": "u", "password": "p"}
+            ),
             patch("app.services.contacts.writeback.discover_dav", AsyncMock(return_value=_make_discovery())),
             patch("app.services.contacts.writeback.httpx.AsyncClient", return_value=mock_client),
         ):
@@ -646,7 +684,11 @@ class TestAutoAddSenderEmail:
 
         with (
             patch("app.services.contacts.writeback.get_session_ctx", fake_session),
-            patch("app.services.contacts.writeback.write_back_email_to_contact", new_callable=AsyncMock, side_effect=RuntimeError("writeback boom")),
+            patch(
+                "app.services.contacts.writeback.write_back_email_to_contact",
+                new_callable=AsyncMock,
+                side_effect=RuntimeError("writeback boom"),
+            ),
             patch("app.services.contacts.writeback.get_cache_client", return_value=mock_cache),
             patch("app.services.contacts.writeback.get_settings") as mock_s,
         ):

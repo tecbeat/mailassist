@@ -19,8 +19,6 @@ import pytest
 
 from app.services.mail import (
     ImapConnection,
-    MoveResult,
-    RelocatedMail,
     _parse_copyuid,
     check_circuit_breaker,
     delete_folder,
@@ -44,10 +42,10 @@ from app.services.mail import (
     update_account_sync_status,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_conn(
     capabilities: list[str] | None = None,
@@ -79,6 +77,7 @@ def _make_account(**overrides):
 # safe_imap_logout
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_safe_imap_logout_success_calls_logout() -> None:
     mb = MagicMock()
@@ -98,14 +97,17 @@ async def test_safe_imap_logout_exception_suppressed() -> None:
 # connect_imap
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_connect_imap_no_ssl_raises() -> None:
     from app.services.mail import connect_imap
 
     acct = _make_account(imap_use_ssl=False)
-    with patch("app.services.mail.decrypt_credentials", return_value={"username": "u", "password": "p"}):
-        with pytest.raises(ValueError, match="SSL/TLS required"):
-            await connect_imap(acct)
+    with (
+        patch("app.services.mail.decrypt_credentials", return_value={"username": "u", "password": "p"}),
+        pytest.raises(ValueError, match="SSL/TLS required"),
+    ):
+        await connect_imap(acct)
 
 
 @pytest.mark.asyncio
@@ -174,6 +176,7 @@ async def test_connect_imap_separator_detection_failure() -> None:
 # imap_connection context manager
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_imap_connection_yields_and_cleans_up() -> None:
     acct = _make_account()
@@ -198,7 +201,7 @@ async def test_imap_connection_cleans_up_on_exception() -> None:
         patch("app.services.mail.safe_imap_logout", new_callable=AsyncMock) as mock_logout,
     ):
         with pytest.raises(RuntimeError):
-            async with imap_connection(acct) as conn:
+            async with imap_connection(acct) as _conn:
                 raise RuntimeError("boom")
         mock_logout.assert_awaited_once()
 
@@ -206,6 +209,7 @@ async def test_imap_connection_cleans_up_on_exception() -> None:
 # ---------------------------------------------------------------------------
 # Folder cache
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_get_cached_folders_hit() -> None:
@@ -260,6 +264,7 @@ async def test_invalidate_folder_cache_deletes_key() -> None:
 # resolve_folder
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_resolve_folder_first_match_found() -> None:
     conn = _make_conn()
@@ -299,6 +304,7 @@ async def test_resolve_folder_create_if_missing() -> None:
 # update_account_sync_status
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_update_account_sync_status_success() -> None:
     db = AsyncMock()
@@ -318,6 +324,7 @@ async def test_update_account_sync_status_error() -> None:
 # ---------------------------------------------------------------------------
 # check_circuit_breaker
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_check_circuit_breaker_under_limit_returns_false() -> None:
@@ -379,6 +386,7 @@ async def test_check_circuit_breaker_no_account_returns_false() -> None:
 # store_flags
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_store_flags_success() -> None:
     conn = _make_conn()
@@ -398,6 +406,7 @@ async def test_store_flags_failure_returns_false() -> None:
 # ---------------------------------------------------------------------------
 # _parse_copyuid
 # ---------------------------------------------------------------------------
+
 
 def test_parse_copyuid_from_client_response() -> None:
     client = MagicMock()
@@ -433,6 +442,7 @@ def test_parse_copyuid_client_returns_none_data() -> None:
 # ---------------------------------------------------------------------------
 # move_message
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_move_message_with_move_capability() -> None:
@@ -522,6 +532,7 @@ async def test_move_message_move_fails_falls_back_to_copy() -> None:
 # move_all_to_inbox
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_move_all_to_inbox_with_move_capability() -> None:
     conn = _make_conn(capabilities=["MOVE"])
@@ -605,6 +616,7 @@ async def test_move_all_to_inbox_batch_copy_fails() -> None:
 # delete_folder / rename_folder
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_delete_folder_success() -> None:
     conn = _make_conn()
@@ -641,6 +653,7 @@ async def test_rename_folder_failure() -> None:
 # get_folder_status
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_get_folder_status_success() -> None:
     conn = _make_conn()
@@ -665,6 +678,7 @@ async def test_get_folder_status_exception_returns_zeros() -> None:
 # ---------------------------------------------------------------------------
 # list_folders_with_counts
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_list_folders_with_counts_success() -> None:
@@ -701,6 +715,7 @@ async def test_list_folders_with_counts_status_exception() -> None:
 # fetch_raw_message (additional to existing tests)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_fetch_raw_message_imap_fetch_failed() -> None:
     conn = _make_conn()
@@ -709,14 +724,17 @@ async def test_fetch_raw_message_imap_fetch_failed() -> None:
     async def run_fn(fn, *a, **kw):
         return fn(*a, **kw)
 
-    with patch("app.services.mail.asyncio.to_thread", side_effect=run_fn):
-        with pytest.raises(ValueError, match="imap_fetch_failed"):
-            await fetch_raw_message(conn, "5")
+    with (
+        patch("app.services.mail.asyncio.to_thread", side_effect=run_fn),
+        pytest.raises(ValueError, match="imap_fetch_failed"),
+    ):
+        await fetch_raw_message(conn, "5")
 
 
 # ---------------------------------------------------------------------------
 # search_uids
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_search_uids_unseen() -> None:
@@ -761,6 +779,7 @@ async def test_search_uids_custom_criteria() -> None:
 # ---------------------------------------------------------------------------
 # fetch_envelopes
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_fetch_envelopes_empty_uids() -> None:
@@ -847,6 +866,7 @@ async def test_fetch_envelopes_fills_missing_uids() -> None:
 # fetch_message_ids
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_fetch_message_ids_empty() -> None:
     result = await fetch_message_ids(_make_conn(), [])
@@ -886,6 +906,7 @@ async def test_fetch_message_ids_exception() -> None:
 # ---------------------------------------------------------------------------
 # relocate_mail_across_folders
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_relocate_mail_empty_subject_returns_none() -> None:
@@ -959,7 +980,5 @@ async def test_relocate_mail_skips_excluded_folders() -> None:
         patch("app.services.mail.list_folders", new_callable=AsyncMock, return_value=["INBOX", "Trash", "Spam"]),
         patch("app.services.mail.asyncio.to_thread", side_effect=run_fn),
     ):
-        result = await relocate_mail_across_folders(
-            conn, "Test", "INBOX", excluded_folders=["Trash", "Spam"]
-        )
+        result = await relocate_mail_across_folders(conn, "Test", "INBOX", excluded_folders=["Trash", "Spam"])
     assert result is None
