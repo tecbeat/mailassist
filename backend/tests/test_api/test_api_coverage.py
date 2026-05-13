@@ -1012,14 +1012,14 @@ class TestDashboardJobParseId:
     def test_parse_cron_job(self):
         from app.api.dashboard import _parse_job_id
 
-        fn, mail_uid, account_id = _parse_job_id("cron:poll_mail_accounts:abc123")
+        fn, mail_uid, _account_id = _parse_job_id("cron:poll_mail_accounts:abc123")
         assert fn == "poll_mail_accounts"
         assert mail_uid is None
 
     def test_parse_empty(self):
         from app.api.dashboard import _parse_job_id
 
-        fn, mail_uid, account_id = _parse_job_id("unknown")
+        fn, mail_uid, _account_id = _parse_job_id("unknown")
         assert fn == "unknown"
         assert mail_uid is None
 
