@@ -46,7 +46,11 @@ async def test_insert_includes_uidvalidity(mock_pg_insert: MagicMock) -> None:
     envelopes: dict[str, tuple[str | None, str | None, datetime | None]] = {}
 
     await _insert_tracked_batch(
-        db, uuid4(), uuid4(), uids, envelopes,
+        db,
+        uuid4(),
+        uuid4(),
+        uids,
+        envelopes,
         uidvalidity=12345,
     )
 
@@ -68,7 +72,11 @@ async def test_insert_includes_first_seen_uid(mock_pg_insert: MagicMock) -> None
     envelopes: dict[str, tuple[str | None, str | None, datetime | None]] = {}
 
     await _insert_tracked_batch(
-        db, uuid4(), uuid4(), uids, envelopes,
+        db,
+        uuid4(),
+        uuid4(),
+        uids,
+        envelopes,
     )
 
     call_args = mock_pg_insert.return_value.values.call_args[0][0]
@@ -89,7 +97,11 @@ async def test_insert_includes_first_seen_folder(mock_pg_insert: MagicMock) -> N
     envelopes: dict[str, tuple[str | None, str | None, datetime | None]] = {}
 
     await _insert_tracked_batch(
-        db, uuid4(), uuid4(), uids, envelopes,
+        db,
+        uuid4(),
+        uuid4(),
+        uids,
+        envelopes,
         current_folder="Sent",
     )
 
@@ -115,7 +127,11 @@ async def test_insert_uses_envelope_data(mock_pg_insert: MagicMock) -> None:
     }
 
     await _insert_tracked_batch(
-        db, uuid4(), uuid4(), uids, envelopes,
+        db,
+        uuid4(),
+        uuid4(),
+        uids,
+        envelopes,
     )
 
     call_args = mock_pg_insert.return_value.values.call_args[0][0]
@@ -136,7 +152,11 @@ async def test_insert_uidvalidity_none_when_not_provided(mock_pg_insert: MagicMo
     mock_pg_insert.return_value.values.return_value = mock_stmt
 
     await _insert_tracked_batch(
-        db, uuid4(), uuid4(), ["1"], {},
+        db,
+        uuid4(),
+        uuid4(),
+        ["1"],
+        {},
     )
 
     call_args = mock_pg_insert.return_value.values.call_args[0][0]
@@ -158,7 +178,11 @@ async def test_insert_returns_actual_inserted_count(mock_pg_insert: MagicMock) -
     mock_pg_insert.return_value.values.return_value = mock_stmt
 
     result = await _insert_tracked_batch(
-        db, uuid4(), uuid4(), ["1", "2", "3", "4", "5"], {},
+        db,
+        uuid4(),
+        uuid4(),
+        ["1", "2", "3", "4", "5"],
+        {},
     )
 
     assert result == 3  # only 3 actually inserted (2 were conflicts)
@@ -169,7 +193,11 @@ async def test_insert_empty_uids_returns_zero() -> None:
     """Empty UID list returns 0 without any DB calls."""
     db = AsyncMock()
     result = await _insert_tracked_batch(
-        db, uuid4(), uuid4(), [], {},
+        db,
+        uuid4(),
+        uuid4(),
+        [],
+        {},
     )
     assert result == 0
     db.execute.assert_not_awaited()
@@ -185,9 +213,11 @@ async def test_insert_uses_on_conflict_do_nothing(mock_pg_insert: MagicMock) -> 
     mock_pg_insert.return_value.values.return_value = mock_stmt
 
     await _insert_tracked_batch(
-        db, uuid4(), uuid4(), ["1"], {},
+        db,
+        uuid4(),
+        uuid4(),
+        ["1"],
+        {},
     )
 
-    mock_stmt.on_conflict_do_nothing.assert_called_once_with(
-        constraint="uq_tracked_email_account_uid"
-    )
+    mock_stmt.on_conflict_do_nothing.assert_called_once_with(constraint="uq_tracked_email_account_uid")

@@ -71,8 +71,13 @@ async def test_metadata_sets_subject_when_provided() -> None:
     tracked = _make_tracked()
     with _capture_updater_and_call(tracked):
         await _update_tracked_metadata(
-            ACCOUNT_ID, "100", "INBOX",
-            subject="Hello", sender=None, received_at=None, log=LOG,
+            ACCOUNT_ID,
+            "100",
+            "INBOX",
+            subject="Hello",
+            sender=None,
+            received_at=None,
+            log=LOG,
         )
     assert tracked.subject == "Hello"
 
@@ -83,9 +88,14 @@ async def test_metadata_sets_all_fields_when_provided() -> None:
     tracked = _make_tracked()
     with _capture_updater_and_call(tracked):
         await _update_tracked_metadata(
-            ACCOUNT_ID, "100", "INBOX",
-            subject="Re: test", sender="alice@example.com",
-            received_at=now, message_id="<abc@example.com>", log=LOG,
+            ACCOUNT_ID,
+            "100",
+            "INBOX",
+            subject="Re: test",
+            sender="alice@example.com",
+            received_at=now,
+            message_id="<abc@example.com>",
+            log=LOG,
         )
     assert tracked.subject == "Re: test"
     assert tracked.sender == "alice@example.com"
@@ -96,13 +106,21 @@ async def test_metadata_sets_all_fields_when_provided() -> None:
 @pytest.mark.asyncio
 async def test_metadata_skips_none_fields() -> None:
     tracked = _make_tracked(
-        subject="Original", sender="bob@example.com",
-        received_at=datetime(2025, 1, 1, tzinfo=UTC), message_id="<old@x>",
+        subject="Original",
+        sender="bob@example.com",
+        received_at=datetime(2025, 1, 1, tzinfo=UTC),
+        message_id="<old@x>",
     )
     with _capture_updater_and_call(tracked):
         await _update_tracked_metadata(
-            ACCOUNT_ID, "100", "INBOX",
-            subject=None, sender=None, received_at=None, message_id=None, log=LOG,
+            ACCOUNT_ID,
+            "100",
+            "INBOX",
+            subject=None,
+            sender=None,
+            received_at=None,
+            message_id=None,
+            log=LOG,
         )
     assert tracked.subject == "Original"
     assert tracked.sender == "bob@example.com"
@@ -120,8 +138,13 @@ async def test_first_seen_uid_backfill_when_empty() -> None:
     tracked = _make_tracked(mail_uid="42", first_seen_uid=None)
     with _capture_updater_and_call(tracked):
         await _update_tracked_metadata(
-            ACCOUNT_ID, "42", "INBOX",
-            subject=None, sender=None, received_at=None, log=LOG,
+            ACCOUNT_ID,
+            "42",
+            "INBOX",
+            subject=None,
+            sender=None,
+            received_at=None,
+            log=LOG,
         )
     assert tracked.first_seen_uid == "42"
 
@@ -131,8 +154,13 @@ async def test_first_seen_uid_not_overwritten_when_set() -> None:
     tracked = _make_tracked(mail_uid="99", first_seen_uid="1")
     with _capture_updater_and_call(tracked):
         await _update_tracked_metadata(
-            ACCOUNT_ID, "99", "INBOX",
-            subject=None, sender=None, received_at=None, log=LOG,
+            ACCOUNT_ID,
+            "99",
+            "INBOX",
+            subject=None,
+            sender=None,
+            received_at=None,
+            log=LOG,
         )
     assert tracked.first_seen_uid == "1"
 
@@ -142,8 +170,13 @@ async def test_first_seen_folder_backfill_when_empty() -> None:
     tracked = _make_tracked(current_folder="Sent", first_seen_folder=None)
     with _capture_updater_and_call(tracked):
         await _update_tracked_metadata(
-            ACCOUNT_ID, "100", "Sent",
-            subject=None, sender=None, received_at=None, log=LOG,
+            ACCOUNT_ID,
+            "100",
+            "Sent",
+            subject=None,
+            sender=None,
+            received_at=None,
+            log=LOG,
         )
     assert tracked.first_seen_folder == "Sent"
 
@@ -153,7 +186,12 @@ async def test_first_seen_folder_not_overwritten_when_set() -> None:
     tracked = _make_tracked(current_folder="Archive", first_seen_folder="INBOX")
     with _capture_updater_and_call(tracked):
         await _update_tracked_metadata(
-            ACCOUNT_ID, "100", "Archive",
-            subject=None, sender=None, received_at=None, log=LOG,
+            ACCOUNT_ID,
+            "100",
+            "Archive",
+            subject=None,
+            sender=None,
+            received_at=None,
+            log=LOG,
         )
     assert tracked.first_seen_folder == "INBOX"

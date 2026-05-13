@@ -57,9 +57,7 @@ async def test_relink_updates_uid_and_uidvalidity(
     ctx.__aexit__ = AsyncMock(return_value=False)
     mock_session_ctx.return_value = ctx
 
-    relinked = await _relink_uids_by_message_id(
-        conn, account_id, "INBOX", ["200", "201"], new_uidvalidity=2
-    )
+    relinked = await _relink_uids_by_message_id(conn, account_id, "INBOX", ["200", "201"], new_uidvalidity=2)
 
     assert relinked == 1
     assert tracked.mail_uid == "200"
@@ -92,9 +90,7 @@ async def test_relink_skips_when_uid_unchanged(
     ctx.__aexit__ = AsyncMock(return_value=False)
     mock_session_ctx.return_value = ctx
 
-    relinked = await _relink_uids_by_message_id(
-        conn, uuid4(), "INBOX", ["200"], new_uidvalidity=2
-    )
+    relinked = await _relink_uids_by_message_id(conn, uuid4(), "INBOX", ["200"], new_uidvalidity=2)
 
     assert relinked == 0
     db.flush.assert_not_awaited()
@@ -111,9 +107,7 @@ async def test_relink_returns_zero_when_no_message_ids(
     conn = AsyncMock()
     mock_fetch_mids.return_value = {"200": None, "201": None}
 
-    relinked = await _relink_uids_by_message_id(
-        conn, uuid4(), "INBOX", ["200", "201"], new_uidvalidity=5
-    )
+    relinked = await _relink_uids_by_message_id(conn, uuid4(), "INBOX", ["200", "201"], new_uidvalidity=5)
 
     assert relinked == 0
     # DB session should never be opened
@@ -144,9 +138,7 @@ async def test_relink_skips_tracked_with_none_message_id(
     ctx.__aexit__ = AsyncMock(return_value=False)
     mock_session_ctx.return_value = ctx
 
-    relinked = await _relink_uids_by_message_id(
-        conn, uuid4(), "INBOX", ["200"], new_uidvalidity=2
-    )
+    relinked = await _relink_uids_by_message_id(conn, uuid4(), "INBOX", ["200"], new_uidvalidity=2)
 
     assert relinked == 0
     db.flush.assert_not_awaited()
