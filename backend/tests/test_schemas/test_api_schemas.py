@@ -119,7 +119,7 @@ class TestTrackedEmailResponse:
                     summary="Not spam",
                 )
             },
-            completion_reason=CompletionReason.ALL_PLUGINS_DONE,
+            completion_reason=CompletionReason.FULL_PIPELINE,
             current_folder="INBOX",
             mail_account_id=uuid4(),
             retry_count=0,

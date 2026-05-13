@@ -6,30 +6,34 @@ and that Phase 4 failure does not prevent the notification from having fired.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
 
-# We test the ordering by recording call order across two mock callables.
+MODULE = "app.workers.mail_processor"
 
 
 @pytest.mark.asyncio
-@patch("app.workers.mail_processor._clear_pipeline_progress", new_callable=AsyncMock)
-@patch("app.workers.mail_processor._update_tracked_status", new_callable=AsyncMock)
-@patch("app.workers.mail_processor._pause_account", new_callable=AsyncMock)
-@patch("app.workers.mail_processor.execute_post_pipeline", new_callable=AsyncMock)
-@patch("app.workers.mail_processor.get_event_bus")
-@patch("app.workers.mail_processor._set_pipeline_progress", new_callable=AsyncMock)
-@patch("app.workers.mail_processor.run_plugin_pipeline", new_callable=AsyncMock)
-@patch("app.workers.mail_processor.fetch_and_parse_mail", new_callable=AsyncMock)
-@patch("app.workers.mail_processor.get_session_ctx")
-@patch("app.workers.mail_processor.fetch_account", new_callable=AsyncMock)
+@patch(f"{MODULE}._clear_pipeline_progress", new_callable=AsyncMock)
+@patch(f"{MODULE}._update_tracked_status", new_callable=AsyncMock)
+@patch(f"{MODULE}._pause_account", new_callable=AsyncMock)
+@patch(f"{MODULE}.execute_post_pipeline", new_callable=AsyncMock)
+@patch(f"{MODULE}.get_event_bus")
+@patch(f"{MODULE}._set_pipeline_progress", new_callable=AsyncMock)
+@patch(f"{MODULE}.run_ai_pipeline", new_callable=AsyncMock)
+@patch(f"{MODULE}._update_tracked_metadata", new_callable=AsyncMock)
+@patch(f"{MODULE}.parse_raw_mail")
+@patch(f"{MODULE}.fetch_raw_mail", new_callable=AsyncMock)
+@patch(f"{MODULE}.get_session_ctx")
+@patch(f"{MODULE}.fetch_account", new_callable=AsyncMock)
 async def test_notify_fires_before_move(
     mock_fetch_account: AsyncMock,
     mock_session_ctx: MagicMock,
-    mock_fetch_mail: AsyncMock,
+    mock_fetch_raw: AsyncMock,
+    mock_parse: MagicMock,
+    mock_update_meta: AsyncMock,
     mock_run_pipeline: AsyncMock,
     mock_set_progress: AsyncMock,
     mock_get_event_bus: MagicMock,
@@ -41,7 +45,7 @@ async def test_notify_fires_before_move(
     """Event bus emit is called before execute_post_pipeline."""
     from app.workers.mail_processor import _process_mail_inner
 
-    # Setup
+    # Setup account
     account = MagicMock()
     account.id = uuid4()
     mock_fetch_account.return_value = account
@@ -54,24 +58,36 @@ async def test_notify_fires_before_move(
     ctx.__aexit__ = AsyncMock(return_value=False)
     mock_session_ctx.return_value = ctx
 
-    # Phase 2: fetch mail
-    mock_fetch_mail.return_value = MagicMock()
+    # Phase 2: fetch + parse
+    fetch_result = MagicMock()
+    fetch_result.relocated = False
+    fetch_result.raw_bytes = b"raw"
+    fetch_result.imap_folders = ["INBOX"]
+    fetch_result.folder_separator = "/"
+    mock_fetch_raw.return_value = fetch_result
 
-    # Phase 3: pipeline
+    parsed = MagicMock()
+    parsed.subject = "Test"
+    parsed.sender = "a@b.com"
+    parsed.date = None
+    parsed.message_id = None
+    mock_parse.return_value = parsed
+
+    # Phase 3: pipeline result
     pipeline_result = MagicMock()
+    pipeline_result.provider_error = False
     pipeline_result.plugins_executed = ["spam"]
     pipeline_result.approvals_created = []
     pipeline_result.mail_id = str(uuid4())
     pipeline_result.auto_actions = [{"action": "move", "folder": "Spam"}]
-    pipeline_result.plugin_results = {"spam": MagicMock(display_name="Spam", to_dict=MagicMock(return_value={}))}
+    pipeline_result.plugin_results = {
+        "spam": MagicMock(display_name="Spam", to_dict=MagicMock(return_value={})),
+    }
     mock_run_pipeline.return_value = pipeline_result
 
     # Event bus
     event_bus = AsyncMock()
     mock_get_event_bus.return_value = event_bus
-
-    # Phase 4: successful move
-    mock_execute_post.return_value = ("Spam", "999")
 
     # Track call order
     call_order: list[str] = []
@@ -91,27 +107,28 @@ async def test_notify_fires_before_move(
         log=log,
     )
 
-    # Verify ordering: emit before move
-    assert "emit" in call_order
-    assert "move" in call_order
     assert call_order.index("emit") < call_order.index("move")
 
 
 @pytest.mark.asyncio
-@patch("app.workers.mail_processor._clear_pipeline_progress", new_callable=AsyncMock)
-@patch("app.workers.mail_processor._update_tracked_status", new_callable=AsyncMock)
-@patch("app.workers.mail_processor._pause_account", new_callable=AsyncMock)
-@patch("app.workers.mail_processor.execute_post_pipeline", new_callable=AsyncMock)
-@patch("app.workers.mail_processor.get_event_bus")
-@patch("app.workers.mail_processor._set_pipeline_progress", new_callable=AsyncMock)
-@patch("app.workers.mail_processor.run_plugin_pipeline", new_callable=AsyncMock)
-@patch("app.workers.mail_processor.fetch_and_parse_mail", new_callable=AsyncMock)
-@patch("app.workers.mail_processor.get_session_ctx")
-@patch("app.workers.mail_processor.fetch_account", new_callable=AsyncMock)
+@patch(f"{MODULE}._clear_pipeline_progress", new_callable=AsyncMock)
+@patch(f"{MODULE}._update_tracked_status", new_callable=AsyncMock)
+@patch(f"{MODULE}._pause_account", new_callable=AsyncMock)
+@patch(f"{MODULE}.execute_post_pipeline", new_callable=AsyncMock)
+@patch(f"{MODULE}.get_event_bus")
+@patch(f"{MODULE}._set_pipeline_progress", new_callable=AsyncMock)
+@patch(f"{MODULE}.run_ai_pipeline", new_callable=AsyncMock)
+@patch(f"{MODULE}._update_tracked_metadata", new_callable=AsyncMock)
+@patch(f"{MODULE}.parse_raw_mail")
+@patch(f"{MODULE}.fetch_raw_mail", new_callable=AsyncMock)
+@patch(f"{MODULE}.get_session_ctx")
+@patch(f"{MODULE}.fetch_account", new_callable=AsyncMock)
 async def test_notify_still_fired_when_phase4_fails(
     mock_fetch_account: AsyncMock,
     mock_session_ctx: MagicMock,
-    mock_fetch_mail: AsyncMock,
+    mock_fetch_raw: AsyncMock,
+    mock_parse: MagicMock,
+    mock_update_meta: AsyncMock,
     mock_run_pipeline: AsyncMock,
     mock_set_progress: AsyncMock,
     mock_get_event_bus: MagicMock,
@@ -134,14 +151,29 @@ async def test_notify_still_fired_when_phase4_fails(
     ctx.__aexit__ = AsyncMock(return_value=False)
     mock_session_ctx.return_value = ctx
 
-    mock_fetch_mail.return_value = MagicMock()
+    fetch_result = MagicMock()
+    fetch_result.relocated = False
+    fetch_result.raw_bytes = b"raw"
+    fetch_result.imap_folders = ["INBOX"]
+    fetch_result.folder_separator = "/"
+    mock_fetch_raw.return_value = fetch_result
+
+    parsed = MagicMock()
+    parsed.subject = "Test"
+    parsed.sender = "a@b.com"
+    parsed.date = None
+    parsed.message_id = None
+    mock_parse.return_value = parsed
 
     pipeline_result = MagicMock()
+    pipeline_result.provider_error = False
     pipeline_result.plugins_executed = ["spam"]
     pipeline_result.approvals_created = []
     pipeline_result.mail_id = str(uuid4())
     pipeline_result.auto_actions = [{"action": "move", "folder": "Spam"}]
-    pipeline_result.plugin_results = {"spam": MagicMock(display_name="Spam", to_dict=MagicMock(return_value={}))}
+    pipeline_result.plugin_results = {
+        "spam": MagicMock(display_name="Spam", to_dict=MagicMock(return_value={})),
+    }
     mock_run_pipeline.return_value = pipeline_result
 
     event_bus = AsyncMock()

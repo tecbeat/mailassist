@@ -8,13 +8,12 @@ detection query that fires after metadata update.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
 import structlog
 
-from app.models.mail import TrackedEmail
 from app.workers.mail_processor import _update_tracked_metadata
 
 MODULE = "app.workers.mail_processor"
@@ -34,9 +33,9 @@ def _make_tracked(
     message_id: str | None = None,
     first_seen_uid: str | None = None,
     first_seen_folder: str | None = None,
-) -> TrackedEmail:
-    """Build a minimal TrackedEmail instance for unit testing."""
-    t = TrackedEmail.__new__(TrackedEmail)
+) -> MagicMock:
+    """Build a MagicMock TrackedEmail for unit testing."""
+    t = MagicMock()
     t.id = uuid4()
     t.mail_uid = mail_uid
     t.current_folder = current_folder
@@ -49,7 +48,7 @@ def _make_tracked(
     return t
 
 
-def _capture_updater_and_call(tracked: TrackedEmail):
+def _capture_updater_and_call(tracked: MagicMock):
     """Patch ``_update_tracked_email`` to capture and invoke the updater callable."""
 
     async def _fake_update(_aid, _uid, _folder, _log, *, updater, **_kw):

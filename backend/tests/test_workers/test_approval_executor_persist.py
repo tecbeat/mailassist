@@ -119,48 +119,50 @@ async def test_edited_actions_override_ai_response() -> None:
 
 
 # ---------------------------------------------------------------------------
-# spam_detection — uses save_spam_detection
+# otp_extraction
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_spam_detection_calls_save() -> None:
+async def test_otp_extraction_persists() -> None:
     approval = _make_approval(
-        function_type="spam_detection",
-        ai_response_data={"is_spam": True, "confidence": 0.98, "reason": "phishing"},
+        function_type="otp_extraction",
+        ai_response_data={"has_codes": True, "codes": [{"code": "123456"}]},
     )
 
-    with patch(f"{MODULE}.save_spam_detection", new_callable=AsyncMock) as mock_save:
+    with patch(f"{MODULE}.save_otp", new_callable=AsyncMock) as mock_save:
         await _persist_plugin_data(approval)
         mock_save.assert_awaited_once()
         kw = mock_save.call_args.kwargs
-        assert kw["is_spam"] is True
+        assert kw["has_codes"] is True
         assert kw["mail_id"] == approval.mail_id
         assert kw["own_session"] is True
 
 
 # ---------------------------------------------------------------------------
-# contacts — uses auto_writeback=True
+# auto_reply
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_contacts_uses_auto_writeback() -> None:
+async def test_auto_reply_persists() -> None:
     approval = _make_approval(
-        function_type="contacts",
+        function_type="auto_reply",
         ai_response_data={
-            "contact_id": str(uuid4()),
-            "contact_name": "Bob",
-            "confidence": 0.85,
-            "reasoning": "match",
+            "should_reply": False,
+            "draft_body": None,
+            "tone": "friendly",
+            "reasoning": "no reply needed",
         },
     )
 
-    with patch(f"{MODULE}.save_contact_assignment", new_callable=AsyncMock) as mock_save:
+    with patch(f"{MODULE}.save_auto_reply", new_callable=AsyncMock) as mock_save:
         await _persist_plugin_data(approval)
+        mock_save.assert_awaited_once()
         kw = mock_save.call_args.kwargs
-        assert kw["auto_writeback"] is True
-        assert kw["sender_email"] == "sender@example.com"
+        assert kw["should_reply"] is False
+        assert kw["mail_id"] == approval.mail_id
+        assert kw["own_session"] is True
 
 
 # ---------------------------------------------------------------------------

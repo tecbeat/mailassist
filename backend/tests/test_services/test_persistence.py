@@ -502,7 +502,7 @@ async def test_save_contact_assignment_auto_writeback(mock_db: AsyncMock) -> Non
 
     contact_id = str(uuid4())
 
-    with patch("app.services.persistence.auto_add_sender_email", new_callable=AsyncMock) as mock_wb:
+    with patch("app.services.contacts.writeback.auto_add_sender_email", new_callable=AsyncMock) as mock_wb:
         await save_contact_assignment(
             user_id=uuid4(),
             contact_id=contact_id,
@@ -524,7 +524,7 @@ async def test_save_contact_assignment_no_writeback_for_new_contact(mock_db: Asy
 
     contact_id = str(uuid4())
 
-    with patch("app.services.persistence.auto_add_sender_email", new_callable=AsyncMock) as mock_wb:
+    with patch("app.services.contacts.writeback.auto_add_sender_email", new_callable=AsyncMock) as mock_wb:
         await save_contact_assignment(
             user_id=uuid4(),
             contact_id=contact_id,

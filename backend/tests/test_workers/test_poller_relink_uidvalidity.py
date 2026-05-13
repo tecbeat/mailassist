@@ -30,7 +30,7 @@ def _make_tracked(mail_uid: str, message_id: str | None, uidvalidity: int) -> Ma
 
 @pytest.mark.asyncio
 @patch("app.workers.mail_poller.get_session_ctx")
-@patch("app.workers.mail_poller.fetch_message_ids", new_callable=AsyncMock)
+@patch("app.services.mail.fetch_message_ids", new_callable=AsyncMock)
 async def test_relink_updates_uid_and_uidvalidity(
     mock_fetch_mids: AsyncMock,
     mock_session_ctx: MagicMock,
@@ -70,7 +70,7 @@ async def test_relink_updates_uid_and_uidvalidity(
 
 @pytest.mark.asyncio
 @patch("app.workers.mail_poller.get_session_ctx")
-@patch("app.workers.mail_poller.fetch_message_ids", new_callable=AsyncMock)
+@patch("app.services.mail.fetch_message_ids", new_callable=AsyncMock)
 async def test_relink_skips_when_uid_unchanged(
     mock_fetch_mids: AsyncMock,
     mock_session_ctx: MagicMock,
@@ -102,7 +102,7 @@ async def test_relink_skips_when_uid_unchanged(
 
 @pytest.mark.asyncio
 @patch("app.workers.mail_poller.get_session_ctx")
-@patch("app.workers.mail_poller.fetch_message_ids", new_callable=AsyncMock)
+@patch("app.services.mail.fetch_message_ids", new_callable=AsyncMock)
 async def test_relink_returns_zero_when_no_message_ids(
     mock_fetch_mids: AsyncMock,
     mock_session_ctx: MagicMock,
@@ -122,7 +122,7 @@ async def test_relink_returns_zero_when_no_message_ids(
 
 @pytest.mark.asyncio
 @patch("app.workers.mail_poller.get_session_ctx")
-@patch("app.workers.mail_poller.fetch_message_ids", new_callable=AsyncMock)
+@patch("app.services.mail.fetch_message_ids", new_callable=AsyncMock)
 async def test_relink_skips_tracked_with_none_message_id(
     mock_fetch_mids: AsyncMock,
     mock_session_ctx: MagicMock,
