@@ -873,6 +873,7 @@ async def _evaluate_rules(
             account_id=UUID(account_id),
             mail_uid=mail_uid,
             actions_taken=rule_result.actions_taken if rule_result else [],
+            mail_id=UUID(context.mail_id) if context.mail_id else None,
         )
     )
 

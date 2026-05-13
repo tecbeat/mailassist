@@ -510,14 +510,14 @@ async def create_contact(
 # to avoid FastAPI matching the literal segment as a {contact_id} UUID.
 
 
-@router.get("/assignment/{account_id}/{mail_uid}")
+@router.get("/assignment/{account_id}/{mail_uid}", deprecated=True)
 async def get_mail_contact(
     account_id: UUID,
     mail_uid: str,
     db: DbSession,
     user_id: CurrentUserId,
 ) -> ContactAssignmentSchema | None:
-    """Get the AI-assigned contact for a specific mail.
+    """Get the AI-assigned contact for a specific mail (deprecated, use mail_id variant).
 
     Returns ``None`` (HTTP 200 with ``null`` body) when no assignment exists.
     """
@@ -530,6 +530,32 @@ async def get_mail_contact(
             ContactAssignment.user_id == user_id,
             TrackedEmail.mail_account_id == account_id,
             TrackedEmail.mail_uid == mail_uid,
+        )
+        .order_by(ContactAssignment.created_at.desc())
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    assignment = result.scalar_one_or_none()
+    if assignment is None:
+        return None
+    return ContactAssignmentSchema.model_validate(assignment)
+
+
+@router.get("/assignment/by-mail/{mail_id}")
+async def get_mail_contact_by_mail_id(
+    mail_id: UUID,
+    db: DbSession,
+    user_id: CurrentUserId,
+) -> ContactAssignmentSchema | None:
+    """Get the AI-assigned contact for a specific mail by mail_id.
+
+    Returns ``None`` (HTTP 200 with ``null`` body) when no assignment exists.
+    """
+    stmt = (
+        select(ContactAssignment)
+        .where(
+            ContactAssignment.user_id == user_id,
+            ContactAssignment.mail_id == mail_id,
         )
         .order_by(ContactAssignment.created_at.desc())
         .limit(1)

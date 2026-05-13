@@ -13,7 +13,7 @@ export interface SpamReportRequest {
      * IMAP UID of the mail to report
      * @maxLength 100
      */
-  mail_id: string;
+  mail_uid: string;
   /** Mail account the message belongs to */
   mail_account_id: string;
   /**

@@ -247,6 +247,7 @@ async def handle_ai_processing_complete(event: Event) -> None:
                         mail_uid=event.mail_uid,
                         channels=channels_sent,
                         correlation_id=event.correlation_id,
+                        mail_id=event.mail_id,
                     )
                 )
             else:

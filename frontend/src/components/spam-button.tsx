@@ -66,7 +66,7 @@ export function SpamButton(props: SpamButtonProps) {
       reportMail.mutate(
         {
           data: {
-            mail_id: p.mailId,
+            mail_uid: p.mailId,
             mail_account_id: p.mailAccountId,
             sender_email: p.senderEmail,
             subject: p.subject,

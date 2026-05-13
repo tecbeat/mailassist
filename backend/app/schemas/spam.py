@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 class SpamReportRequest(BaseModel):
     """Request to report a mail as spam."""
 
-    mail_id: str = Field(max_length=100, description="IMAP UID of the mail to report")
+    mail_uid: str = Field(max_length=100, description="IMAP UID of the mail to report")
     mail_account_id: UUID = Field(description="Mail account the message belongs to")
     sender_email: str = Field(max_length=320, description="Sender email address")
     subject: str | None = Field(default=None, max_length=998, description="Email subject for pattern extraction")
