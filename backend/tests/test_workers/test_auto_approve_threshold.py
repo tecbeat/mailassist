@@ -8,11 +8,6 @@ Issue #123.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
-
-import pytest
 
 from app.models.user import ApprovalMode
 
@@ -45,13 +40,6 @@ class FakeActionResult:
     skip_remaining_plugins: bool = False
     error: str | None = None
     retry_prompt: str | None = None
-
-
-def _make_outcome() -> Any:
-    """Import and instantiate PluginOutcome."""
-    from app.workers.plugin_executor import PluginOutcome
-
-    return PluginOutcome(plugin_name="spam_detection", plugin_display_name="Spam Detection")
 
 
 class TestAutoApproveThreshold:
