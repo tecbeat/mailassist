@@ -256,6 +256,7 @@ def make_mail_context(**kwargs) -> dict:
         "user_id": str(uuid4()),
         "account_id": str(uuid4()),
         "mail_uid": "123",
+        "mail_id": str(uuid4()),
         "sender": "sender@example.com",
         "sender_name": "Test Sender",
         "recipient": "me@example.com",
