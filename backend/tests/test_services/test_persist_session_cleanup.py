@@ -76,31 +76,31 @@ async def test_persist_no_session_raises():
 
 @pytest.mark.asyncio
 async def test_save_calendar_event_flushes_and_expunges_before_caldav_sync():
-    """flush+expunge must happen inside _persist before _sync_event_to_caldav.
+    """CalDAV sync must receive a record with accessible attributes after session closes.
 
-    Regression test for DetachedInstanceError: record attributes must remain
-    accessible after the session closes (i.e. after expunge, not expire).
+    The upsert pattern uses RETURNING + detached CalendarEvent instance,
+    ensuring attributes remain accessible outside the session context.
     """
     call_order: list[str] = []
-    captured_record: list[object] = []
+    sync_calls: list[object] = []
 
     mock_session = AsyncMock()
 
-    async def track_flush() -> None:
-        call_order.append("flush")
+    # Simulate RETURNING result
+    mock_row = MagicMock()
+    mock_row.id = uuid.uuid4()
+    mock_result = MagicMock()
+    mock_result.fetchone.return_value = mock_row
 
-    def track_expunge(obj: object) -> None:
-        call_order.append("expunge")
-        captured_record.append(obj)
+    async def track_execute(stmt: object) -> object:
+        call_order.append("execute")
+        return mock_result
 
-    mock_session.flush = AsyncMock(side_effect=track_flush)
-    mock_session.expunge = MagicMock(side_effect=track_expunge)
+    mock_session.execute = AsyncMock(side_effect=track_execute)
 
     mock_ctx = MagicMock()
     mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
     mock_ctx.__aexit__ = AsyncMock(return_value=False)
-
-    sync_calls: list[object] = []
 
     async def fake_sync(record: object) -> None:
         call_order.append("sync")
@@ -120,9 +120,9 @@ async def test_save_calendar_event_flushes_and_expunges_before_caldav_sync():
             own_session=True,
         )
 
-    # flush must precede expunge; both must precede the CalDAV sync
-    assert call_order == ["flush", "expunge", "sync"], f"Expected ['flush', 'expunge', 'sync'], got {call_order}"
+    # execute (upsert) must precede the CalDAV sync
+    assert call_order == ["execute", "sync"], f"Expected ['execute', 'sync'], got {call_order}"
 
-    # _sync_event_to_caldav receives the same record object that was expunged
+    # _sync_event_to_caldav receives a CalendarEvent with accessible title
     assert len(sync_calls) == 1
-    assert sync_calls[0] is captured_record[0]
+    assert getattr(sync_calls[0], "title", None) == "Team Meeting"

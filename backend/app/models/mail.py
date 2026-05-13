@@ -218,6 +218,7 @@ class DetectedNewsletter(Base):
     tracked_email: Mapped["TrackedEmail | None"] = relationship(back_populates="newsletter", foreign_keys=[mail_id])
 
     __table_args__ = (
+        UniqueConstraint("mail_id", name="uq_newsletter_mail_id"),
         Index("ix_detected_newsletters_user_id", "user_id"),
         Index("ix_detected_newsletters_sender_address", "sender_address"),
         Index("ix_detected_newsletters_mail_id", "mail_id"),
@@ -383,6 +384,7 @@ class CalendarEvent(Base):
     )
 
     __table_args__ = (
+        UniqueConstraint("mail_id", name="uq_calendar_event_mail_id"),
         Index("ix_calendar_events_user_id", "user_id"),
         Index("ix_calendar_events_mail_id", "mail_id"),
     )
@@ -411,6 +413,7 @@ class AutoReplyRecord(Base):
     tracked_email: Mapped["TrackedEmail | None"] = relationship(back_populates="auto_reply", foreign_keys=[mail_id])
 
     __table_args__ = (
+        UniqueConstraint("mail_id", name="uq_auto_reply_mail_id"),
         Index("ix_auto_reply_records_user_id", "user_id"),
         Index("ix_auto_reply_records_mail_id", "mail_id"),
     )
@@ -449,6 +452,7 @@ class ContactAssignment(Base):
     )
 
     __table_args__ = (
+        UniqueConstraint("mail_id", name="uq_contact_assignment_mail_id"),
         Index("ix_contact_assignments_user_id", "user_id"),
         Index("ix_contact_assignments_contact_id", "contact_id"),
         Index("ix_contact_assignments_mail_id", "mail_id"),
