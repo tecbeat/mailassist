@@ -55,7 +55,9 @@ def _fake_session_ctx(tracked: MagicMock | None):
     db = AsyncMock()
     result = MagicMock()
     result.scalar_one_or_none.return_value = tracked
-    db.execute.return_value = result
+    db.execute = AsyncMock(return_value=result)
+    db.flush = AsyncMock()
+    db.commit = AsyncMock()
 
     @asynccontextmanager
     async def ctx():
@@ -78,7 +80,7 @@ async def test_update_tracked_email_calls_updater() -> None:
 
     updater = MagicMock()
     with patch(f"{MODULE}.get_session_ctx", ctx_fn):
-        await _update_tracked_email("acc", "100", "INBOX", _log(), updater=updater)
+        await _update_tracked_email(str(uuid4()), "100", "INBOX", _log(), updater=updater)
     updater.assert_called_once_with(tracked)
 
 
@@ -91,7 +93,7 @@ async def test_update_tracked_email_not_found_logs_event() -> None:
     updater = MagicMock()
     with patch(f"{MODULE}.get_session_ctx", ctx_fn):
         await _update_tracked_email(
-            "acc",
+            str(uuid4()),
             "100",
             "INBOX",
             _log(),
@@ -107,7 +109,7 @@ async def test_update_tracked_email_exception_non_fatal(mock_ctx: MagicMock) -> 
     from app.workers.mail_processor import _update_tracked_email
 
     # Should not raise
-    await _update_tracked_email("acc", "100", "INBOX", _log(), updater=MagicMock())
+    await _update_tracked_email(str(uuid4()), "100", "INBOX", _log(), updater=MagicMock())
 
 
 # ---------------------------------------------------------------------------
@@ -123,9 +125,10 @@ async def test_update_tracked_status_sets_all_fields() -> None:
     tracked = _make_tracked(status="PROCESSING")
     ctx_fn, _db = _fake_session_ctx(tracked)
 
+    acc_id = str(uuid4())
     with patch(f"{MODULE}.get_session_ctx", ctx_fn):
         await _update_tracked_status(
-            "acc",
+            acc_id,
             "100",
             TrackedEmailStatus.COMPLETED,
             _log(),
@@ -160,7 +163,7 @@ async def test_update_tracked_status_increments_retry_on_requeue() -> None:
 
     with patch(f"{MODULE}.get_session_ctx", ctx_fn):
         await _update_tracked_status(
-            "acc",
+            str(uuid4()),
             "100",
             TrackedEmailStatus.QUEUED,
             _log(),
@@ -181,7 +184,7 @@ async def test_update_current_folder_sets_folder_and_uid() -> None:
     ctx_fn, _db = _fake_session_ctx(tracked)
 
     with patch(f"{MODULE}.get_session_ctx", ctx_fn):
-        await _update_current_folder("acc", "100", "INBOX", "Archive", _log(), new_mail_uid="200")
+        await _update_current_folder(str(uuid4()), "100", "INBOX", "Archive", _log(), new_mail_uid="200")
 
     assert tracked.current_folder == "Archive"
     assert tracked.mail_uid == "200"
@@ -195,7 +198,7 @@ async def test_update_current_folder_no_new_uid() -> None:
     ctx_fn, _db = _fake_session_ctx(tracked)
 
     with patch(f"{MODULE}.get_session_ctx", ctx_fn):
-        await _update_current_folder("acc", "100", "INBOX", "Trash", _log())
+        await _update_current_folder(str(uuid4()), "100", "INBOX", "Trash", _log())
     assert tracked.current_folder == "Trash"
 
 
@@ -218,7 +221,7 @@ async def test_fail_queued_mails_executes_bulk_update() -> None:
         yield db
 
     with patch(f"{MODULE}.get_session_ctx", ctx):
-        await _fail_queued_mails_for_folder("acc", "INBOX", "folder gone", _log())
+        await _fail_queued_mails_for_folder(str(uuid4()), "INBOX", "folder gone", _log())
     db.execute.assert_awaited_once()
 
 
@@ -228,7 +231,7 @@ async def test_fail_queued_mails_exception_non_fatal(mock_ctx: MagicMock) -> Non
     from app.workers.mail_processor import _fail_queued_mails_for_folder
 
     # Should not raise
-    await _fail_queued_mails_for_folder("acc", "INBOX", "err", _log())
+    await _fail_queued_mails_for_folder(str(uuid4()), "INBOX", "err", _log())
 
 
 # ---------------------------------------------------------------------------

@@ -93,16 +93,17 @@ def test_is_idle_active_finished_task_returns_false() -> None:
 @pytest.mark.asyncio
 async def test_stop_idle_for_account_cancels_running_task() -> None:
     aid = "acc-stop"
-    task = MagicMock()
-    task.done.return_value = False
-    task.cancel = MagicMock()
-    # Make task awaitable (simulates CancelledError being suppressed)
-    task.__await__ = lambda self: iter([])
+
+    # Create a real asyncio task that we can cancel
+    async def _never_finish():
+        await asyncio.sleep(999)
+
+    task = asyncio.create_task(_never_finish())
     idle_monitor._idle_tasks[aid] = task
 
     await stop_idle_for_account(aid)
 
-    task.cancel.assert_called_once()
+    assert task.cancelled()
     assert aid not in idle_monitor._idle_tasks
 
 
@@ -118,11 +119,11 @@ async def test_stop_idle_for_account_noop_if_not_present() -> None:
 
 @pytest.mark.asyncio
 async def test_stop_all_idle_cancels_all_tasks() -> None:
+    async def _never_finish():
+        await asyncio.sleep(999)
+
     for i in range(3):
-        task = MagicMock()
-        task.done.return_value = False
-        task.cancel = MagicMock()
-        task.__await__ = lambda self: iter([])
+        task = asyncio.create_task(_never_finish())
         idle_monitor._idle_tasks[f"acc-{i}"] = task
 
     await stop_all_idle()
