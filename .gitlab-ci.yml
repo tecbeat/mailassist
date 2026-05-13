@@ -34,18 +34,40 @@ pages:
   stage: deploy
   image: node:24-slim@sha256:24dc26ef1e3c3690f27ebc4136c9c186c3133b25563ae4d7f0692e4d1fe5db0e
   needs: []
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
   script:
-    - |
-      cd docs
-      npm ci
-      if [ "$CI_COMMIT_REF_NAME" = "$CI_DEFAULT_BRANCH" ]; then
-        npx docusaurus build --out-dir ../public
-      else
-        DOCUSAURUS_BASE_URL="/mailassist/$CI_COMMIT_REF_SLUG/" npx docusaurus build --out-dir "../public/$CI_COMMIT_REF_SLUG"
-      fi
+    - cd docs
+    - npm ci
+    - npx docusaurus build --out-dir ../public
   artifacts:
     paths:
       - public
+  environment:
+    name: documentation/production
+    url: https://tecbeat.pages.teccave.de/mailassist
+  tags:
+    - teccave
+
+pages:preview:
+  stage: deploy
+  image: node:24-slim@sha256:24dc26ef1e3c3690f27ebc4136c9c186c3133b25563ae4d7f0692e4d1fe5db0e
+  needs: []
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+  script:
+    - cd docs
+    - npm ci
+    - DOCUSAURUS_BASE_URL="/mailassist/$CI_COMMIT_REF_SLUG/" npx docusaurus build --out-dir ../public
+  artifacts:
+    paths:
+      - public
+  pages:
+    path_prefix: $CI_COMMIT_REF_SLUG
+  environment:
+    name: documentation/$CI_COMMIT_REF_SLUG
+    url: https://tecbeat.pages.teccave.de/mailassist/$CI_COMMIT_REF_SLUG
+    on_stop: pages:preview:stop
   tags:
     - teccave
 
@@ -292,3 +314,18 @@ cleanup_image:
 cleanup_helm:
   rules:
     - when: never
+
+pages:preview:stop:
+  stage: cleanup
+  image: alpine:latest
+  needs:
+    - job: cleanup_image
+      artifacts: false
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+      when: always
+  script:
+    - "true"
+  environment:
+    name: documentation/$CI_COMMIT_REF_SLUG
+    action: stop
