@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.20.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.20.0-beta) - 2026-05-13
+
+### ⛰️  Features
+
+- Add auto-approve threshold for high-confidence plugin actions - ([5e3f5a1](https://git.teccave.de/tecbeat/mailassist/commit/5e3f5a10dfd92281c11c6a31920631f249136f26))
+
+### 🐛 Bug Fixes
+
+- Remove unused imports in auto-approve test - ([438b5a9](https://git.teccave.de/tecbeat/mailassist/commit/438b5a97b01d0c23cc1f9c54aafcd43beb6e9fd1))
+- Make auto_approve_threshold migration idempotent - ([d5e5548](https://git.teccave.de/tecbeat/mailassist/commit/d5e5548a7fc38bd6be3f2fad14ae9cfdf4567369))
+
 ## [2.19.2-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.19.2-beta) - 2026-05-13
 
 ### 🐛 Bug Fixes
