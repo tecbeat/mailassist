@@ -12,8 +12,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from conftest import FakeValkey
 from fastapi import HTTPException
+
+from conftest import FakeValkey
 
 
 @pytest.fixture
