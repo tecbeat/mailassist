@@ -18,6 +18,7 @@ export interface SettingsResponse {
   draft_expiry_hours: number;
   max_concurrent_processing: number;
   ai_timeout_seconds: number;
+  auto_approve_threshold?: number | null;
   approval_modes: ApprovalModes;
   plugin_order?: string[] | null;
   plugin_provider_map?: SettingsResponsePluginProviderMap;

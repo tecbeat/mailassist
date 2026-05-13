@@ -86,6 +86,7 @@ class PluginOutcome:
     transient_error_reason: str | None = None
     failed_provider_id: str | None = None
     break_pipeline: bool = False
+    auto_approved: bool = False
     result_summary: str | None = None
     result_details: dict[str, Any] | None = None
 
@@ -298,7 +299,22 @@ async def execute_plugin(
         elif approval_mode == ApprovalMode.APPROVAL:
             needs_approval = has_actionable_results(action_result.actions_taken)
 
+    # --- Auto-approve threshold: skip approval if confidence exceeds user threshold ---
+    auto_approved = False
+    if needs_approval and user_settings and user_settings.auto_approve_threshold is not None:
+        response_confidence = getattr(ai_response, "confidence", None)
+        if response_confidence is not None and response_confidence >= user_settings.auto_approve_threshold:
+            needs_approval = False
+            auto_approved = True
+            log.info(
+                "auto_approve_threshold_met",
+                plugin=plugin.name,
+                confidence=response_confidence,
+                threshold=user_settings.auto_approve_threshold,
+            )
+
     outcome.needs_approval = needs_approval
+    outcome.auto_approved = auto_approved
 
     if needs_approval:
         await _create_approval(

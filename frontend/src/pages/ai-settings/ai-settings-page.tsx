@@ -130,13 +130,14 @@ export default function AISettingsPage() {
   const aiSettingsSchema = z.object({
     max_concurrent_processing: z.number().int().min(1).max(20),
     ai_timeout_seconds: z.number().int().min(10).max(600),
+    auto_approve_threshold: z.number().min(0).max(100).nullable(),
   });
 
   type AISettingsFormValues = z.infer<typeof aiSettingsSchema>;
 
   const aiSettingsForm = useForm<AISettingsFormValues>({
     resolver: zodResolver(aiSettingsSchema),
-    defaultValues: { max_concurrent_processing: 5, ai_timeout_seconds: 120 },
+    defaultValues: { max_concurrent_processing: 5, ai_timeout_seconds: 120, auto_approve_threshold: null },
   });
 
   useEffect(() => {
@@ -146,13 +147,24 @@ export default function AISettingsPage() {
           (settings as Record<string, unknown>).max_concurrent_processing as number ?? 5,
         ai_timeout_seconds:
           (settings as Record<string, unknown>).ai_timeout_seconds as number ?? 120,
+        auto_approve_threshold:
+          (settings as Record<string, unknown>).auto_approve_threshold != null
+            ? ((settings as Record<string, unknown>).auto_approve_threshold as number) * 100
+            : null,
       });
     }
   }, [settings, aiSettingsForm]);
 
   async function saveAISettings(values: AISettingsFormValues) {
     try {
-      await updateSettingsMutation.mutateAsync({ data: values });
+      const payload: Record<string, unknown> = {
+        max_concurrent_processing: values.max_concurrent_processing,
+        ai_timeout_seconds: values.ai_timeout_seconds,
+        auto_approve_threshold: values.auto_approve_threshold != null
+          ? values.auto_approve_threshold / 100
+          : null,
+      };
+      await updateSettingsMutation.mutateAsync({ data: payload });
       queryClient.invalidateQueries({
         queryKey: getGetSettingsApiSettingsGetQueryKey(),
       });
@@ -349,6 +361,25 @@ export default function AISettingsPage() {
           ),
           error: aiSettingsForm.formState.errors.ai_timeout_seconds?.message,
           hint: "Global timeout for AI requests (10-600s). Per-provider overrides take precedence.",
+        },
+        {
+          key: "auto_approve_threshold",
+          label: "Auto-Approve Confidence Threshold (%)",
+          input: (
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              placeholder="Disabled"
+              className="w-28 h-8 text-sm"
+              {...aiSettingsForm.register("auto_approve_threshold", {
+                setValueAs: (v: string) => (v === "" ? null : Number(v)),
+              })}
+            />
+          ),
+          error: aiSettingsForm.formState.errors.auto_approve_threshold?.message,
+          hint: "Actions with confidence above this threshold are auto-approved. Leave empty to disable.",
         },
       ]}
     />

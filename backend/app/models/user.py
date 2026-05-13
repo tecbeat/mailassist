@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -145,6 +145,7 @@ class UserSettings(Base):
     approval_mode_otp: Mapped[ApprovalMode] = mapped_column(
         _approval_enum, default=ApprovalMode.APPROVAL, nullable=False
     )
+    auto_approve_threshold: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
     plugin_order: Mapped[list[str] | None] = mapped_column(JSON, nullable=True, default=None)
     plugin_provider_map: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True, default=None)
     last_seen_version: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
