@@ -12,14 +12,13 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from app.models.mail import CompletionReason, ErrorType, TrackedEmailStatus
+from app.models.mail import CompletionReason, TrackedEmailStatus
 from app.schemas.queue import PipelineProgress, PluginResultEntry, TrackedEmailResponse
 from app.schemas.summary import (
     EmailSummaryResponse,
     MissingSummaryItem,
     SummaryFilterRules,
 )
-
 
 # ---------------------------------------------------------------------------
 # EmailSummaryResponse
