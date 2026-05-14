@@ -82,7 +82,11 @@ async def get_otp_code(
 ) -> ExtractedOtpCodeResponse:
     """Get a single extracted OTP code with full details."""
     otp = await get_or_404(
-        db, ExtractedOtpCode, otp_id, user_id, "OTP code not found",
+        db,
+        ExtractedOtpCode,
+        otp_id,
+        user_id,
+        "OTP code not found",
         options=[joinedload(ExtractedOtpCode.tracked_email)],
     )
     return ExtractedOtpCodeResponse.model_validate(otp)

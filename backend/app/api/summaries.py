@@ -94,7 +94,11 @@ async def get_summary(
 ) -> EmailSummaryResponse:
     """Get a single email summary with full details."""
     summary = await get_or_404(
-        db, EmailSummary, summary_id, user_id, "Summary not found",
+        db,
+        EmailSummary,
+        summary_id,
+        user_id,
+        "Summary not found",
         options=[joinedload(EmailSummary.tracked_email)],
     )
     return EmailSummaryResponse.model_validate(summary)

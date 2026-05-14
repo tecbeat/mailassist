@@ -78,7 +78,11 @@ async def get_auto_reply(
 ) -> AutoReplyRecordResponse:
     """Get a single auto-reply record."""
     record = await get_or_404(
-        db, AutoReplyRecord, reply_id, user_id, "Auto-reply not found",
+        db,
+        AutoReplyRecord,
+        reply_id,
+        user_id,
+        "Auto-reply not found",
         options=[joinedload(AutoReplyRecord.tracked_email)],
     )
     return AutoReplyRecordResponse.model_validate(record)

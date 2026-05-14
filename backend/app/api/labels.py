@@ -46,11 +46,7 @@ async def list_applied_labels(
     """List applied labels with pagination and optional label filter."""
     uid = user_id
 
-    base_stmt = (
-        select(AppliedLabel)
-        .options(joinedload(AppliedLabel.tracked_email))
-        .where(AppliedLabel.user_id == uid)
-    )
+    base_stmt = select(AppliedLabel).options(joinedload(AppliedLabel.tracked_email)).where(AppliedLabel.user_id == uid)
 
     if label:
         base_stmt = base_stmt.where(AppliedLabel.label.ilike(f"%{sanitize_like(label)}%"))

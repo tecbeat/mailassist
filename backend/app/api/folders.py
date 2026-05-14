@@ -54,9 +54,7 @@ async def list_assigned_folders(
     uid = user_id
 
     base_stmt = (
-        select(AssignedFolder)
-        .options(joinedload(AssignedFolder.tracked_email))
-        .where(AssignedFolder.user_id == uid)
+        select(AssignedFolder).options(joinedload(AssignedFolder.tracked_email)).where(AssignedFolder.user_id == uid)
     )
 
     if folder:

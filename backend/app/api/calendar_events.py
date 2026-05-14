@@ -46,9 +46,7 @@ async def list_calendar_events(
     uid = user_id
 
     base_stmt = (
-        select(CalendarEvent)
-        .options(joinedload(CalendarEvent.tracked_email))
-        .where(CalendarEvent.user_id == uid)
+        select(CalendarEvent).options(joinedload(CalendarEvent.tracked_email)).where(CalendarEvent.user_id == uid)
     )
 
     if search:
@@ -77,7 +75,11 @@ async def get_calendar_event(
 ) -> CalendarEventResponse:
     """Get a single calendar event."""
     event = await get_or_404(
-        db, CalendarEvent, event_id, user_id, "Calendar event not found",
+        db,
+        CalendarEvent,
+        event_id,
+        user_id,
+        "Calendar event not found",
         options=[joinedload(CalendarEvent.tracked_email)],
     )
     return CalendarEventResponse.model_validate(event)

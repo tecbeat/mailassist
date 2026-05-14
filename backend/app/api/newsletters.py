@@ -76,7 +76,11 @@ async def get_newsletter(
 ) -> DetectedNewsletterResponse:
     """Get a single detected newsletter with full details."""
     newsletter = await get_or_404(
-        db, DetectedNewsletter, newsletter_id, user_id, "Newsletter not found",
+        db,
+        DetectedNewsletter,
+        newsletter_id,
+        user_id,
+        "Newsletter not found",
         options=[joinedload(DetectedNewsletter.tracked_email)],
     )
     return DetectedNewsletterResponse.model_validate(newsletter)

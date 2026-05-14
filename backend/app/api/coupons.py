@@ -46,9 +46,7 @@ async def list_coupons(
     uid = user_id
 
     base_stmt = (
-        select(ExtractedCoupon)
-        .options(joinedload(ExtractedCoupon.tracked_email))
-        .where(ExtractedCoupon.user_id == uid)
+        select(ExtractedCoupon).options(joinedload(ExtractedCoupon.tracked_email)).where(ExtractedCoupon.user_id == uid)
     )
 
     if store:
@@ -80,7 +78,11 @@ async def get_coupon(
 ) -> ExtractedCouponResponse:
     """Get a single extracted coupon with full details."""
     coupon = await get_or_404(
-        db, ExtractedCoupon, coupon_id, user_id, "Coupon not found",
+        db,
+        ExtractedCoupon,
+        coupon_id,
+        user_id,
+        "Coupon not found",
         options=[joinedload(ExtractedCoupon.tracked_email)],
     )
     return ExtractedCouponResponse.model_validate(coupon)
