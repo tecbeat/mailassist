@@ -9,6 +9,7 @@ from uuid import UUID
 import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from app.api.deps import (
     CurrentUserId,
@@ -44,7 +45,7 @@ async def list_otp_codes(
     """List extracted OTP codes with pagination and optional filters."""
     uid = user_id
 
-    base_stmt = select(ExtractedOtpCode).where(ExtractedOtpCode.user_id == uid)
+    base_stmt = select(ExtractedOtpCode).options(joinedload(ExtractedOtpCode.tracked_email)).where(ExtractedOtpCode.user_id == uid)
 
     if service:
         base_stmt = base_stmt.where(ExtractedOtpCode.service.ilike(f"%{sanitize_like(service)}%"))
@@ -76,7 +77,10 @@ async def get_otp_code(
     user_id: CurrentUserId,
 ) -> ExtractedOtpCodeResponse:
     """Get a single extracted OTP code with full details."""
-    otp = await get_or_404(db, ExtractedOtpCode, otp_id, user_id, "OTP code not found")
+    otp = await get_or_404(
+        db, ExtractedOtpCode, otp_id, user_id, "OTP code not found",
+        options=[joinedload(ExtractedOtpCode.tracked_email)],
+    )
     return ExtractedOtpCodeResponse.model_validate(otp)
 
 

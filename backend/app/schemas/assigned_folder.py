@@ -5,13 +5,13 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.schemas.plugin_base import PluginResponseBase
 
-class AssignedFolderResponse(BaseModel):
+
+class AssignedFolderResponse(PluginResponseBase):
     """Response schema for an assigned folder record."""
 
     id: UUID
-    subject: str | None = None
-    sender: str | None = None
     folder: str
     confidence: float | None = None
     reason: str | None = None

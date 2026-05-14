@@ -10,6 +10,7 @@ from uuid import UUID
 import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from app.api.deps import (
     CurrentUserId,
@@ -44,7 +45,7 @@ async def list_calendar_events(
     """List calendar events with pagination and optional search filter."""
     uid = user_id
 
-    base_stmt = select(CalendarEvent).where(CalendarEvent.user_id == uid)
+    base_stmt = select(CalendarEvent).options(joinedload(CalendarEvent.tracked_email)).where(CalendarEvent.user_id == uid)
 
     if search:
         base_stmt = base_stmt.where(CalendarEvent.title.ilike(f"%{sanitize_like(search)}%"))
@@ -71,7 +72,10 @@ async def get_calendar_event(
     user_id: CurrentUserId,
 ) -> CalendarEventResponse:
     """Get a single calendar event."""
-    event = await get_or_404(db, CalendarEvent, event_id, user_id, "Calendar event not found")
+    event = await get_or_404(
+        db, CalendarEvent, event_id, user_id, "Calendar event not found",
+        options=[joinedload(CalendarEvent.tracked_email)],
+    )
     return CalendarEventResponse.model_validate(event)
 
 

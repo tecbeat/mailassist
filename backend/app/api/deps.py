@@ -50,6 +50,7 @@ async def get_or_404[T](
     record_id: UUID,
     user_id: UUID,
     detail: str = "Not found",
+    options: list[Any] | None = None,
 ) -> T:
     """Fetch a single record by ID scoped to a user, or raise 404.
 
@@ -59,6 +60,7 @@ async def get_or_404[T](
         record_id: Primary key value.
         user_id: Current user UUID.
         detail: Error message for the 404 response.
+        options: Optional list of SQLAlchemy loader options (e.g. ``joinedload``).
 
     Returns:
         The model instance.
@@ -70,6 +72,9 @@ async def get_or_404[T](
         model.id == record_id,  # type: ignore[attr-defined]
         model.user_id == user_id,  # type: ignore[attr-defined]
     )
+    if options:
+        for opt in options:
+            stmt = stmt.options(opt)
     result = await db.execute(stmt)
     instance = result.scalar_one_or_none()
     if instance is None:

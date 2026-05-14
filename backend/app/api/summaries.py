@@ -10,6 +10,7 @@ from uuid import UUID
 import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import case, select
+from sqlalchemy.orm import contains_eager, joinedload
 
 from app.api.deps import (
     CurrentUserId,
@@ -50,6 +51,7 @@ async def list_summaries(
     base_stmt = (
         select(EmailSummary)
         .join(TrackedEmail, EmailSummary.mail_id == TrackedEmail.id)
+        .options(contains_eager(EmailSummary.tracked_email))
         .where(EmailSummary.user_id == uid)
     )
 
@@ -91,7 +93,10 @@ async def get_summary(
     user_id: CurrentUserId,
 ) -> EmailSummaryResponse:
     """Get a single email summary with full details."""
-    summary = await get_or_404(db, EmailSummary, summary_id, user_id, "Summary not found")
+    summary = await get_or_404(
+        db, EmailSummary, summary_id, user_id, "Summary not found",
+        options=[joinedload(EmailSummary.tracked_email)],
+    )
     return EmailSummaryResponse.model_validate(summary)
 
 

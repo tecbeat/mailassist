@@ -5,13 +5,13 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.schemas.plugin_base import PluginResponseBase
 
-class ExtractedCouponResponse(BaseModel):
+
+class ExtractedCouponResponse(PluginResponseBase):
     """Response schema for an extracted coupon."""
 
     id: UUID
-    subject: str | None = None
-    sender: str | None = None
     code: str | None = None
     description: str | None = None
     store: str | None = None

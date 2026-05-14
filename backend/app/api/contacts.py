@@ -13,6 +13,7 @@ import structlog
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
+from sqlalchemy.orm import joinedload
 
 from app.api.deps import CurrentUserId, DbSession, build_paginated_response, get_or_404, paginate, sanitize_like
 from app.core.redis import get_cache_client
@@ -603,6 +604,7 @@ async def list_contact_mails(
     await get_or_404(db, Contact, contact_id, user_id, "Contact not found")
     base_stmt = (
         select(ContactAssignment)
+        .options(joinedload(ContactAssignment.tracked_email))
         .where(
             ContactAssignment.user_id == user_id,
             ContactAssignment.contact_id == contact_id,

@@ -5,13 +5,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.plugin_base import PluginResponseBase
 
-class CalendarEventResponse(BaseModel):
+
+class CalendarEventResponse(PluginResponseBase):
     """Response schema for a calendar event record."""
 
     id: UUID
-    subject: str | None = None
-    sender: str | None = None
     title: str
     start: datetime | None = None
     end: datetime | None = None

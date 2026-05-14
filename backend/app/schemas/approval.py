@@ -6,8 +6,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.plugin_base import PluginResponseBase
 
-class ApprovalResponse(BaseModel):
+
+class ApprovalResponse(PluginResponseBase):
     """Response schema for an approval queue entry."""
 
     id: UUID
