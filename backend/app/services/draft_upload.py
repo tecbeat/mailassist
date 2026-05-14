@@ -204,7 +204,7 @@ async def upload_draft_to_imap(
                     TrackedEmail.mail_uid == mail_uid,
                 )
                 te_result = await db.execute(te_stmt)
-                tracked_email_id = te_result.scalar_one_or_none()
+                tracked_email_id = te_result.scalars().first()
 
                 if tracked_email_id is None:
                     log.warning("ai_draft_tracking_skipped_no_tracked_email")

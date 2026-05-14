@@ -488,6 +488,7 @@ async def run_ai_pipeline(
     tracked_stmt = select(TrackedEmail.id).where(
         TrackedEmail.mail_account_id == UUID(account_id),
         TrackedEmail.mail_uid == mail_uid,
+        TrackedEmail.current_folder == current_folder,
     )
     tracked_result = await db.execute(tracked_stmt)
     tracked_email_id = tracked_result.scalar_one_or_none()
