@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any
-from uuid import UUID
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, model_validator
+
+if TYPE_CHECKING:
+    from datetime import datetime
+    from uuid import UUID
 
 
 class PluginResponseBase(BaseModel):
@@ -19,8 +21,10 @@ class PluginResponseBase(BaseModel):
     ``mail_from``, and ``mail_date`` — which all live on ``TrackedEmail``,
     not on the plugin table itself.
 
-    Subclasses must set ``model_config = {"from_attributes": True}``.
+    Subclasses inherit ``from_attributes`` and do not need to repeat it.
     """
+
+    model_config = {"from_attributes": True}
 
     mail_uid: str | None = None
     mail_account_id: UUID | None = None

@@ -24,8 +24,6 @@ class ApprovalResponse(PluginResponseBase):
     resolved_at: datetime | None
     expires_at: datetime
 
-    model_config = {"from_attributes": True}
-
 
 class ApprovalListResponse(BaseModel):
     """Paginated list of approvals."""

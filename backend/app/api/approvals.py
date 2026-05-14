@@ -16,8 +16,8 @@ from uuid import UUID
 import structlog
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import or_, select
-from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from app.api.deps import (
     CurrentUserId,

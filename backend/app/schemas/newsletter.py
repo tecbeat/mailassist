@@ -18,8 +18,6 @@ class DetectedNewsletterResponse(PluginResponseBase):
     has_unsubscribe: bool
     created_at: datetime
 
-    model_config = {"from_attributes": True}
-
 
 class DetectedNewsletterListResponse(BaseModel):
     """Paginated list of detected newsletters."""

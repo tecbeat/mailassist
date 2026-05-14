@@ -21,8 +21,6 @@ class ExtractedCouponResponse(PluginResponseBase):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
-
 
 class ExtractedCouponListResponse(BaseModel):
     """Paginated list of extracted coupons."""

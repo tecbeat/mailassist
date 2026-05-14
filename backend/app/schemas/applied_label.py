@@ -16,8 +16,6 @@ class AppliedLabelResponse(PluginResponseBase):
     is_new_label: bool
     created_at: datetime
 
-    model_config = {"from_attributes": True}
-
 
 class AppliedLabelListResponse(BaseModel):
     """Paginated list of applied labels."""

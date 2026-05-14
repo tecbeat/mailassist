@@ -18,8 +18,6 @@ class AutoReplyRecordResponse(PluginResponseBase):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
-
 
 class AutoReplyRecordListResponse(BaseModel):
     """Paginated list of auto-reply records."""

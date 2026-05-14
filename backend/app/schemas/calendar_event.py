@@ -23,8 +23,6 @@ class CalendarEventResponse(PluginResponseBase):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
-
 
 class CalendarEventListResponse(BaseModel):
     """Paginated list of calendar events."""

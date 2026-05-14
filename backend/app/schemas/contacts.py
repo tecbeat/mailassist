@@ -179,8 +179,6 @@ class ContactAssignmentResponse(PluginResponseBase):
     is_new_contact_suggestion: bool
     created_at: datetime
 
-    model_config = {"from_attributes": True}
-
 
 class ContactMailsResponse(BaseModel):
     """Paginated response for listing mails associated with a contact."""

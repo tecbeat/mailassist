@@ -18,8 +18,6 @@ class AssignedFolderResponse(PluginResponseBase):
     is_new_folder: bool
     created_at: datetime
 
-    model_config = {"from_attributes": True}
-
 
 class AssignedFolderListResponse(BaseModel):
     """Paginated list of assigned folders."""

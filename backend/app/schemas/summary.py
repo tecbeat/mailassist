@@ -21,8 +21,6 @@ class EmailSummaryResponse(PluginResponseBase):
     notified: bool
     created_at: datetime
 
-    model_config = {"from_attributes": True}
-
 
 class EmailSummaryListResponse(BaseModel):
     """Paginated list of email summaries."""
