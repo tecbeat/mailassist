@@ -10,6 +10,7 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from conftest import FakeEncryption, FakeValkey
 
 
