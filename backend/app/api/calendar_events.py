@@ -45,7 +45,11 @@ async def list_calendar_events(
     """List calendar events with pagination and optional search filter."""
     uid = user_id
 
-    base_stmt = select(CalendarEvent).options(joinedload(CalendarEvent.tracked_email)).where(CalendarEvent.user_id == uid)
+    base_stmt = (
+        select(CalendarEvent)
+        .options(joinedload(CalendarEvent.tracked_email))
+        .where(CalendarEvent.user_id == uid)
+    )
 
     if search:
         base_stmt = base_stmt.where(CalendarEvent.title.ilike(f"%{sanitize_like(search)}%"))

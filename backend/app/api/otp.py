@@ -45,7 +45,11 @@ async def list_otp_codes(
     """List extracted OTP codes with pagination and optional filters."""
     uid = user_id
 
-    base_stmt = select(ExtractedOtpCode).options(joinedload(ExtractedOtpCode.tracked_email)).where(ExtractedOtpCode.user_id == uid)
+    base_stmt = (
+        select(ExtractedOtpCode)
+        .options(joinedload(ExtractedOtpCode.tracked_email))
+        .where(ExtractedOtpCode.user_id == uid)
+    )
 
     if service:
         base_stmt = base_stmt.where(ExtractedOtpCode.service.ilike(f"%{sanitize_like(service)}%"))

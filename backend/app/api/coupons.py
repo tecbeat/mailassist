@@ -45,7 +45,11 @@ async def list_coupons(
     """List extracted coupons with pagination and optional filters."""
     uid = user_id
 
-    base_stmt = select(ExtractedCoupon).options(joinedload(ExtractedCoupon.tracked_email)).where(ExtractedCoupon.user_id == uid)
+    base_stmt = (
+        select(ExtractedCoupon)
+        .options(joinedload(ExtractedCoupon.tracked_email))
+        .where(ExtractedCoupon.user_id == uid)
+    )
 
     if store:
         base_stmt = base_stmt.where(ExtractedCoupon.store.ilike(f"%{sanitize_like(store)}%"))

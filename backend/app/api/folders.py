@@ -53,7 +53,11 @@ async def list_assigned_folders(
     """List assigned folders with pagination and optional folder filter."""
     uid = user_id
 
-    base_stmt = select(AssignedFolder).options(joinedload(AssignedFolder.tracked_email)).where(AssignedFolder.user_id == uid)
+    base_stmt = (
+        select(AssignedFolder)
+        .options(joinedload(AssignedFolder.tracked_email))
+        .where(AssignedFolder.user_id == uid)
+    )
 
     if folder:
         base_stmt = base_stmt.where(AssignedFolder.folder.ilike(f"%{sanitize_like(folder)}%"))

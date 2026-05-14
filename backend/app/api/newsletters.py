@@ -44,7 +44,11 @@ async def list_newsletters(
     """List detected newsletters with pagination and optional sender filter."""
     uid = user_id
 
-    base_stmt = select(DetectedNewsletter).options(joinedload(DetectedNewsletter.tracked_email)).where(DetectedNewsletter.user_id == uid)
+    base_stmt = (
+        select(DetectedNewsletter)
+        .options(joinedload(DetectedNewsletter.tracked_email))
+        .where(DetectedNewsletter.user_id == uid)
+    )
 
     if sender:
         base_stmt = base_stmt.where(DetectedNewsletter.sender_address.ilike(f"%{sanitize_like(sender)}%"))

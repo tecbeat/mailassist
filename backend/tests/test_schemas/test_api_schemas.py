@@ -29,9 +29,9 @@ class TestEmailSummaryResponse:
     def test_valid_with_all_fields(self) -> None:
         data = EmailSummaryResponse(
             id=uuid4(),
-            subject="Test Subject",
-            sender="alice@example.com",
-            received_at=datetime.now(UTC),
+            mail_subject="Test Subject",
+            mail_from="alice@example.com",
+            mail_date=datetime.now(UTC),
             summary="A brief summary",
             key_points=["point 1", "point 2"],
             urgency="high",
@@ -40,15 +40,15 @@ class TestEmailSummaryResponse:
             notified=False,
             created_at=datetime.now(UTC),
         )
-        assert data.subject == "Test Subject"
-        assert data.sender == "alice@example.com"
+        assert data.mail_subject == "Test Subject"
+        assert data.mail_from == "alice@example.com"
 
     def test_subject_and_sender_nullable(self) -> None:
         data = EmailSummaryResponse(
             id=uuid4(),
-            subject=None,
-            sender=None,
-            received_at=None,
+            mail_subject=None,
+            mail_from=None,
+            mail_date=None,
             summary="Summary",
             key_points=[],
             urgency="low",
@@ -57,8 +57,8 @@ class TestEmailSummaryResponse:
             notified=False,
             created_at=datetime.now(UTC),
         )
-        assert data.subject is None
-        assert data.sender is None
+        assert data.mail_subject is None
+        assert data.mail_from is None
 
     def test_missing_required_field_raises(self) -> None:
         with pytest.raises(ValidationError):

@@ -54,7 +54,11 @@ async def list_approvals(
 ) -> ApprovalListResponse:
     """List approval queue entries for the current user."""
     uid = user_id
-    base_stmt = select(Approval).options(joinedload(Approval.tracked_email)).where(Approval.user_id == uid)
+    base_stmt = (
+        select(Approval)
+        .options(joinedload(Approval.tracked_email))
+        .where(Approval.user_id == uid)
+    )
 
     if status:
         base_stmt = base_stmt.where(Approval.status == status)
