@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.20.1-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.20.1-beta) - 2026-05-14
+
+### 🐛 Bug Fixes
+
+- *(tests)* Update draft_upload mocks for scalars().first() change - ([b553777](https://git.teccave.de/tecbeat/mailassist/commit/b553777177b86834993c975098d25a94b1214365))
+- Add current_folder filter to TrackedEmail lookup preventing MultipleResultsFound - ([3bb0caf](https://git.teccave.de/tecbeat/mailassist/commit/3bb0caf95c47b9b9bc0f06369497db45c6401a29))
+- Mark test_caldav_connection as non-test to prevent collection error - ([4fc83d7](https://git.teccave.de/tecbeat/mailassist/commit/4fc83d79f82be8319a1f76a88ef259b0f4ffbc2d))
+- Use collect_ignore for app dir, fix isort in auth tests - ([feb6361](https://git.teccave.de/tecbeat/mailassist/commit/feb6361d6dc277265472d4c6719bf010f3d3d3e6))
+- Add root conftest to exclude app/ from pytest collection - ([b872181](https://git.teccave.de/tecbeat/mailassist/commit/b87218193a525f44e57577de13716398b11b53fd))
+- Exclude app/ from pytest collection to avoid test_caldav_connection error - ([c113b6b](https://git.teccave.de/tecbeat/mailassist/commit/c113b6b773e1645f31180fb7b6b0973d06c5056d))
+- Use real asyncio tasks for idle_monitor tests, valid UUIDs for mail_processor - ([3580f29](https://git.teccave.de/tecbeat/mailassist/commit/3580f2940be1c36e99daa038f4b8d85c9f592725))
+- Resolve remaining test failures in idle_monitor, mail_processor, prompt_resolver - ([5694493](https://git.teccave.de/tecbeat/mailassist/commit/5694493b7928679f8b9213a7e27cef10bc2cbbaf))
+- Correct patch paths and lint errors in coverage tests - ([4472ae3](https://git.teccave.de/tecbeat/mailassist/commit/4472ae35feafcceaea33c3bf5500dc4e2bb3a81b))
+- Resolve 11 test failures in CI - ([246f23b](https://git.teccave.de/tecbeat/mailassist/commit/246f23bfffb06064d8e378dc8ea1da2b9a516672))
+- Resolve CI failures in new test files - ([a007ad9](https://git.teccave.de/tecbeat/mailassist/commit/a007ad90191d82f0a9edf9171a38fc2272ac7260))
+
+### 🎨 Styling
+
+- Fix unused variable lint errors - ([e6c9b88](https://git.teccave.de/tecbeat/mailassist/commit/e6c9b888f68257a805e078a3c29f846814474560))
+- Fix ruff lint errors in new test files - ([93b44cf](https://git.teccave.de/tecbeat/mailassist/commit/93b44cfcc76f46584cd3d077699e38bebc90f3ab))
+- Apply ruff format to test files - ([913a889](https://git.teccave.de/tecbeat/mailassist/commit/913a889a236c623e1282879f3b41c9d87f0730df))
+- Fix ruff isort and unused import in test files - ([0b2f669](https://git.teccave.de/tecbeat/mailassist/commit/0b2f669a1da2c203619fa74823d852a19cdfe94d))
+
+### 🧪 Testing
+
+- Add API route and scheduler/poller tests for 80% coverage target - ([c2a092d](https://git.teccave.de/tecbeat/mailassist/commit/c2a092dcd4f8f9f5685890eb11890448d852f16d))
+- Add comprehensive coverage tests for workers and services - ([cb019e5](https://git.teccave.de/tecbeat/mailassist/commit/cb019e5118d7cc297d018aaa387c44e182eb1358))
+- Add comprehensive tests for schemas, plugins, API routes, services, and workers - ([8250762](https://git.teccave.de/tecbeat/mailassist/commit/8250762236802f69a1792fd2232d36f26e9c2cfb))
+- Add integration and schema tests for mail processor, poller relink, and approval executor - ([61bd3b9](https://git.teccave.de/tecbeat/mailassist/commit/61bd3b9b5277cd92306fc3994614dc76f8817841))
+- Add comprehensive tests for persistence, plugin executor, mail processor, and poller - ([e1b8229](https://git.teccave.de/tecbeat/mailassist/commit/e1b8229ab3e5e25492c86dd02efa5d691e25059a))
+
 ## [2.20.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.20.0-beta) - 2026-05-13
 
 ### ⛰️  Features
