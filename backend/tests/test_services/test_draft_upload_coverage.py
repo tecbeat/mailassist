@@ -223,7 +223,9 @@ async def test_upload_draft_success_tracks_in_db(
     # Mock DB session for tracking
     db = AsyncMock()
     te_result = MagicMock()
-    te_result.scalar_one_or_none.return_value = uuid4()  # tracked_email_id
+    te_scalars = MagicMock()
+    te_scalars.first.return_value = uuid4()  # tracked_email_id
+    te_result.scalars.return_value = te_scalars
     db.execute.return_value = te_result
 
     ctx = AsyncMock()
@@ -267,7 +269,9 @@ async def test_upload_draft_tracking_no_tracked_email_skips(
 
     db = AsyncMock()
     te_result = MagicMock()
-    te_result.scalar_one_or_none.return_value = None  # no tracked email
+    te_scalars = MagicMock()
+    te_scalars.first.return_value = None  # no tracked email
+    te_result.scalars.return_value = te_scalars
     db.execute.return_value = te_result
 
     ctx = AsyncMock()
