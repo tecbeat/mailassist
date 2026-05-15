@@ -165,7 +165,7 @@ backend_migration_test:
       when: on_success
     - when: never
   services:
-    - name: postgres:18-alpine@sha256:fbe586b342d1bcac6d4f3d0e12453a0e3b48369943fdac6658447e1dbe788565
+    - name: postgres:18-alpine@sha256:fa206fb6391c039c6d3ac69791f60536d79ff19d1dc32eac7818f39fa5a4aa2e
       alias: postgres
   variables:
     POSTGRES_USER: mailassist
@@ -254,7 +254,7 @@ integration_systemtest:
       when: on_success
     - when: never
   services:
-    - name: postgres:18-alpine@sha256:fbe586b342d1bcac6d4f3d0e12453a0e3b48369943fdac6658447e1dbe788565
+    - name: postgres:18-alpine@sha256:fa206fb6391c039c6d3ac69791f60536d79ff19d1dc32eac7818f39fa5a4aa2e
       alias: postgres
     - name: valkey/valkey:9-alpine@sha256:d1cc70645bbcef743615463a2fa4616e841407545e18f560aed0c49671a90147
       alias: valkey
