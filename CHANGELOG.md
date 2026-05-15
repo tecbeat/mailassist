@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.20.3-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.20.3-beta) - 2026-05-15
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Update postgres:18-alpine Docker digest to fbe586b - ([9c3e9f8](https://git.teccave.de/tecbeat/mailassist/commit/9c3e9f865a3b0c66c22fc8a988a6ca0f10500605))
+
 ## [2.20.2-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.20.2-beta) - 2026-05-14
 
 ### ⚙️ Miscellaneous Tasks
