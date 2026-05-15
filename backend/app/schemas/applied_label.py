@@ -5,18 +5,16 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.plugin_base import PluginResponseBase
 
-class AppliedLabelResponse(BaseModel):
+
+class AppliedLabelResponse(PluginResponseBase):
     """Response schema for an applied label record."""
 
     id: UUID
-    subject: str | None = None
-    sender: str | None = None
     label: str
     is_new_label: bool
     created_at: datetime
-
-    model_config = {"from_attributes": True}
 
 
 class AppliedLabelListResponse(BaseModel):

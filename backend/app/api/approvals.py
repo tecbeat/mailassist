@@ -17,6 +17,7 @@ import structlog
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from app.api.deps import (
     CurrentUserId,
@@ -53,7 +54,7 @@ async def list_approvals(
 ) -> ApprovalListResponse:
     """List approval queue entries for the current user."""
     uid = user_id
-    base_stmt = select(Approval).where(Approval.user_id == uid)
+    base_stmt = select(Approval).options(joinedload(Approval.tracked_email)).where(Approval.user_id == uid)
 
     if status:
         base_stmt = base_stmt.where(Approval.status == status)

@@ -9,6 +9,7 @@ from uuid import UUID
 import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from app.api.deps import (
     CurrentUserId,
@@ -44,7 +45,9 @@ async def list_coupons(
     """List extracted coupons with pagination and optional filters."""
     uid = user_id
 
-    base_stmt = select(ExtractedCoupon).where(ExtractedCoupon.user_id == uid)
+    base_stmt = (
+        select(ExtractedCoupon).options(joinedload(ExtractedCoupon.tracked_email)).where(ExtractedCoupon.user_id == uid)
+    )
 
     if store:
         base_stmt = base_stmt.where(ExtractedCoupon.store.ilike(f"%{sanitize_like(store)}%"))
@@ -74,7 +77,14 @@ async def get_coupon(
     user_id: CurrentUserId,
 ) -> ExtractedCouponResponse:
     """Get a single extracted coupon with full details."""
-    coupon = await get_or_404(db, ExtractedCoupon, coupon_id, user_id, "Coupon not found")
+    coupon = await get_or_404(
+        db,
+        ExtractedCoupon,
+        coupon_id,
+        user_id,
+        "Coupon not found",
+        options=[joinedload(ExtractedCoupon.tracked_email)],
+    )
     return ExtractedCouponResponse.model_validate(coupon)
 
 

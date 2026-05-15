@@ -83,7 +83,7 @@ class TestAppliedLabel:
     def test_response(self) -> None:
         obj = AppliedLabelResponse(id=UID, label="Important", is_new_label=False, created_at=NOW)
         assert obj.label == "Important"
-        assert obj.subject is None
+        assert obj.mail_subject is None
 
     def test_list_response(self) -> None:
         item = AppliedLabelResponse(id=UID, label="X", is_new_label=True, created_at=NOW)

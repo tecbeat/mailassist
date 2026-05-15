@@ -10,6 +10,7 @@ from uuid import UUID
 import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import select
+from sqlalchemy.orm import contains_eager, joinedload
 
 from app.api.deps import (
     CurrentUserId,
@@ -48,6 +49,7 @@ async def list_auto_replies(
     base_stmt = (
         select(AutoReplyRecord)
         .join(TrackedEmail, AutoReplyRecord.mail_id == TrackedEmail.id)
+        .options(contains_eager(AutoReplyRecord.tracked_email))
         .where(AutoReplyRecord.user_id == uid)
     )
 
@@ -75,7 +77,14 @@ async def get_auto_reply(
     user_id: CurrentUserId,
 ) -> AutoReplyRecordResponse:
     """Get a single auto-reply record."""
-    record = await get_or_404(db, AutoReplyRecord, reply_id, user_id, "Auto-reply not found")
+    record = await get_or_404(
+        db,
+        AutoReplyRecord,
+        reply_id,
+        user_id,
+        "Auto-reply not found",
+        options=[joinedload(AutoReplyRecord.tracked_email)],
+    )
     return AutoReplyRecordResponse.model_validate(record)
 
 

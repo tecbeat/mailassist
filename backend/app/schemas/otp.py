@@ -5,13 +5,13 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.schemas.plugin_base import PluginResponseBase
 
-class ExtractedOtpCodeResponse(BaseModel):
+
+class ExtractedOtpCodeResponse(PluginResponseBase):
     """Response schema for an extracted OTP code."""
 
     id: UUID
-    subject: str | None = None
-    sender: str | None = None
     code: str
     description: str | None = None
     service: str | None = None
@@ -21,8 +21,6 @@ class ExtractedOtpCodeResponse(BaseModel):
     is_expired: bool
     created_at: datetime
     updated_at: datetime
-
-    model_config = {"from_attributes": True}
 
 
 class ExtractedOtpCodeListResponse(BaseModel):

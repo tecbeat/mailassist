@@ -5,20 +5,18 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.plugin_base import PluginResponseBase
 
-class AutoReplyRecordResponse(BaseModel):
+
+class AutoReplyRecordResponse(PluginResponseBase):
     """Response schema for an auto-reply record."""
 
     id: UUID
-    subject: str | None = None
-    sender: str | None = None
     draft_body: str
     tone: str | None = None
     reasoning: str | None = None
     created_at: datetime
     updated_at: datetime
-
-    model_config = {"from_attributes": True}
 
 
 class AutoReplyRecordListResponse(BaseModel):

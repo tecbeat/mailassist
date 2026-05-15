@@ -6,8 +6,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.plugin_base import PluginResponseBase
 
-class ApprovalResponse(BaseModel):
+
+class ApprovalResponse(PluginResponseBase):
     """Response schema for an approval queue entry."""
 
     id: UUID
@@ -21,8 +23,6 @@ class ApprovalResponse(BaseModel):
     created_at: datetime
     resolved_at: datetime | None
     expires_at: datetime
-
-    model_config = {"from_attributes": True}
 
 
 class ApprovalListResponse(BaseModel):

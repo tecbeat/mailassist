@@ -6,14 +6,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.plugin_base import PluginResponseBase
 
-class EmailSummaryResponse(BaseModel):
+
+class EmailSummaryResponse(PluginResponseBase):
     """Response schema for an email summary."""
 
     id: UUID
-    subject: str | None = None
-    sender: str | None = None
-    received_at: datetime | None = None
     summary: str
     key_points: list[str]
     urgency: str
@@ -21,8 +20,6 @@ class EmailSummaryResponse(BaseModel):
     action_description: str | None
     notified: bool
     created_at: datetime
-
-    model_config = {"from_attributes": True}
 
 
 class EmailSummaryListResponse(BaseModel):

@@ -10,6 +10,7 @@ from uuid import UUID
 import structlog
 from fastapi import APIRouter, Query
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from app.api.deps import (
     CurrentUserId,
@@ -43,7 +44,11 @@ async def list_newsletters(
     """List detected newsletters with pagination and optional sender filter."""
     uid = user_id
 
-    base_stmt = select(DetectedNewsletter).where(DetectedNewsletter.user_id == uid)
+    base_stmt = (
+        select(DetectedNewsletter)
+        .options(joinedload(DetectedNewsletter.tracked_email))
+        .where(DetectedNewsletter.user_id == uid)
+    )
 
     if sender:
         base_stmt = base_stmt.where(DetectedNewsletter.sender_address.ilike(f"%{sanitize_like(sender)}%"))
@@ -70,7 +75,14 @@ async def get_newsletter(
     user_id: CurrentUserId,
 ) -> DetectedNewsletterResponse:
     """Get a single detected newsletter with full details."""
-    newsletter = await get_or_404(db, DetectedNewsletter, newsletter_id, user_id, "Newsletter not found")
+    newsletter = await get_or_404(
+        db,
+        DetectedNewsletter,
+        newsletter_id,
+        user_id,
+        "Newsletter not found",
+        options=[joinedload(DetectedNewsletter.tracked_email)],
+    )
     return DetectedNewsletterResponse.model_validate(newsletter)
 
 

@@ -6,6 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.plugin_base import PluginResponseBase
+
 # --- CardDAV Config ---
 
 
@@ -166,20 +168,16 @@ class SyncResult(BaseModel):
     errors: int
 
 
-class ContactAssignmentResponse(BaseModel):
+class ContactAssignmentResponse(PluginResponseBase):
     """Response schema for a contact assignment record."""
 
     id: UUID
-    subject: str | None = None
-    sender: str | None = None
     contact_id: UUID | None = None
     contact_name: str
     confidence: float
     reasoning: str | None = None
     is_new_contact_suggestion: bool
     created_at: datetime
-
-    model_config = {"from_attributes": True}
 
 
 class ContactMailsResponse(BaseModel):
