@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [2.20.3-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.20.3-beta) - 2026-05-15
 
+### 🐛 Bug Fixes
+
+- Format long lines and update tests for renamed schema fields - ([7b5cfa2](https://git.teccave.de/tecbeat/mailassist/commit/7b5cfa2778e7415e37d4bef5ecbf7ecd0e241d93))
+- Resolve lint errors in plugin response schemas - ([00afd4b](https://git.teccave.de/tecbeat/mailassist/commit/00afd4be6c8ed465b353adef38bd9690a490f97e))
+- Add mail_uid, mail_account_id, mail_subject, mail_from to all plugin response schemas - ([67814a7](https://git.teccave.de/tecbeat/mailassist/commit/67814a742611bd5d5a2a9251175eace4900b58d4))
+
+### 🎨 Styling
+
+- Apply ruff formatting to API endpoints - ([60442ef](https://git.teccave.de/tecbeat/mailassist/commit/60442ef02e78753ced943821e10b69f1eec7898d))
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(deps)* Update postgres:18-alpine Docker digest to fbe586b - ([9c3e9f8](https://git.teccave.de/tecbeat/mailassist/commit/9c3e9f865a3b0c66c22fc8a988a6ca0f10500605))
