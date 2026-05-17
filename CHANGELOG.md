@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.20.8-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.20.8-beta) - 2026-05-17
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update postgres:18-alpine docker digest to 96d56f7 - ([92f772b](https://git.teccave.de/tecbeat/mailassist/commit/92f772ba2440f7e0a19e6ef38deef96e635855aa))
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Update postgres:18-alpine Docker digest to 96d56f7 - ([d7db22e](https://git.teccave.de/tecbeat/mailassist/commit/d7db22e64f95d8e1a45f1bd114f7178d02596fa4))
+
 ## [2.20.7-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.20.7-beta) - 2026-05-15
 
 ### 🐛 Bug Fixes
