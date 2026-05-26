@@ -201,8 +201,11 @@ async def execute_plugin(
     try:
         from app.tools.registry import get_tool_registry
 
-        tool_registry = get_tool_registry()
-        litellm_tools = tool_registry.get_litellm_tools()
+        try:
+            tool_registry = get_tool_registry()
+            litellm_tools = tool_registry.get_litellm_tools()
+        except RuntimeError:
+            litellm_tools = []
 
         if litellm_tools:
             # Append tool-calling instruction to system prompt
