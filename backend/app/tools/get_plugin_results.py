@@ -46,20 +46,24 @@ class GetPluginResultsTool(BaseTool):
             if result is None:
                 available = self._pipeline.executed
                 return ToolResult(
-                    content=json.dumps({
-                        "error": f"No result from plugin '{plugin_name}'.",
-                        "executed_plugins": available,
-                    }),
+                    content=json.dumps(
+                        {
+                            "error": f"No result from plugin '{plugin_name}'.",
+                            "executed_plugins": available,
+                        }
+                    ),
                 )
             return ToolResult(content=json.dumps({plugin_name: result}))
 
         # Return all results
         if not self._pipeline.results:
             return ToolResult(
-                content=json.dumps({
-                    "message": "No plugins have produced results yet.",
-                    "executed_plugins": self._pipeline.executed,
-                }),
+                content=json.dumps(
+                    {
+                        "message": "No plugins have produced results yet.",
+                        "executed_plugins": self._pipeline.executed,
+                    }
+                ),
             )
 
         return ToolResult(content=json.dumps(self._pipeline.results, default=str))

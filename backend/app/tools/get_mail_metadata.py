@@ -51,11 +51,21 @@ class GetMailMetadataTool(BaseTool):
         if section in ("headers", "all"):
             # Expose interesting headers beyond basic From/To/Subject
             interesting_headers = [
-                "reply-to", "list-unsubscribe", "list-id", "list-post",
-                "x-mailer", "x-spam-status", "x-spam-score",
-                "authentication-results", "dkim-signature", "arc-authentication-results",
-                "precedence", "auto-submitted", "x-auto-response-suppress",
-                "content-type", "mime-version",
+                "reply-to",
+                "list-unsubscribe",
+                "list-id",
+                "list-post",
+                "x-mailer",
+                "x-spam-status",
+                "x-spam-score",
+                "authentication-results",
+                "dkim-signature",
+                "arc-authentication-results",
+                "precedence",
+                "auto-submitted",
+                "x-auto-response-suppress",
+                "content-type",
+                "mime-version",
             ]
             headers: dict[str, str] = {}
             for key, value in ctx.headers.items():

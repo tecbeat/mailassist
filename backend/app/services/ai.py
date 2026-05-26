@@ -374,8 +374,7 @@ async def call_llm_with_tools(
                                     "role": "tool",
                                     "tool_call_id": tool_call.id,
                                     "content": (
-                                        "Validation failed. Please call submit_result "
-                                        "again with corrected values."
+                                        "Validation failed. Please call submit_result again with corrected values."
                                     ),
                                 }
                             )
@@ -472,9 +471,7 @@ async def call_llm_with_tools(
         model=model,
         max_iterations=max_iterations,
     )
-    raise ValueError(
-        f"LLM failed to produce a valid result after {max_iterations} tool-calling iterations"
-    )
+    raise ValueError(f"LLM failed to produce a valid result after {max_iterations} tool-calling iterations")
 
 
 async def test_llm_connection(
@@ -538,9 +535,7 @@ def _resolve_base_url(provider_type: str, base_url: str | None) -> str | None:
     return base_url
 
 
-def _truncate_to_schema(
-    data: dict[str, Any], schema: type[BaseModel]
-) -> dict[str, Any]:
+def _truncate_to_schema(data: dict[str, Any], schema: type[BaseModel]) -> dict[str, Any]:
     """Truncate string values that exceed the schema's maxLength constraints.
 
     This prevents ValidationError from verbose LLMs that exceed field limits.

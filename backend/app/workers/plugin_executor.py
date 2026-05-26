@@ -23,7 +23,6 @@ from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext, Pipeli
 from app.services.ai import (
     PermanentLLMError,
     TransientLLMError,
-    call_llm,
     call_llm_with_tools,
     check_ai_circuit_breaker,
     update_provider_health,
@@ -290,7 +289,7 @@ async def execute_plugin(
     if action_result.retry_prompt:
         log.info("plugin_reprompt_requested", plugin=plugin.name, retry_prompt=action_result.retry_prompt)
         try:
-            ai_response, retry_tokens = await call_llm(
+            ai_response, retry_tokens = await call_llm_with_tools(
                 provider_type=provider.provider_type.value,
                 base_url=provider.base_url,
                 model_name=provider.model_name,

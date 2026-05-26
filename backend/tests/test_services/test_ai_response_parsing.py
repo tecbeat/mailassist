@@ -54,7 +54,13 @@ def _make_tool_call_response(func_args: dict, total_tokens: int = 50):
     message.model_dump = lambda: {
         "role": "assistant",
         "content": None,
-        "tool_calls": [{"id": "call_test123", "type": "function", "function": {"name": "submit_result", "arguments": json.dumps(func_args)}}],
+        "tool_calls": [
+            {
+                "id": "call_test123",
+                "type": "function",
+                "function": {"name": "submit_result", "arguments": json.dumps(func_args)},
+            }
+        ],
     }
 
     choice = MagicMock()

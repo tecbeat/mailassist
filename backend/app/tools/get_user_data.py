@@ -59,10 +59,12 @@ class GetUserDataTool(BaseTool):
             contacts: list[dict[str, str]] = []
             if ctx.user_contacts:
                 for c in ctx.user_contacts:
-                    contacts.append({
-                        "name": c.get("name", ""),
-                        "email": c.get("email", ""),
-                    })
+                    contacts.append(
+                        {
+                            "name": c.get("name", ""),
+                            "email": c.get("email", ""),
+                        }
+                    )
             result["contacts"] = {
                 "count": len(contacts),
                 "list": contacts,
