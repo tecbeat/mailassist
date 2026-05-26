@@ -110,6 +110,7 @@ class Settings(BaseSettings):
     ai_temperature: float = Field(default=0.3, description="Default LLM temperature")
     ai_timeout_seconds: int = Field(default=120, description="LLM HTTP request timeout in seconds")
     ai_token_usage_ttl_days: int = Field(default=90, description="Token usage stats TTL in days")
+    ai_max_tool_calls: int = Field(default=5, description="Max tool-calling iterations per plugin execution")
     ai_pause_cooldown_seconds: int = Field(
         default=120,
         description="Seconds before auto-unpausing a paused AI provider",

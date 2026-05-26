@@ -361,6 +361,215 @@ async def call_llm(
     raise ValueError("LLM call failed after retries")
 
 
+async def call_llm_with_tools(
+    provider_type: str,
+    base_url: str,
+    model_name: str,
+    api_key: str | None,
+    system_prompt: str,
+    user_prompt: str,
+    response_schema: type[BaseModel],
+    tools: list[dict[str, Any]],
+    tool_executor: Any,
+    max_iterations: int = 5,
+    max_tokens: int | None = None,
+    temperature: float | None = None,
+    timeout: int | None = None,
+    user_id: str | None = None,
+) -> tuple[BaseModel, int]:
+    """Call an LLM with tool-calling support and validate the final response.
+
+    Implements an agentic loop where the LLM can call tools to gather context
+    before submitting its final response via the ``submit_result`` tool.
+
+    The ``submit_result`` tool is automatically added to the tools list. Its
+    parameters schema is derived from ``response_schema``.
+
+    Args:
+        tools: List of tool definitions in litellm/OpenAI format.
+        tool_executor: Async callable(tool_name, **kwargs) -> str that executes tools.
+        max_iterations: Maximum tool-calling rounds before forced fallback.
+        Other args: Same as ``call_llm``.
+
+    Returns:
+        Tuple of (validated response, total tokens used).
+
+    Raises:
+        ValueError: If the LLM fails to produce a valid result.
+        TransientLLMError: On transient provider errors.
+        PermanentLLMError: On permanent config errors.
+    """
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    max_tokens = max_tokens if max_tokens is not None else settings.ai_max_tokens
+    temperature = temperature if temperature is not None else settings.ai_temperature
+    timeout = timeout if timeout is not None else settings.ai_timeout_seconds
+    model = _build_model_string(provider_type, model_name)
+
+    # Build submit_result tool from the response schema
+    submit_result_tool: dict[str, Any] = {
+        "type": "function",
+        "function": {
+            "name": "submit_result",
+            "description": (
+                "Submit your final analysis result. Call this tool ONLY when you have "
+                "gathered enough information to make your decision. The parameters must "
+                "match the required output schema exactly."
+            ),
+            "parameters": response_schema.model_json_schema(),
+        },
+    }
+    all_tools = [*tools, submit_result_tool]
+
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    optional_params: dict[str, Any] = {}
+    if api_key:
+        optional_params["api_key"] = api_key
+    if base_url:
+        optional_params["api_base"] = base_url
+
+    total_tokens = 0
+
+    for iteration in range(max_iterations):
+        try:
+            completion_kwargs: dict[str, Any] = {
+                "model": model,
+                "messages": messages,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "timeout": timeout,
+                "tools": all_tools,
+                "tool_choice": "auto",
+                **optional_params,
+            }
+
+            response = await litellm.acompletion(**completion_kwargs)
+            message = response.choices[0].message
+            usage = response.usage
+            total_tokens += usage.total_tokens if usage else 0
+
+            # Check if the LLM wants to call tools
+            if message.tool_calls:
+                # Append assistant message with tool calls
+                messages.append(message.model_dump())
+
+                for tool_call in message.tool_calls:
+                    func_name = tool_call.function.name
+                    try:
+                        func_args = json.loads(tool_call.function.arguments)
+                    except json.JSONDecodeError:
+                        func_args = {}
+
+                    if func_name == "submit_result":
+                        # Final result — validate and return
+                        validated = response_schema.model_validate(func_args)
+                        if user_id:
+                            await _track_tokens(user_id, total_tokens)
+                        logger.info(
+                            "llm_tool_call_complete",
+                            model=model,
+                            total_tokens=total_tokens,
+                            iterations=iteration + 1,
+                            submit_via="submit_result",
+                        )
+                        return validated, total_tokens
+
+                    # Execute the tool
+                    tool_result = await tool_executor(func_name, **func_args)
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tool_call.id,
+                            "content": str(tool_result),
+                        }
+                    )
+
+                logger.debug(
+                    "llm_tool_iteration",
+                    model=model,
+                    iteration=iteration + 1,
+                    tool_calls=[tc.function.name for tc in message.tool_calls],
+                )
+            else:
+                # No tool calls — LLM returned content directly
+                # Try to parse as the response schema (fallback for models
+                # that don't always use tools)
+                content = message.content or ""
+                if content.strip():
+                    try:
+                        parsed = _parse_json_response(content)
+                        validated = response_schema.model_validate(parsed)
+                        if user_id:
+                            await _track_tokens(user_id, total_tokens)
+                        logger.info(
+                            "llm_tool_call_complete",
+                            model=model,
+                            total_tokens=total_tokens,
+                            iterations=iteration + 1,
+                            submit_via="direct_content",
+                        )
+                        return validated, total_tokens
+                    except (json.JSONDecodeError, ValidationError):
+                        pass
+
+                # If we can't parse, ask the LLM to use submit_result
+                messages.append({"role": "assistant", "content": content})
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "Please submit your final result using the submit_result tool. "
+                            "Do not respond with plain text."
+                        ),
+                    }
+                )
+
+        except Exception as e:
+            if is_transient_llm_error(e):
+                raise TransientLLMError(
+                    f"Transient LLM error ({type(e).__name__}): {e}",
+                    original_error=e,
+                ) from e
+            elif is_permanent_llm_error(e):
+                raise PermanentLLMError(
+                    f"Permanent LLM error ({type(e).__name__}): {e}",
+                    original_error=e,
+                ) from e
+            else:
+                raise TransientLLMError(
+                    f"Unknown LLM error ({type(e).__name__}): {e}",
+                    original_error=e,
+                ) from e
+
+    # Exhausted iterations — fall back to a plain structured output call
+    logger.warning(
+        "llm_tool_call_max_iterations",
+        model=model,
+        max_iterations=max_iterations,
+    )
+    # Final attempt without tools, using structured output
+    return await call_llm(
+        provider_type=provider_type,
+        base_url=base_url,
+        model_name=model_name,
+        api_key=api_key,
+        system_prompt=system_prompt,
+        user_prompt="\n\n".join(
+            m["content"] for m in messages if m.get("role") in ("user", "tool") and m.get("content")
+        ),
+        response_schema=response_schema,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        timeout=timeout,
+        user_id=user_id,
+    )
+
+
 async def test_llm_connection(
     provider_type: str,
     base_url: str,

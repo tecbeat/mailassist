@@ -58,6 +58,7 @@ from app.core.redis import close_valkey, init_valkey
 from app.core.security import init_encryption
 from app.core.templating import init_template_engine
 from app.plugins.registry import init_plugin_registry
+from app.tools.registry import init_tool_registry
 
 logger = structlog.get_logger()
 
@@ -204,6 +205,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     init_event_bus()
     init_template_engine()
     init_plugin_registry()
+    init_tool_registry()
 
     await _run_migrations()
 
