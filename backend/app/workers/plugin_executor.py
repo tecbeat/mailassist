@@ -23,6 +23,7 @@ from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext, Pipeli
 from app.services.ai import (
     PermanentLLMError,
     TransientLLMError,
+    call_llm,
     call_llm_with_tools,
     check_ai_circuit_breaker,
     update_provider_health,

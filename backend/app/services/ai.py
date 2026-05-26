@@ -365,7 +365,21 @@ async def call_llm_with_tools(
                     if func_name == "submit_result":
                         # Final result — truncate overlong strings, then validate
                         func_args = _truncate_to_schema(func_args, response_schema)
-                        validated = response_schema.model_validate(func_args)
+                        try:
+                            validated = response_schema.model_validate(func_args)
+                        except ValidationError:
+                            # Invalid args — ask model to retry
+                            messages.append(
+                                {
+                                    "role": "tool",
+                                    "tool_call_id": tool_call.id,
+                                    "content": (
+                                        "Validation failed. Please call submit_result "
+                                        "again with corrected values."
+                                    ),
+                                }
+                            )
+                            break
                         if user_id:
                             await _track_tokens(user_id, total_tokens)
                         logger.info(
