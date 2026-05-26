@@ -218,6 +218,10 @@ async def execute_plugin(
                 "If you do not need additional context, call `submit_result` immediately."
             )
 
+            # Inject pipeline/mail context into all tools so they can access it
+            for _tool in tool_registry.get_all_tools():
+                _tool.set_context(pipeline=pipeline, mail_context=context)
+
             # Tool-calling mode: LLM can call tools to gather context
             async def _execute_tool(tool_name: str, **kwargs: Any) -> str:
                 tool = tool_registry.get_tool(tool_name)

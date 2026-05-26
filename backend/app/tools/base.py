@@ -5,11 +5,16 @@ plugin execution. Each tool defines its name, description, parameters (as
 JSON Schema), and an async execute method.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import structlog
+
+if TYPE_CHECKING:
+    from app.plugins.base import MailContext, PipelineContext
 
 logger = structlog.get_logger()
 
@@ -37,6 +42,9 @@ class BaseTool(ABC):
 
     And implement:
         - execute(**kwargs) -> ToolResult
+
+    Tools receive pipeline and mail context via ``set_context()`` before each
+    execution. Access via ``self._pipeline`` and ``self._mail_context``.
     """
 
     #: Unique identifier for this tool (snake_case, e.g. "get_plugin_results")
@@ -56,6 +64,20 @@ class BaseTool(ABC):
     #:       "required": ["query"]
     #:   }
     parameters: ClassVar[dict[str, Any]] = {}
+
+    def __init__(self) -> None:
+        self._pipeline: PipelineContext | None = None
+        self._mail_context: MailContext | None = None
+
+    def set_context(
+        self,
+        *,
+        pipeline: PipelineContext,
+        mail_context: MailContext,
+    ) -> None:
+        """Inject pipeline and mail context before tool execution."""
+        self._pipeline = pipeline
+        self._mail_context = mail_context
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Validate required class attributes on subclass definition."""
