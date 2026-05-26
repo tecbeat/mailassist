@@ -323,7 +323,12 @@ async def call_llm_with_tools(
     if api_key:
         optional_params["api_key"] = api_key
     if base_url:
-        optional_params["api_base"] = base_url
+        optional_params["api_base"] = _resolve_base_url(provider_type, base_url)
+
+    # Disable thinking for Ollama models (e.g. Qwen 3.5) to avoid
+    # excessive token usage and ensure tool calls work reliably.
+    if provider_type == "ollama":
+        optional_params["think"] = False
 
     total_tokens = 0
 
@@ -336,7 +341,7 @@ async def call_llm_with_tools(
                 "temperature": temperature,
                 "timeout": timeout,
                 "tools": all_tools,
-                "tool_choice": "auto",
+                "tool_choice": "required",
                 **optional_params,
             }
 
@@ -358,7 +363,8 @@ async def call_llm_with_tools(
                         func_args = {}
 
                     if func_name == "submit_result":
-                        # Final result — validate and return
+                        # Final result — truncate overlong strings, then validate
+                        func_args = _truncate_to_schema(func_args, response_schema)
                         validated = response_schema.model_validate(func_args)
                         if user_id:
                             await _track_tokens(user_id, total_tokens)
@@ -392,9 +398,17 @@ async def call_llm_with_tools(
                 # Try to parse as the response schema (fallback for models
                 # that don't always use tools)
                 content = message.content or ""
+                logger.debug(
+                    "llm_no_tool_calls",
+                    model=model,
+                    iteration=iteration + 1,
+                    content_length=len(content),
+                    content_preview=content[:500] if content else "",
+                )
                 if content.strip():
                     try:
                         parsed = _parse_json_response(content)
+                        parsed = _truncate_to_schema(parsed, response_schema)
                         validated = response_schema.model_validate(parsed)
                         if user_id:
                             await _track_tokens(user_id, total_tokens)
@@ -465,7 +479,9 @@ async def test_llm_connection(
     if api_key:
         optional_params["api_key"] = api_key
     if base_url:
-        optional_params["api_base"] = base_url
+        optional_params["api_base"] = _resolve_base_url(provider_type, base_url)
+    if provider_type == "ollama":
+        optional_params["think"] = False
 
     try:
         response = await litellm.acompletion(
@@ -501,6 +517,31 @@ def _build_model_string(provider_type: str, model_name: str) -> str:
         return f"anthropic/{model_name}"
     # OpenAI and compatible APIs use model name directly
     return model_name
+
+
+def _resolve_base_url(provider_type: str, base_url: str | None) -> str | None:
+    """Resolve the API base URL."""
+    return base_url
+
+
+def _truncate_to_schema(
+    data: dict[str, Any], schema: type[BaseModel]
+) -> dict[str, Any]:
+    """Truncate string values that exceed the schema's maxLength constraints.
+
+    This prevents ValidationError from verbose LLMs that exceed field limits.
+    """
+    json_schema = schema.model_json_schema()
+    properties = json_schema.get("properties", {})
+
+    for field_name, field_schema in properties.items():
+        if field_name not in data:
+            continue
+        max_len = field_schema.get("maxLength")
+        if max_len and isinstance(data[field_name], str) and len(data[field_name]) > max_len:
+            data[field_name] = data[field_name][:max_len]
+
+    return data
 
 
 def _repair_json(text: str) -> str:
