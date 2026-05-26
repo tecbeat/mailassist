@@ -220,6 +220,15 @@ class Settings(BaseSettings):
     rules_max_pattern_length: int = Field(default=500, description="Max regex pattern length for rule matching")
     rules_max_text_length: int = Field(default=51200, description="Max text length (bytes) to search against rules")
 
+    # Web tools
+    search_provider_url: str | None = Field(
+        default=None, description="SearXNG instance URL for web_search tool (e.g. 'https://search.example.com')"
+    )
+    tool_fetch_timeout: int = Field(default=10, description="HTTP timeout in seconds for fetch_url tool")
+    tool_fetch_max_content_length: int = Field(
+        default=8000, description="Max characters of fetched content returned to LLM"
+    )
+
     @field_validator("app_secret_key_old")
     @classmethod
     def validate_secret_key_old(cls, v: str | None) -> str | None:
