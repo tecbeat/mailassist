@@ -297,6 +297,8 @@ async def execute_plugin(
                 system_prompt=system_prompt,
                 user_prompt=action_result.retry_prompt,
                 response_schema=plugin.get_response_schema(),
+                tools=litellm_tools,
+                tool_executor=_execute_tool,
                 max_tokens=provider.max_tokens,
                 temperature=provider.temperature,
                 user_id=context.user_id,
