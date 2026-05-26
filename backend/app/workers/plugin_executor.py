@@ -219,7 +219,7 @@ async def execute_plugin(
         # Inject pipeline/mail context into all tools so they can access it
         if litellm_tools:
             for _tool in tool_registry.get_all_tools():
-                _tool.set_context(pipeline=pipeline, mail_context=context)
+                _tool.set_context(pipeline=pipeline, mail_context=context, db=db)
 
         # Tool-calling mode: LLM can call tools to gather context
         async def _execute_tool(tool_name: str, **kwargs: Any) -> str:

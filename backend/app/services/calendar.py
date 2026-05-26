@@ -1,7 +1,7 @@
 """CalDAV calendar service.
 
-Handles CalDAV connection testing, calendar listing, and event creation.
-Uses the caldav library for CalDAV protocol operations.
+Handles CalDAV connection testing, calendar listing, event creation, and
+event querying.  Uses the caldav library for CalDAV protocol operations.
 
 The caldav library uses ``requests`` internally, which blocks the event
 loop.  All network-bound caldav calls are therefore dispatched to a
@@ -295,3 +295,105 @@ async def delete_caldav_event(
     except Exception as e:
         logger.exception("caldav_event_delete_failed", uid=uid)
         raise ExternalServiceError("CalDAV", f"Failed to delete event: {e}") from e
+
+
+@dataclass(frozen=True)
+class CalendarEventInfo:
+    """Lightweight representation of a calendar event for search results."""
+
+    title: str
+    start: str
+    end: str
+    location: str | None = None
+    description: str | None = None
+    uid: str | None = None
+
+
+async def search_calendar_events(
+    caldav_url: str,
+    username: str,
+    password: str,
+    calendar_name: str,
+    start: datetime,
+    end: datetime,
+    query: str | None = None,
+    max_results: int = 20,
+) -> list[CalendarEventInfo]:
+    """Search calendar events within a date range.
+
+    Optionally filters by a text query (matched against summary/description).
+    Returns at most ``max_results`` events sorted by start time.
+
+    Raises:
+        ExternalServiceError: If the CalDAV server cannot be reached.
+    """
+    from app.services.dav_discovery import discover_dav
+
+    discovery = await discover_dav(caldav_url, username, password)
+    resolved_url = discovery.dav_url if discovery.success and discovery.dav_url else caldav_url
+
+    def _search() -> list[CalendarEventInfo]:
+        client = caldav.DAVClient(  # type: ignore[operator]
+            url=resolved_url,
+            username=username,
+            password=password,
+        )
+        principal = client.principal()
+        calendars = principal.calendars()
+
+        target_cal = None
+        for cal_obj in calendars:
+            cal_slug = str(cal_obj.url).rstrip("/").rsplit("/", 1)[-1]
+            if cal_obj.name == calendar_name or cal_slug == calendar_name:
+                target_cal = cal_obj
+                break
+        if target_cal is None and calendars:
+            target_cal = calendars[0]
+        if target_cal is None:
+            return []
+
+        results: list[CalendarEventInfo] = []
+        events = target_cal.date_search(start=start, end=end, expand=True)
+
+        for ev in events:
+            try:
+                vevent = ev.vobject_instance.vevent
+                summary = str(vevent.summary.value) if hasattr(vevent, "summary") else ""
+                desc = str(vevent.description.value) if hasattr(vevent, "description") else None
+                loc = str(vevent.location.value) if hasattr(vevent, "location") else None
+                uid = str(vevent.uid.value) if hasattr(vevent, "uid") else None
+
+                ev_start = vevent.dtstart.value
+                ev_end = vevent.dtend.value if hasattr(vevent, "dtend") else ev_start
+
+                # Text filter
+                if query:
+                    q_lower = query.lower()
+                    searchable = (summary + " " + (desc or "")).lower()
+                    if q_lower not in searchable:
+                        continue
+
+                results.append(
+                    CalendarEventInfo(
+                        title=summary,
+                        start=str(ev_start),
+                        end=str(ev_end),
+                        location=loc,
+                        description=desc[:200] if desc else None,
+                        uid=uid,
+                    )
+                )
+            except Exception:
+                continue
+
+        # Sort by start time string and limit
+        results.sort(key=lambda e: e.start)
+        return results[:max_results]
+
+    try:
+        return await asyncio.to_thread(_search)
+    except ExternalServiceError:
+        raise
+    except Exception as e:
+        logger.exception("caldav_search_failed")
+        raise ExternalServiceError("CalDAV", f"Failed to search events: {e}") from e

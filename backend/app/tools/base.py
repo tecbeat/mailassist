@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import structlog
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
     from app.plugins.base import MailContext, PipelineContext
 
 logger = structlog.get_logger()
@@ -68,16 +70,19 @@ class BaseTool(ABC):
     def __init__(self) -> None:
         self._pipeline: PipelineContext | None = None
         self._mail_context: MailContext | None = None
+        self._db: AsyncSession | None = None
 
     def set_context(
         self,
         *,
         pipeline: PipelineContext,
         mail_context: MailContext,
+        db: AsyncSession | None = None,
     ) -> None:
         """Inject pipeline and mail context before tool execution."""
         self._pipeline = pipeline
         self._mail_context = mail_context
+        self._db = db
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Validate required class attributes on subclass definition."""
