@@ -55,10 +55,3 @@ Sender is a known contact: {{ contact.display_name }}{% if contact.organization 
 {% endif %}
 
 Account: {{ account_name }} ({{ account_email }})
-
-Respond ONLY with a JSON object, no additional text:
-{
-  "folder": "Server{{ folder_separator }}Backups",
-  "confidence": 0.9,
-  "reason": "Automated backup status report from server"
-}

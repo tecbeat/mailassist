@@ -41,7 +41,4 @@ Sender is a known contact: {{ contact.display_name }}{% if contact.organization 
 
 Current date: {{ current_date }} ({{ current_weekday }})
 
-Respond ONLY with a JSON object:
-{"has_event": false, "title": null, "start": null, "end": null, "location": null, "description": null, "is_all_day": false}
-
 If has_event is true, use ISO 8601 format for start/end (e.g. "2026-04-01T14:00:00"). If no timezone is specified, assume Europe/Berlin.

@@ -47,12 +47,3 @@ Sender is a known contact: {{ contact.display_name }}{% if contact.organization 
 Account: {{ account_email }} ({{ account_name }})
 {% if is_reply %}This is a reply in an existing thread ({{ thread_length }} messages).{% endif %}
 {% if is_forwarded %}This is a forwarded message.{% endif %}
-
-Respond ONLY with a JSON object, no additional text:
-{
-  "summary": "Vzdump backup of VM on tec2.teccave.de completed successfully.",
-  "key_points": ["Backup completed without errors", "VM 100 backed up"],
-  "urgency": "low",
-  "action_required": false,
-  "action_description": null
-}

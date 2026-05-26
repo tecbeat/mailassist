@@ -41,12 +41,4 @@ Date: {{ date }}
 {{ body | sanitize_for_llm | truncate(3000) }}
 === END UNTRUSTED EMAIL CONTENT ===
 
-Respond ONLY with a JSON object, no additional text:
-{
-  "is_newsletter": false,
-  "newsletter_name": null,
-  "has_unsubscribe": false,
-  "unsubscribe_url": null
-}
-
 If is_newsletter is true, provide the newsletter name (e.g. "GitHub Weekly Digest") and unsubscribe URL if found.

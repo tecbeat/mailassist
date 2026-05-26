@@ -46,12 +46,3 @@ Date: {{ date }}
 {% if contact %}
 NOTE: The sender's email address already matched to contact: {{ contact.display_name }}{% if contact.organization %} ({{ contact.organization }}){% endif %} [ID: {{ contact.id }}]. Confirm this match if appropriate.
 {% endif %}
-
-Respond ONLY with a JSON object, no additional text:
-{
-  "contact_id": "uuid-of-matched-contact-or-null",
-  "contact_name": "Display Name or empty string if no match",
-  "confidence": 0.95,
-  "reasoning": "Brief explanation",
-  "is_new_contact_suggestion": false
-}

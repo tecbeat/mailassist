@@ -65,8 +65,3 @@ Sender is a known contact: {{ contact.display_name | default(sender_name) | defa
 
 Account: {{ account_name }} ({{ account_email }})
 Current time: {{ current_time }} ({{ current_weekday }})
-
-Respond ONLY with a JSON object:
-{"should_reply": false, "draft_body": null, "tone": null, "reasoning": "..."}
-or
-{"should_reply": true, "draft_body": "The full draft reply text", "tone": "formal", "reasoning": "..."}
