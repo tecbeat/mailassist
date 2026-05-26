@@ -66,10 +66,14 @@ class GetContactDetailsTool(BaseTool):
             from sqlalchemy import String
             from sqlalchemy.sql import cast
 
-            stmt = select(Contact).where(
-                Contact.user_id == user_id,
-                cast(Contact.emails, String).ilike(pattern),
-            ).limit(1)
+            stmt = (
+                select(Contact)
+                .where(
+                    Contact.user_id == user_id,
+                    cast(Contact.emails, String).ilike(pattern),
+                )
+                .limit(1)
+            )
 
         result = await self._db.execute(stmt)
         contact = result.scalar_one_or_none()

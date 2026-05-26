@@ -63,9 +63,7 @@ class CheckConflictsTool(BaseTool):
         config = result.scalar_one_or_none()
 
         if config is None:
-            return ToolResult(
-                content="Calendar (CalDAV) is not configured. Cannot check conflicts."
-            )
+            return ToolResult(content="Calendar (CalDAV) is not configured. Cannot check conflicts.")
 
         username, password = get_caldav_credentials(config.encrypted_credentials)
 

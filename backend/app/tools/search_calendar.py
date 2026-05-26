@@ -68,10 +68,7 @@ class SearchCalendarTool(BaseTool):
         config = result.scalar_one_or_none()
 
         if config is None:
-            return ToolResult(
-                content="Calendar (CalDAV) is not configured for this user. "
-                "Cannot search events."
-            )
+            return ToolResult(content="Calendar (CalDAV) is not configured for this user. Cannot search events.")
 
         username, password = get_caldav_credentials(config.encrypted_credentials)
 
