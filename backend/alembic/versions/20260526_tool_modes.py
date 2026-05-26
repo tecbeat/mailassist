@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "20260526_tool_modes"
-down_revision = "20260513_mail_aggregate_dedup"
+down_revision = "20260513_auto_approve_threshold"
 branch_labels = None
 depends_on = None
 
