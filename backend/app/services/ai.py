@@ -230,7 +230,7 @@ async def call_llm(
 
     Returns the validated response and total token usage.
     """
-    return await call_llm_with_tools(
+    result, tokens, _tools = await call_llm_with_tools(
         provider_type=provider_type,
         base_url=base_url,
         model_name=model_name,
@@ -246,6 +246,7 @@ async def call_llm(
         timeout=timeout,
         user_id=user_id,
     )
+    return result, tokens
 
 
 async def _noop_tool_executor(tool_name: str, **kwargs: Any) -> str:
@@ -268,7 +269,7 @@ async def call_llm_with_tools(
     temperature: float | None = None,
     timeout: int | None = None,
     user_id: str | None = None,
-) -> tuple[BaseModel, int]:
+) -> tuple[BaseModel, int, list[str]]:
     """Call an LLM with tool-calling support and validate the final response.
 
     Implements an agentic loop where the LLM can call tools to gather context
@@ -284,7 +285,7 @@ async def call_llm_with_tools(
         Other args: Same as ``call_llm``.
 
     Returns:
-        Tuple of (validated response, total tokens used).
+        Tuple of (validated response, total tokens used, list of tool names called).
 
     Raises:
         ValueError: If the LLM fails to produce a valid result.
@@ -331,6 +332,7 @@ async def call_llm_with_tools(
         optional_params["think"] = False
 
     total_tokens = 0
+    tools_used: list[str] = []
 
     for iteration in range(max_iterations):
         try:
@@ -388,9 +390,10 @@ async def call_llm_with_tools(
                             iterations=iteration + 1,
                             submit_via="submit_result",
                         )
-                        return validated, total_tokens
+                        return validated, total_tokens, tools_used
 
                     # Execute the tool
+                    tools_used.append(func_name)
                     tool_result = await tool_executor(func_name, **func_args)
                     messages.append(
                         {
@@ -432,7 +435,7 @@ async def call_llm_with_tools(
                             iterations=iteration + 1,
                             submit_via="direct_content",
                         )
-                        return validated, total_tokens
+                        return validated, total_tokens, tools_used
                     except (json.JSONDecodeError, ValidationError):
                         pass
 

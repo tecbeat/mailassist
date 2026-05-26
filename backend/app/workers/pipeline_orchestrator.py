@@ -80,6 +80,7 @@ class PluginResultEntry:
     display_name: str
     summary: str | None = None
     details: dict[str, Any] | None = None
+    tools_used: list[str] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dict."""
@@ -88,6 +89,8 @@ class PluginResultEntry:
             d["summary"] = self.summary
         if self.details is not None:
             d["details"] = self.details
+        if self.tools_used:
+            d["tools_used"] = self.tools_used
         return d
 
 
@@ -903,6 +906,7 @@ def _apply_outcome(result: PipelineResult, outcome: PluginOutcome) -> None:
             display_name=outcome.plugin_display_name,
             summary=outcome.result_summary,
             details=details,
+            tools_used=outcome.tools_used or None,
         )
     elif outcome.failed:
         result.plugins_failed.append(outcome.plugin_name)
@@ -911,6 +915,7 @@ def _apply_outcome(result: PipelineResult, outcome: PluginOutcome) -> None:
             status=status,
             display_name=outcome.plugin_display_name,
             summary=outcome.transient_error_reason or "Plugin failed",
+            tools_used=outcome.tools_used or None,
         )
 
     if outcome.approval_created:

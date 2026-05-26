@@ -166,6 +166,19 @@ function PluginResultDetail({ result }: { result: PluginResultEntry }) {
   return (
     <div className="text-xs space-y-1.5">
       <span className="font-medium">{result.display_name}</span>
+      {result.tools_used && result.tools_used.length > 0 && (
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className="text-muted-foreground">Tools:</span>
+          {result.tools_used.map((tool, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground"
+            >
+              {tool}
+            </span>
+          ))}
+        </div>
+      )}
       {result.summary && (
         <p className="text-muted-foreground">{result.summary}</p>
       )}

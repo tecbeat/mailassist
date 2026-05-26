@@ -334,7 +334,7 @@ class TestExecutePluginSuccess:
             patch("app.workers.plugin_executor.get_encryption") as enc,
             patch("app.core.templating.get_template_engine"),
             patch(
-                "app.workers.plugin_executor.call_llm_with_tools", new_callable=AsyncMock, return_value=(ai_resp, 100)
+                "app.workers.plugin_executor.call_llm_with_tools", new_callable=AsyncMock, return_value=(ai_resp, 100, [])
             ),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.has_actionable_results", return_value=True),
@@ -377,7 +377,7 @@ class TestExecutePluginSuccess:
             patch("app.workers.plugin_executor.get_encryption") as enc,
             patch("app.core.templating.get_template_engine"),
             patch(
-                "app.workers.plugin_executor.call_llm_with_tools", new_callable=AsyncMock, return_value=(ai_resp, 100)
+                "app.workers.plugin_executor.call_llm_with_tools", new_callable=AsyncMock, return_value=(ai_resp, 100, [])
             ),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.has_actionable_results", return_value=True),
@@ -421,7 +421,7 @@ class TestExecutePluginSuccess:
             patch("app.workers.plugin_executor.get_encryption") as enc,
             patch("app.core.templating.get_template_engine"),
             patch(
-                "app.workers.plugin_executor.call_llm_with_tools", new_callable=AsyncMock, return_value=(ai_resp, 50)
+                "app.workers.plugin_executor.call_llm_with_tools", new_callable=AsyncMock, return_value=(ai_resp, 50, [])
             ),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.has_actionable_results", return_value=True),
@@ -470,7 +470,7 @@ class TestExecutePluginActionFailure:
             patch("app.workers.plugin_executor.get_encryption") as enc,
             patch("app.core.templating.get_template_engine"),
             patch(
-                "app.workers.plugin_executor.call_llm_with_tools", new_callable=AsyncMock, return_value=(ai_resp, 50)
+                "app.workers.plugin_executor.call_llm_with_tools", new_callable=AsyncMock, return_value=(ai_resp, 50, [])
             ),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.has_actionable_results", return_value=False),
@@ -522,7 +522,7 @@ class TestExecutePluginReprompt:
             patch(
                 "app.workers.plugin_executor.call_llm_with_tools",
                 new_callable=AsyncMock,
-                side_effect=[(ai_resp1, 50), (ai_resp2, 30)],
+                side_effect=[(ai_resp1, 50, []), (ai_resp2, 30, [])],
             ),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.has_actionable_results", return_value=True),
@@ -567,7 +567,7 @@ class TestExecutePluginReprompt:
             patch(
                 "app.workers.plugin_executor.call_llm_with_tools",
                 new_callable=AsyncMock,
-                side_effect=[(ai_resp, 50), TransientLLMError("retry fail")],
+                side_effect=[(ai_resp, 50, []), TransientLLMError("retry fail")],
             ),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.has_actionable_results", return_value=False),
@@ -615,7 +615,7 @@ class TestExecutePluginSpamShortCircuit:
             patch("app.workers.plugin_executor.get_encryption") as enc,
             patch("app.core.templating.get_template_engine"),
             patch(
-                "app.workers.plugin_executor.call_llm_with_tools", new_callable=AsyncMock, return_value=(ai_resp, 50)
+                "app.workers.plugin_executor.call_llm_with_tools", new_callable=AsyncMock, return_value=(ai_resp, 50, [])
             ),
             patch("app.workers.plugin_executor.update_provider_health", new_callable=AsyncMock),
             patch("app.workers.plugin_executor.has_actionable_results", return_value=True),

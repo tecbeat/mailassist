@@ -16,6 +16,7 @@ class PluginResultEntry(BaseModel):
     display_name: str
     summary: str | None = None
     details: dict[str, Any] | None = None
+    tools_used: list[str] | None = None
 
 
 class PipelinePluginName(BaseModel):

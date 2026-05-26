@@ -89,6 +89,7 @@ class PluginOutcome:
     auto_approved: bool = False
     result_summary: str | None = None
     result_details: dict[str, Any] | None = None
+    tools_used: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -197,6 +198,7 @@ async def execute_plugin(
         api_key = encryption.decrypt(provider.api_key)
 
     # --- LLM call (always tool-calling mode) ---
+    tools_used: list[str] = []
     try:
         from app.tools.registry import get_tool_registry
 
@@ -238,7 +240,7 @@ async def execute_plugin(
             )
             return result.content
 
-        ai_response, tokens_used = await call_llm_with_tools(
+        ai_response, tokens_used, tools_used = await call_llm_with_tools(
             provider_type=provider.provider_type.value,
             base_url=provider.base_url,
             model_name=provider.model_name,
@@ -292,7 +294,7 @@ async def execute_plugin(
     if action_result.retry_prompt:
         log.info("plugin_reprompt_requested", plugin=plugin.name, retry_prompt=action_result.retry_prompt)
         try:
-            ai_response, retry_tokens = await call_llm_with_tools(
+            ai_response, retry_tokens, retry_tools = await call_llm_with_tools(
                 provider_type=provider.provider_type.value,
                 base_url=provider.base_url,
                 model_name=provider.model_name,
@@ -308,6 +310,7 @@ async def execute_plugin(
                 timeout=provider.timeout_seconds or user_settings.ai_timeout_seconds,
             )
             tokens_used += retry_tokens
+            tools_used.extend(retry_tools)
         except (TransientLLMError, PermanentLLMError, ValueError) as e:
             log.error("plugin_reprompt_failed", plugin=plugin.name, error=str(e))
             outcome.failed = True
@@ -390,6 +393,7 @@ async def execute_plugin(
     # Extract result summary for queue display
     outcome.result_summary = _extract_result_summary(plugin.name, ai_response)
     outcome.result_details = _extract_result_details(plugin.name, ai_response)
+    outcome.tools_used = tools_used
 
     log.info(
         "plugin_executed",
