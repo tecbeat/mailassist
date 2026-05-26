@@ -225,140 +225,32 @@ async def call_llm(
 ) -> tuple[BaseModel, int]:
     """Call an LLM and validate the response against a Pydantic schema.
 
+    Thin wrapper around ``call_llm_with_tools`` with no extra tools.
+    The LLM must call ``submit_result`` to return its response.
+
     Returns the validated response and total token usage.
-    Retries once if the response is invalid JSON.
-
-    Args:
-        max_tokens: Max response tokens. Defaults to ``settings.ai_max_tokens``.
-        temperature: Sampling temperature. Defaults to ``settings.ai_temperature``.
-        timeout: HTTP timeout in seconds. Defaults to ``settings.ai_timeout_seconds``.
-
-    Raises:
-        ValueError: If the LLM returns invalid output after retry.
-        TransientLLMError: On transient provider errors (timeout, connection, rate limit).
-        PermanentLLMError: On permanent config errors (auth, not found).
     """
-    from app.core.config import get_settings
+    return await call_llm_with_tools(
+        provider_type=provider_type,
+        base_url=base_url,
+        model_name=model_name,
+        api_key=api_key,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        response_schema=response_schema,
+        tools=[],
+        tool_executor=_noop_tool_executor,
+        max_iterations=3,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        timeout=timeout,
+        user_id=user_id,
+    )
 
-    settings = get_settings()
-    max_tokens = max_tokens if max_tokens is not None else settings.ai_max_tokens
-    temperature = temperature if temperature is not None else settings.ai_temperature
-    timeout = timeout if timeout is not None else settings.ai_timeout_seconds
-    # Build litellm model identifier
-    model = _build_model_string(provider_type, model_name)
 
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
-
-    optional_params: dict[str, Any] = {}
-    if api_key:
-        optional_params["api_key"] = api_key
-    if base_url:
-        optional_params["api_base"] = base_url
-
-    total_tokens = 0
-
-    for attempt in range(2):
-        try:
-            completion_kwargs: dict[str, Any] = {
-                "model": model,
-                "messages": messages,
-                "max_tokens": max_tokens,
-                "temperature": temperature,
-                "timeout": timeout,
-                **optional_params,
-            }
-            # Only use response_format for providers that support it reliably
-            if provider_type.lower() not in ("ollama", "anthropic"):
-                completion_kwargs["response_format"] = {"type": "json_object"}
-
-            response = await litellm.acompletion(**completion_kwargs)
-
-            content = response.choices[0].message.content
-            usage = response.usage
-            total_tokens += usage.total_tokens if usage else 0
-
-            # Parse and validate -- try to extract JSON from markdown code blocks
-            parsed = _parse_json_response(content)
-            validated = response_schema.model_validate(parsed)
-
-            # Track token usage in Valkey
-            if user_id:
-                await _track_tokens(user_id, usage.total_tokens if usage else 0)
-
-            logger.info(
-                "llm_call_success",
-                model=model,
-                tokens=usage.total_tokens if usage else 0,
-                attempt=attempt + 1,
-            )
-            return validated, total_tokens
-
-        except (json.JSONDecodeError, ValidationError) as e:
-            if attempt == 0:
-                # Retry with explicit JSON instruction
-                logger.warning(
-                    "llm_invalid_output_retrying",
-                    model=model,
-                    error=str(e),
-                )
-                messages.append({"role": "assistant", "content": content if "content" in locals() else ""})
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": "Your response was not valid JSON matching the required schema. "
-                        "Please respond with valid JSON only, matching the exact schema requested.",
-                    }
-                )
-                continue
-            logger.error(
-                "llm_invalid_output_final",
-                model=model,
-                error=str(e),
-                attempt=attempt + 1,
-            )
-            raise ValueError(f"LLM returned invalid output after retry: {e}") from e
-
-        except Exception as e:
-            # Classify the error as transient or permanent
-            if is_transient_llm_error(e):
-                logger.warning(
-                    "llm_transient_error",
-                    model=model,
-                    error_type=type(e).__name__,
-                    error=str(e),
-                )
-                raise TransientLLMError(
-                    f"Transient LLM error ({type(e).__name__}): {e}",
-                    original_error=e,
-                ) from e
-            elif is_permanent_llm_error(e):
-                logger.error(
-                    "llm_permanent_error",
-                    model=model,
-                    error_type=type(e).__name__,
-                    error=str(e),
-                )
-                raise PermanentLLMError(
-                    f"Permanent LLM error ({type(e).__name__}): {e}",
-                    original_error=e,
-                ) from e
-            else:
-                # Unknown error type — treat as transient to be safe
-                logger.error(
-                    "llm_unknown_error",
-                    model=model,
-                    error_type=type(e).__name__,
-                    error=str(e),
-                )
-                raise TransientLLMError(
-                    f"Unknown LLM error ({type(e).__name__}): {e}",
-                    original_error=e,
-                ) from e
-
-    raise ValueError("LLM call failed after retries")
+async def _noop_tool_executor(tool_name: str, **kwargs: Any) -> str:
+    """No-op tool executor for calls without extra tools."""
+    return f"Error: Unknown tool '{tool_name}'"
 
 
 async def call_llm_with_tools(
@@ -546,27 +438,14 @@ async def call_llm_with_tools(
                     original_error=e,
                 ) from e
 
-    # Exhausted iterations — fall back to a plain structured output call
+    # Exhausted iterations — raise error
     logger.warning(
         "llm_tool_call_max_iterations",
         model=model,
         max_iterations=max_iterations,
     )
-    # Final attempt without tools, using structured output
-    return await call_llm(
-        provider_type=provider_type,
-        base_url=base_url,
-        model_name=model_name,
-        api_key=api_key,
-        system_prompt=system_prompt,
-        user_prompt="\n\n".join(
-            m["content"] for m in messages if m.get("role") in ("user", "tool") and m.get("content")
-        ),
-        response_schema=response_schema,
-        max_tokens=max_tokens,
-        temperature=temperature,
-        timeout=timeout,
-        user_id=user_id,
+    raise ValueError(
+        f"LLM failed to produce a valid result after {max_iterations} tool-calling iterations"
     )
 
 

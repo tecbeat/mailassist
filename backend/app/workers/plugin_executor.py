@@ -23,7 +23,6 @@ from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext, Pipeli
 from app.services.ai import (
     PermanentLLMError,
     TransientLLMError,
-    call_llm,
     call_llm_with_tools,
     check_ai_circuit_breaker,
     update_provider_health,
@@ -197,7 +196,7 @@ async def execute_plugin(
     if provider.api_key:
         api_key = encryption.decrypt(provider.api_key)
 
-    # --- LLM call (with or without tools) ---
+    # --- LLM call (always tool-calling mode) ---
     try:
         from app.tools.registry import get_tool_registry
 
@@ -207,66 +206,51 @@ async def execute_plugin(
         except RuntimeError:
             litellm_tools = []
 
-        if litellm_tools:
-            # Append tool-calling instruction to system prompt
-            tool_system_prompt = (
-                system_prompt + "\n\n## Tools\n"
-                "You have access to tools that can help you gather additional context "
-                "before making your decision. Use them if the email content alone is "
-                "insufficient. When you have gathered enough information, call the "
-                "`submit_result` tool with your final analysis.\n"
-                "If you do not need additional context, call `submit_result` immediately."
-            )
+        # Append tool-calling instruction to system prompt
+        tool_system_prompt = (
+            system_prompt + "\n\n## Tools\n"
+            "You have access to tools that can help you gather additional context "
+            "before making your decision. Use them if the email content alone is "
+            "insufficient. When you have gathered enough information, call the "
+            "`submit_result` tool with your final analysis.\n"
+            "If you do not need additional context, call `submit_result` immediately."
+        )
 
-            # Inject pipeline/mail context into all tools so they can access it
+        # Inject pipeline/mail context into all tools so they can access it
+        if litellm_tools:
             for _tool in tool_registry.get_all_tools():
                 _tool.set_context(pipeline=pipeline, mail_context=context)
 
-            # Tool-calling mode: LLM can call tools to gather context
-            async def _execute_tool(tool_name: str, **kwargs: Any) -> str:
-                tool = tool_registry.get_tool(tool_name)
-                if tool is None:
-                    return f"Error: Unknown tool '{tool_name}'"
-                result = await tool.safe_execute(**kwargs)
-                log.debug(
-                    "tool_executed",
-                    plugin=plugin.name,
-                    tool=tool_name,
-                    is_error=result.is_error,
-                )
-                return result.content
+        # Tool-calling mode: LLM can call tools to gather context
+        async def _execute_tool(tool_name: str, **kwargs: Any) -> str:
+            tool = tool_registry.get_tool(tool_name)
+            if tool is None:
+                return f"Error: Unknown tool '{tool_name}'"
+            result = await tool.safe_execute(**kwargs)
+            log.debug(
+                "tool_executed",
+                plugin=plugin.name,
+                tool=tool_name,
+                is_error=result.is_error,
+            )
+            return result.content
 
-            ai_response, tokens_used = await call_llm_with_tools(
-                provider_type=provider.provider_type.value,
-                base_url=provider.base_url,
-                model_name=provider.model_name,
-                api_key=api_key,
-                system_prompt=tool_system_prompt,
-                user_prompt=user_prompt,
-                response_schema=plugin.get_response_schema(),
-                tools=litellm_tools,
-                tool_executor=_execute_tool,
-                max_iterations=get_settings().ai_max_tool_calls,
-                max_tokens=provider.max_tokens,
-                temperature=provider.temperature,
-                user_id=context.user_id,
-                timeout=provider.timeout_seconds or user_settings.ai_timeout_seconds,
-            )
-        else:
-            # No tools registered — use plain structured output (backward compatible)
-            ai_response, tokens_used = await call_llm(
-                provider_type=provider.provider_type.value,
-                base_url=provider.base_url,
-                model_name=provider.model_name,
-                api_key=api_key,
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                response_schema=plugin.get_response_schema(),
-                max_tokens=provider.max_tokens,
-                temperature=provider.temperature,
-                user_id=context.user_id,
-                timeout=provider.timeout_seconds or user_settings.ai_timeout_seconds,
-            )
+        ai_response, tokens_used = await call_llm_with_tools(
+            provider_type=provider.provider_type.value,
+            base_url=provider.base_url,
+            model_name=provider.model_name,
+            api_key=api_key,
+            system_prompt=tool_system_prompt,
+            user_prompt=user_prompt,
+            response_schema=plugin.get_response_schema(),
+            tools=litellm_tools,
+            tool_executor=_execute_tool,
+            max_iterations=get_settings().ai_max_tool_calls,
+            max_tokens=provider.max_tokens,
+            temperature=provider.temperature,
+            user_id=context.user_id,
+            timeout=provider.timeout_seconds or user_settings.ai_timeout_seconds,
+        )
     except TransientLLMError as e:
         return await _handle_transient_error(
             db=db,
