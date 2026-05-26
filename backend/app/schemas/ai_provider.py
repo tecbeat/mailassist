@@ -101,6 +101,14 @@ class PluginInfo(BaseModel):
     runs_in_pipeline: bool = True
 
 
+class ToolInfo(BaseModel):
+    """Metadata about an available LLM tool."""
+
+    name: str
+    description: str
+    enabled: bool = True
+
+
 class PauseUpdate(BaseModel):
     """Request schema for updating the pause state."""
 

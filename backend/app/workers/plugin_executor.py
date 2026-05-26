@@ -202,7 +202,12 @@ async def execute_plugin(
 
         try:
             tool_registry = get_tool_registry()
-            litellm_tools = tool_registry.get_litellm_tools()
+            # Filter out disabled tools based on user settings
+            tool_modes = user_settings.tool_modes or {}
+            active_tools = [
+                t for t in tool_registry.get_all_tools() if tool_modes.get(t.name, "enabled") != "disabled"
+            ]
+            litellm_tools = [t.to_litellm_tool() for t in active_tools]
         except RuntimeError:
             litellm_tools = []
 

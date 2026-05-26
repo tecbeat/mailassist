@@ -23,6 +23,7 @@ from app.schemas.ai_provider import (
     AIProviderUpdate,
     PauseUpdate,
     PluginInfo,
+    ToolInfo,
 )
 
 logger = structlog.get_logger()
@@ -109,6 +110,38 @@ async def list_plugins(
         plugin_infos.sort(key=lambda p: order_map.get(p.name, fallback))
 
     return plugin_infos
+
+
+@router.get("/tools", name="list_tools")
+async def list_tools(
+    db: DbSession,
+    user_id: CurrentUserId,
+) -> list[ToolInfo]:
+    """List all available LLM tools with their enabled/disabled status."""
+    from app.tools.registry import get_tool_registry
+
+    try:
+        registry = get_tool_registry()
+    except RuntimeError:
+        return []
+
+    settings = await get_or_create(db, UserSettings, user_id)
+    tool_modes = settings.tool_modes or {}
+
+    tools = []
+    for tool in registry.get_all_tools():
+        enabled = tool_modes.get(tool.name, "enabled") != "disabled"
+        tools.append(
+            ToolInfo(
+                name=tool.name,
+                description=tool.description,
+                enabled=enabled,
+            )
+        )
+
+    # Sort alphabetically
+    tools.sort(key=lambda t: t.name)
+    return tools
 
 
 @router.get("/{provider_id}")

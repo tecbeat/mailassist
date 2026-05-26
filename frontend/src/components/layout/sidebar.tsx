@@ -19,6 +19,7 @@ import {
   Ticket,
   KeyRound,
   Puzzle,
+  Wrench,
   LogOut,
   Menu,
   X,
@@ -90,6 +91,7 @@ const OVERVIEW_ITEMS: NavItem[] = [
 
 const STATIC_CONFIG_ITEMS_TOP: NavItem[] = [
   { label: "Plugins", to: "/plugins", icon: Puzzle },
+  { label: "Tools", to: "/tools", icon: Wrench },
   { label: "Prompts", to: "/prompts", icon: FileText },
 ];
 

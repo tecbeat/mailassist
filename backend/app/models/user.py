@@ -148,6 +148,7 @@ class UserSettings(Base):
     auto_approve_threshold: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
     plugin_order: Mapped[list[str] | None] = mapped_column(JSON, nullable=True, default=None)
     plugin_provider_map: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True, default=None)
+    tool_modes: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True, default=None)
     last_seen_version: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(
