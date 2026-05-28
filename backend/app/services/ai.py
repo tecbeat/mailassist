@@ -357,11 +357,14 @@ async def call_llm_with_tools(
                 chunks: list[Any] = []
                 async for chunk in stream_response:
                     chunks.append(chunk)
-                response = litellm.stream_chunk_builder(chunks)
+                built = litellm.stream_chunk_builder(chunks)
+                if built is None:
+                    raise TransientLLMError("Stream returned no response")
+                response = built
             else:
                 response = await litellm.acompletion(**completion_kwargs)
-            message = response.choices[0].message
-            usage = response.usage
+            message = response.choices[0].message  # type: ignore[union-attr]
+            usage = response.usage  # type: ignore[union-attr]
             total_tokens += usage.total_tokens if usage else 0
 
             # Check if the LLM wants to call tools
@@ -405,7 +408,7 @@ async def call_llm_with_tools(
                         return validated, total_tokens, tools_used
 
                     # Execute the tool
-                    tools_used.append(func_name)
+                    tools_used.append(str(func_name))
                     tool_result = await tool_executor(func_name, **func_args)
                     messages.append(
                         {

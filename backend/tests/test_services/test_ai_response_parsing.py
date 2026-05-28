@@ -282,11 +282,15 @@ class TestCallLLMParsing:
 
     @pytest.mark.asyncio
     async def test_no_api_key_omits_param(self):
-        """When api_key is None, it is not passed to litellm. Ollama gets think=False."""
+        """When api_key is None, it is not passed to litellm. Ollama gets think=False and streaming."""
         mock_resp = _make_tool_call_response({"label": "test", "confidence": 0.5})
 
+        async def _fake_stream(*args, **kwargs):
+            yield MagicMock()
+
         with (
-            patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_resp) as mock_call,
+            patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, side_effect=_fake_stream) as mock_call,
+            patch("app.services.ai.litellm.stream_chunk_builder", return_value=mock_resp),
             patch("app.services.ai._track_tokens", new_callable=AsyncMock),
         ):
             await call_llm(
@@ -302,6 +306,7 @@ class TestCallLLMParsing:
         _, kwargs = mock_call.call_args
         assert "api_key" not in kwargs
         assert kwargs.get("think") is False
+        assert kwargs.get("stream") is True
 
 
 class TestTokenTracking:
