@@ -22,12 +22,30 @@ class CalendarEventResponse(BaseModel):
     """Validated LLM response for calendar extraction."""
 
     has_event: bool
+    event_action: str = Field(
+        default="create",
+        description="Action to take: 'create' for new events, 'update' to modify an existing event, 'cancel' to mark an event as cancelled.",
+    )
     title: str | None = Field(default=None, max_length=300)
     start: str | None = None
     end: str | None = None
     location: str | None = Field(default=None, max_length=500)
     description: str | None = Field(default=None, max_length=2000)
     is_all_day: bool = False
+    existing_event_title: str | None = Field(
+        default=None,
+        max_length=300,
+        description="Title of the existing calendar event to update or cancel (from search_calendar results).",
+    )
+
+    @field_validator("event_action", mode="before")
+    @classmethod
+    def validate_event_action(cls, v: str | None) -> str:
+        """Ensure event_action is one of the allowed values."""
+        allowed = ("create", "update", "cancel")
+        if v is None or v not in allowed:
+            return "create"
+        return v
 
     @field_validator("start", "end", mode="before")
     @classmethod
@@ -65,6 +83,22 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
             return self._no_action("no_calendar_event_found")
 
         if not ai_response.title or not ai_response.start:
+            # For cancel actions, title alone is sufficient
+            if ai_response.event_action == "cancel" and ai_response.existing_event_title:
+                cancel_actions = [
+                    f"cancel_calendar_event:{ai_response.existing_event_title}",
+                ]
+                self.logger.info(
+                    "calendar_event_cancel_detected",
+                    existing_title=ai_response.existing_event_title,
+                    mail_uid=context.mail_uid,
+                )
+                return ActionResult(
+                    success=True,
+                    actions_taken=cancel_actions,
+                    requires_approval=True,
+                    approval_summary=f"Cancel calendar event: '{ai_response.existing_event_title}'",
+                )
             return ActionResult(
                 success=True,
                 actions_taken=["event_detected_but_incomplete"],
@@ -92,8 +126,16 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
 
         actions: list[str] = [
             "apply_label:calendar",
-            f"create_calendar_event:{ai_response.title}",
         ]
+
+        if ai_response.event_action == "cancel":
+            actions.append(f"cancel_calendar_event:{ai_response.existing_event_title or ai_response.title}")
+        elif ai_response.event_action == "update":
+            actions.append(f"update_calendar_event:{ai_response.title}")
+            if ai_response.existing_event_title and ai_response.existing_event_title != ai_response.title:
+                actions.append(f"replaces_event:{ai_response.existing_event_title}")
+        else:
+            actions.append(f"create_calendar_event:{ai_response.title}")
 
         if ai_response.location:
             actions.append(f"event_location:{ai_response.location}")
@@ -102,6 +144,7 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
             "calendar_event_detected",
             title=ai_response.title,
             start=ai_response.start,
+            event_action=ai_response.event_action,
             mail_uid=context.mail_uid,
         )
 
@@ -114,7 +157,13 @@ class CalendarExtractionPlugin(AIFunctionPlugin[CalendarEventResponse]):
         )
 
     def get_approval_summary(self, ai_response: CalendarEventResponse) -> str:
-        return f"Calendar event: '{ai_response.title}' on {ai_response.start}"
+        action_label = {"create": "Create", "update": "Update", "cancel": "Cancel"}.get(
+            ai_response.event_action, "Create"
+        )
+        title = ai_response.existing_event_title or ai_response.title
+        if ai_response.event_action == "cancel":
+            return f"{action_label} calendar event: '{title}'"
+        return f"{action_label} calendar event: '{ai_response.title}' on {ai_response.start}"
 
     @classmethod
     def get_notification_context(cls, result_data: dict[str, Any]) -> dict[str, Any]:

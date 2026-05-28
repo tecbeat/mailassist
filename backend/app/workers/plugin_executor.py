@@ -627,6 +627,8 @@ async def _persist_plugin_result(
             location=resp_cal.location,
             description=resp_cal.description,
             is_all_day=resp_cal.is_all_day,
+            event_action=resp_cal.event_action,
+            existing_event_title=resp_cal.existing_event_title,
             mail_id=mail_id,
             db=db,
         )

@@ -432,6 +432,67 @@ async def _sync_event_to_caldav(record: CalendarEvent) -> None:
                 event.caldav_uid = caldav_uid
 
 
+async def _cancel_calendar_event(
+    *,
+    user_id: UUID,
+    title: str,
+    mail_id: UUID,
+    own_session: bool = False,
+    db: AsyncSession | None = None,
+) -> None:
+    """Cancel/delete a calendar event by searching for it by title.
+
+    Searches the user's recent calendar events in the DB for a matching title,
+    then deletes it from CalDAV and marks the DB record.
+    """
+    from app.services.calendar import delete_caldav_event, get_caldav_credentials
+
+    async with get_session_ctx() as session:
+        # Find the existing event by title (most recent match)
+        stmt = (
+            select(CalendarEvent)
+            .where(
+                CalendarEvent.user_id == user_id,
+                CalendarEvent.title.ilike(f"%{title}%"),
+            )
+            .order_by(CalendarEvent.created_at.desc())
+            .limit(1)
+        )
+        result = await session.execute(stmt)
+        event = result.scalar_one_or_none()
+
+        if event is None:
+            logger.info("cancel_calendar_event_not_found", title=title, user_id=str(user_id))
+            return
+
+        # Delete from CalDAV if synced
+        if event.caldav_uid:
+            config_stmt = select(CalDAVConfig).where(
+                CalDAVConfig.user_id == user_id,
+                CalDAVConfig.is_active.is_(True),
+            )
+            config = (await session.execute(config_stmt)).scalar_one_or_none()
+            if config:
+                username, password = get_caldav_credentials(bytes(config.encrypted_credentials))
+                try:
+                    await delete_caldav_event(
+                        caldav_url=config.caldav_url,
+                        username=username,
+                        password=password,
+                        calendar_name=config.default_calendar or "",
+                        uid=event.caldav_uid,
+                    )
+                    logger.info("caldav_event_deleted", title=title, uid=event.caldav_uid)
+                except Exception as exc:
+                    logger.warning("caldav_event_delete_failed", title=title, error=str(exc)[:200])
+
+        # Remove from DB
+        from sqlalchemy import delete as sa_delete
+
+        await session.execute(sa_delete(CalendarEvent).where(CalendarEvent.id == event.id))
+        logger.info("calendar_event_cancelled", title=title, mail_id=str(mail_id))
+
+
 async def save_calendar_event(
     *,
     user_id: UUID,
@@ -442,17 +503,37 @@ async def save_calendar_event(
     location: str | None = None,
     description: str | None = None,
     is_all_day: bool = False,
+    event_action: str = "create",
+    existing_event_title: str | None = None,
     mail_id: UUID,
     own_session: bool = False,
     db: AsyncSession | None = None,
 ) -> None:
     """Persist a calendar event record and push to CalDAV if configured.
 
-    If ``has_event`` is False or ``title`` is missing, this is a no-op.
+    Supports three actions:
+    - ``create``: create a new event (default)
+    - ``update``: update an existing event (matched by existing_event_title)
+    - ``cancel``: mark an existing event as cancelled in CalDAV
+
+    If ``has_event`` is False or ``title`` is missing (unless cancelling), this is a no-op.
     The DB insert always happens first.  CalDAV sync is attempted afterwards;
     failures are recorded on the row but never prevent the DB save.
     """
-    if not has_event or not title:
+    if not has_event:
+        return
+
+    # Handle cancellation
+    if event_action == "cancel":
+        cancel_title = existing_event_title or title
+        if not cancel_title:
+            return
+        await _cancel_calendar_event(
+            user_id=user_id, title=cancel_title, mail_id=mail_id, own_session=own_session, db=db
+        )
+        return
+
+    if not title:
         return
 
     # Parse start/end strings to datetime if needed

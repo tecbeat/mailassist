@@ -14,6 +14,8 @@ EXTRACT these types:
 - Hotel/restaurant reservations with check-in dates
 - Event tickets with a specific date (concerts, conferences, webinars)
 - Deadlines with a specific date requiring user action
+- **Cancellations** of previously confirmed events
+- **Reschedules** or time changes for existing events
 
 DO NOT EXTRACT (return has_event: false):
 - Vague date mentions ("next week", "soon", "in the coming days")
@@ -22,8 +24,19 @@ DO NOT EXTRACT (return has_event: false):
 - Recurring automated emails (daily/weekly reports, digests)
 - General mentions of dates in informational context
 - Emails referencing time/date without requiring the user's presence
+- Reminder emails for an event that was already extracted (use search_calendar to check!)
 
 When in doubt, set has_event to false. False positives clutter the user's calendar.
+
+## EVENT ACTIONS
+
+Set the `event_action` field based on the email's intent:
+
+- **"create"** — A new event invitation, confirmation, or booking. This is the default.
+- **"update"** — The email changes the time, location, or details of an existing event (e.g. "Meeting rescheduled to Thursday"). Set `existing_event_title` to the original event title found via `search_calendar`.
+- **"cancel"** — The email explicitly cancels a previously confirmed event (e.g. "Your appointment has been cancelled", "Meeting cancelled"). Set `existing_event_title` to the event being cancelled. Start/end can be omitted for cancellations.
+
+IMPORTANT: Before choosing "create", ALWAYS use `search_calendar` to check if a similar event already exists in the same time window. If it does, this is likely a reminder or duplicate — return has_event: false.
 
 === BEGIN UNTRUSTED EMAIL CONTENT ===
 From: {{ sender_name }} <{{ sender }}>
@@ -43,9 +56,12 @@ Current date: {{ current_date }} ({{ current_weekday }})
 
 ## TOOL USAGE
 
-Before submitting your result, use the following tools when appropriate:
+Before submitting your result, use the following tools:
 
-1. **check_conflicts** — If you detect a valid event, ALWAYS call `check_conflicts` with the proposed start and end time to check if the time slot is already occupied. Report conflicts in your result so the user can decide.
-2. **search_calendar** — If the email references an existing appointment (e.g. "rescheduled", "updated", "cancelled"), use `search_calendar` to find the original event. This prevents duplicate entries.
+1. **search_calendar** — ALWAYS search the calendar around the event's date (±1 day) to check if a similar event already exists. If it does:
+   - If this email is just a reminder → return `has_event: false`
+   - If this email reschedules it → use `event_action: "update"` with `existing_event_title`
+   - If this email cancels it → use `event_action: "cancel"` with `existing_event_title`
+2. **check_conflicts** — If creating a NEW event, call `check_conflicts` with the proposed start and end time. Mention conflicts in the description so the user is informed.
 
 If has_event is true, use ISO 8601 format for start/end (e.g. "2026-04-01T14:00:00"). If no timezone is specified, assume Europe/Berlin.
