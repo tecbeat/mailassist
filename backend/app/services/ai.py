@@ -340,6 +340,9 @@ async def call_llm_with_tools(
 
     for iteration in range(max_iterations):
         try:
+            # Use "auto" for tool_choice — allows the model to either call tools
+            # or respond with content directly. "required" causes issues with models
+            # like GLM-4 that never call submit_result.
             completion_kwargs: dict[str, Any] = {
                 "model": model,
                 "messages": messages,
@@ -347,7 +350,7 @@ async def call_llm_with_tools(
                 "temperature": temperature,
                 "timeout": timeout,
                 "tools": all_tools,
-                "tool_choice": "required",
+                "tool_choice": "auto",
                 **optional_params,
             }
 
