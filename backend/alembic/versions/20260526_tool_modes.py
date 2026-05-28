@@ -19,8 +19,7 @@ def upgrade() -> None:
     conn = op.get_bind()
     result = conn.execute(
         sa.text(
-            "SELECT 1 FROM information_schema.columns "
-            "WHERE table_name = 'user_settings' AND column_name = 'tool_modes'"
+            "SELECT 1 FROM information_schema.columns WHERE table_name = 'user_settings' AND column_name = 'tool_modes'"
         )
     )
     if not result.fetchone():
