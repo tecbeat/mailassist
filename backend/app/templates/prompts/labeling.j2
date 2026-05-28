@@ -40,3 +40,10 @@ Sender is a known contact: {{ contact.display_name }}{% if contact.organization 
 {% endif %}
 
 Account: {{ account_name }} ({{ account_email }})
+
+## TOOL USAGE
+
+Use the following tools when they can improve your labeling:
+
+1. **get_plugin_results** — Check what earlier plugins determined (spam_detection, newsletter_detection). Use their findings to inform label choices (e.g. if newsletter_detection confirmed it's a newsletter, add appropriate labels like "newsletter" or the specific topic).
+2. **get_user_data** — If you need the full list of existing labels and folders for context, call `get_user_data` with section "folders" to see all available labels.

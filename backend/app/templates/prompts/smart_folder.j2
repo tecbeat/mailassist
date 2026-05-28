@@ -55,3 +55,10 @@ Sender is a known contact: {{ contact.display_name }}{% if contact.organization 
 {% endif %}
 
 Account: {{ account_name }} ({{ account_email }})
+
+## TOOL USAGE
+
+Use the following tools when they can improve your decision:
+
+1. **get_user_data** — If the folder list above seems incomplete or you need to verify the full folder hierarchy, call `get_user_data` with section "folders" to get the complete, up-to-date folder tree.
+2. **get_plugin_results** — Check what other plugins determined about this email (e.g. spam_detection, newsletter_detection, labeling). A spam email should go to Junk, a newsletter might go to a topic-specific folder rather than a generic "Newsletter" folder.

@@ -41,4 +41,11 @@ Sender is a known contact: {{ contact.display_name }}{% if contact.organization 
 
 Current date: {{ current_date }} ({{ current_weekday }})
 
+## TOOL USAGE
+
+Before submitting your result, use the following tools when appropriate:
+
+1. **check_conflicts** — If you detect a valid event, ALWAYS call `check_conflicts` with the proposed start and end time to check if the time slot is already occupied. Report conflicts in your result so the user can decide.
+2. **search_calendar** — If the email references an existing appointment (e.g. "rescheduled", "updated", "cancelled"), use `search_calendar` to find the original event. This prevents duplicate entries.
+
 If has_event is true, use ISO 8601 format for start/end (e.g. "2026-04-01T14:00:00"). If no timezone is specified, assume Europe/Berlin.

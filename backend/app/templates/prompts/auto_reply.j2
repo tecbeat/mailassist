@@ -65,3 +65,11 @@ Sender is a known contact: {{ contact.display_name | default(sender_name) | defa
 
 Account: {{ account_name }} ({{ account_email }})
 Current time: {{ current_time }} ({{ current_weekday }})
+
+## TOOL USAGE
+
+Use the following tools when they can improve your draft:
+
+1. **search_contacts** — If the sender is unknown, search contacts to find context about who they are (organization, title). This helps match formality and tone.
+2. **get_plugin_results** — Check what other plugins determined (e.g. spam_detection, newsletter_detection). If the email was flagged as spam or newsletter, do NOT draft a reply.
+3. **search_calendar** — If the email discusses scheduling, check the user's calendar to write an informed reply about availability.
