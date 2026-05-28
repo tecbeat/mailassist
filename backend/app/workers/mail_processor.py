@@ -359,25 +359,52 @@ async def _pause_account(
 
 
 async def _pause_provider(
-    provider_id: str,
+    provider_id: str | UUID,
     reason: str,
     log: structlog.stdlib.BoundLogger,
+    *,
+    pause_threshold: int = 5,
 ) -> None:
-    """Set ``is_paused=True`` on an AIProvider."""
+    """Increment error counter and pause only after threshold consecutive errors.
+
+    This prevents a single transient 504 from disabling the entire provider.
+    The provider is only paused after ``pause_threshold`` consecutive failures.
+    """
     now = datetime.now(UTC)
-    await _pause_entity(
-        model=AIProvider,
-        entity_id=provider_id,
-        values={
-            "is_paused": True,
-            "paused_reason": reason[:200],
-            "paused_at": now,
-        },
-        reason=reason,
-        log=log,
-        log_success="provider_paused",
-        log_failure="provider_pause_failed",
-    )
+    _provider_id = UUID(str(provider_id)) if not isinstance(provider_id, UUID) else provider_id
+
+    async with get_session_ctx() as db:
+        stmt = select(AIProvider).where(AIProvider.id == _provider_id)
+        result = await db.execute(stmt)
+        provider = result.scalar_one_or_none()
+        if not provider:
+            log.warning("provider_pause_failed", entity_id=str(_provider_id), reason="not_found")
+            return
+
+        provider.consecutive_errors += 1
+        provider.last_error = reason[:200]
+        provider.last_error_at = now
+
+        if provider.consecutive_errors >= pause_threshold:
+            provider.is_paused = True
+            provider.paused_reason = reason[:200]
+            provider.paused_at = now
+            log.warning(
+                "provider_paused",
+                entity_id=str(provider_id),
+                reason=reason,
+                consecutive_errors=provider.consecutive_errors,
+            )
+        else:
+            log.info(
+                "provider_error_recorded",
+                entity_id=str(provider_id),
+                reason=reason,
+                consecutive_errors=provider.consecutive_errors,
+                threshold=pause_threshold,
+            )
+
+        await db.commit()
 
 
 # ---------------------------------------------------------------------------

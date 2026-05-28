@@ -334,6 +334,10 @@ async def call_llm_with_tools(
     total_tokens = 0
     tools_used: list[str] = []
 
+    # Enable streaming for Ollama to prevent 504 gateway timeouts
+    # (openresty proxy has ~60s read timeout; streaming keeps connection alive)
+    use_streaming = provider_type == "ollama"
+
     for iteration in range(max_iterations):
         try:
             completion_kwargs: dict[str, Any] = {
@@ -347,7 +351,15 @@ async def call_llm_with_tools(
                 **optional_params,
             }
 
-            response = await litellm.acompletion(**completion_kwargs)
+            if use_streaming:
+                completion_kwargs["stream"] = True
+                stream_response = await litellm.acompletion(**completion_kwargs)
+                chunks: list[Any] = []
+                async for chunk in stream_response:
+                    chunks.append(chunk)
+                response = litellm.stream_chunk_builder(chunks)
+            else:
+                response = await litellm.acompletion(**completion_kwargs)
             message = response.choices[0].message
             usage = response.usage
             total_tokens += usage.total_tokens if usage else 0
