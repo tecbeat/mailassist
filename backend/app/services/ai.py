@@ -405,13 +405,15 @@ def _build_model_string(provider_type: str, model_name: str) -> str:
     """Build the litellm model identifier from provider type and model name.
 
     litellm uses prefixed model strings for routing, e.g. 'ollama/llama3.1'.
-    OpenAI models don't need a prefix.
+    OpenAI-compatible calls are prefixed so litellm can route custom model
+    names (e.g. via a LiteLLM proxy) without auto-detection failures.
     """
     if provider_type == "ollama":
         return f"ollama/{model_name}"
     if provider_type == "anthropic":
         return f"anthropic/{model_name}"
-    # OpenAI and compatible APIs use model name directly
+    if provider_type == "openai":
+        return f"openai/{model_name}"
     return model_name
 
 

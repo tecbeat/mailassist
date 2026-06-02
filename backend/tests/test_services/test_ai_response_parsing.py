@@ -44,9 +44,9 @@ class TestBuildModelString:
         result = _build_model_string("ollama", "llama3.1")
         assert result == "ollama/llama3.1"
 
-    def test_openai_no_prefix(self):
+    def test_openai_prefix(self):
         result = _build_model_string("openai", "gpt-4o")
-        assert result == "gpt-4o"
+        assert result == "openai/gpt-4o"
 
     def test_unknown_provider_no_prefix(self):
         result = _build_model_string("custom", "my-model")
