@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.20.12-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.20.12-beta) - 2026-08-22
+
+### 🐛 Bug Fixes
+
+- *(ai)* Add openai/ prefix to litellm model string for custom proxies - ([e96788c](https://git.teccave.de/tecbeat/mailassist/commit/e96788c694fc42b73fb0459123783d32f7767b2c))
+
 ## [2.20.11-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.20.11-beta) - 2026-08-22
 
 ### 🐛 Bug Fixes
