@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.20.11-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.20.11-beta) - 2026-08-22
+
+### 🐛 Bug Fixes
+
+- *(deps)* Add httpx2 dev dependency for starlette 1.6.0 testclient - ([629618f](https://git.teccave.de/tecbeat/mailassist/commit/629618f2d5f62d68d1452ec4ce177e821a17f7b4))
+- *(deps)* Remove unused type:ignore comments for icalendar 7.3.0 - ([75fb23e](https://git.teccave.de/tecbeat/mailassist/commit/75fb23e893b03211a312b982be6078a947d24af8))
+- *(deps)* Drop removed baseUrl option for typescript 7 - ([b3dc6e4](https://git.teccave.de/tecbeat/mailassist/commit/b3dc6e438ed5581d1e58d2ac7d9ee0d2f57cd800))
+- *(deps)* Update dependency @testing-library/jest-dom to v7 - ([119855d](https://git.teccave.de/tecbeat/mailassist/commit/119855de407362a5733279287ce19a8f0a9c5cc3))
+- *(deps)* Update dependency react-router to v8 - ([6a724c6](https://git.teccave.de/tecbeat/mailassist/commit/6a724c62efbb64c1fc9ffe5a1e635062acad866b))
+- *(deps)* Update dependency typescript to v7 - ([5f16748](https://git.teccave.de/tecbeat/mailassist/commit/5f1674884edf905f9b272a10b72d9b78760862e0))
+- *(deps)* Update dependency jsdom to v30 - ([14d2d12](https://git.teccave.de/tecbeat/mailassist/commit/14d2d12290df4fe1900732a57d20e58bd24330d7))
+- *(deps)* Update dependency cryptography to v50 - ([b898a08](https://git.teccave.de/tecbeat/mailassist/commit/b898a08a15434176292967832da12a68e2103a74))
+- *(deps)* Update all non-major dependencies - ([50bda68](https://git.teccave.de/tecbeat/mailassist/commit/50bda6863c4f75efefce28ff4788b697560527eb))
+- *(deps)* Update valkey/valkey:9-alpine docker digest to de31910 - ([04dd245](https://git.teccave.de/tecbeat/mailassist/commit/04dd245a2e18e5df80a6be18ffcfd7c27b0880fb))
+- *(deps)* Update postgres:18-alpine docker digest to d3e1620 - ([a314b79](https://git.teccave.de/tecbeat/mailassist/commit/a314b795387663d08b69758b696ef4610a6a33c5))
+- *(deps)* Update python:3.14-slim docker digest to ce40764 - ([8856269](https://git.teccave.de/tecbeat/mailassist/commit/88562692b0b8997ec121392fcb4ec8b55891d282))
+- *(deps)* Update node.js to d32cdf6 - ([2b113a2](https://git.teccave.de/tecbeat/mailassist/commit/2b113a290b970dc0e87977743929ce40886814da))
+- *(security)* Remediate transitive advisories via npm audit fix - ([ed0c035](https://git.teccave.de/tecbeat/mailassist/commit/ed0c035c40aa3d072aa519f742d2bd06b643199d))
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Regenerate lockfiles after renovate consolidation - ([f16a52e](https://git.teccave.de/tecbeat/mailassist/commit/f16a52e6cb1b9a7bcf28a6e169b010d2d6e42bc9))
+- *(deps)* Update gitlab-ci - ([b6e2530](https://git.teccave.de/tecbeat/mailassist/commit/b6e253055999b18531b8b52279f7f05b3b8acfda))
+
+## [2.20.10-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.20.10-beta) - 2026-05-26
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update valkey/valkey:9-alpine docker digest to a35428e - ([6e7e99e](https://git.teccave.de/tecbeat/mailassist/commit/6e7e99e4c49c41efa141857f7da29c2cdb2f8015))
+- *(deps)* Update node.js to 2bdb65e - ([0fa5f3e](https://git.teccave.de/tecbeat/mailassist/commit/0fa5f3ecd80bcff861df80034313f7e7174bcec0))
+- *(deps)* Update python:3.14-slim docker digest to c845af9 - ([5912917](https://git.teccave.de/tecbeat/mailassist/commit/59129176b10c4d48818ae736f0dd638ecd969105))
+- *(deps)* Update all non-major dependencies - ([71a50a6](https://git.teccave.de/tecbeat/mailassist/commit/71a50a648dea7c94a47805f4146f567ef14efa89))
+- *(deps)* Update ghcr.io/astral-sh/uv docker tag to v0.11.15 - ([8156c9e](https://git.teccave.de/tecbeat/mailassist/commit/8156c9e065b85612600b734702b4fa89ca563d17))
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Update gitlab-ci - ([bab6fdd](https://git.teccave.de/tecbeat/mailassist/commit/bab6fdd50b101cbaeb08f25b4c9585377e9dbf1a))
+
 ## [2.20.9-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.20.9-beta) - 2026-05-18
 
 ### 🐛 Bug Fixes
