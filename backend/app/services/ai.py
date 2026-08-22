@@ -376,9 +376,9 @@ async def call_llm_with_tools(
                 messages.append(message.model_dump())
 
                 for tool_call in message.tool_calls:
-                    func_name = tool_call.function.name
+                    func_name = tool_call.function.name  # type: ignore[union-attr]
                     try:
-                        func_args = json.loads(tool_call.function.arguments)
+                        func_args = json.loads(tool_call.function.arguments)  # type: ignore[union-attr]
                     except json.JSONDecodeError:
                         func_args = {}
 
@@ -425,7 +425,7 @@ async def call_llm_with_tools(
                     "llm_tool_iteration",
                     model=model,
                     iteration=iteration + 1,
-                    tool_calls=[tc.function.name for tc in message.tool_calls],
+                    tool_calls=[tc.function.name for tc in message.tool_calls],  # type: ignore[union-attr]
                 )
             else:
                 # No tool calls — LLM returned content directly
