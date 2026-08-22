@@ -195,7 +195,7 @@ backend_migration_test:
 helm_lint:
   stage: lint
   image:
-    name: alpine/helm:4.2.0@sha256:af08f75a3130d666a50b9fc150f40987ef20b885cf67659aabf4b83a5f2c5501
+    name: alpine/helm:4.2.4@sha256:76c375eed56144c68d6197c55bc5a4552fb42002190b796729901cbab3ae6e51
     entrypoint: [""]
   needs: []
   tags:
@@ -215,7 +215,7 @@ helm_lint:
 .helm_publish:
   stage: deploy
   image:
-    name: alpine/helm:4.2.0@sha256:af08f75a3130d666a50b9fc150f40987ef20b885cf67659aabf4b83a5f2c5501
+    name: alpine/helm:4.2.4@sha256:76c375eed56144c68d6197c55bc5a4552fb42002190b796729901cbab3ae6e51
     entrypoint: [""]
   needs:
     - job: versioner

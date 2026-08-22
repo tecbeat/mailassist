@@ -6,16 +6,16 @@ requires-python = ">=3.13"
 readme = "README.md"
 
 dependencies = [
-    "fastapi==0.136.3",
-    "uvicorn[standard]==0.48.0",
-    "sqlalchemy[asyncio]==2.0.50",
-    "alembic==1.18.4",
+    "fastapi==0.141.1",
+    "uvicorn[standard]==0.52.4",
+    "sqlalchemy[asyncio]==2.0.52",
+    "alembic==1.19.1",
     "asyncpg==0.31.0",
     "pydantic==2.13.4",
     "pydantic-settings>=2.9.1",
     "arq>=0.26.1",
     "httpx==0.28.1",
-    "cryptography==48.0.0",
+    "cryptography==48.0.1",
     "litellm>=1.67.4",
     "imap-tools>=1.12.0",
     "apprise>=1.9.2",
