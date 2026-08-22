@@ -142,11 +142,11 @@ async def create_calendar_event(
         end = start + timedelta(days=1) if is_all_day else start + timedelta(hours=1)
 
     # Build iCalendar event
-    cal = Calendar()  # type: ignore[no-untyped-call]
+    cal = Calendar()
     cal.add("prodid", get_settings().ical_product_id)
     cal.add("version", "2.0")
 
-    event = Event()  # type: ignore[no-untyped-call]
+    event = Event()
     event.add("summary", title)
 
     if is_all_day:
