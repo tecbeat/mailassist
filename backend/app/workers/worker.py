@@ -48,6 +48,7 @@ async def startup(ctx: dict[str, Any]) -> None:
     from app.core.security import init_encryption
     from app.core.templating import init_template_engine
     from app.plugins.registry import init_plugin_registry
+    from app.tools.registry import init_tool_registry
 
     init_db(settings)
     init_valkey(settings)
@@ -55,6 +56,7 @@ async def startup(ctx: dict[str, Any]) -> None:
     init_event_bus()
     init_template_engine()
     init_plugin_registry()
+    init_tool_registry()
 
     # Write initial heartbeat so monitors detect the worker immediately
     from app.workers.health import write_heartbeat

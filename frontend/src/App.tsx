@@ -13,6 +13,7 @@ const Dashboard = lazy(() => import("@/pages/dashboard"));
 const MailAccounts = lazy(() => import("@/pages/mail-accounts"));
 const AIProviders = lazy(() => import("@/pages/ai-settings"));
 const Plugins = lazy(() => import("@/pages/plugins"));
+const Tools = lazy(() => import("@/pages/tools"));
 const Prompts = lazy(() => import("@/pages/prompts"));
 const Approvals = lazy(() => import("@/pages/approvals"));
 const Queue = lazy(() => import("@/pages/queue"));
@@ -74,6 +75,7 @@ export default function App() {
 
                         {/* Configuration (static) */}
                         <Route path="plugins" element={<RouteErrorBoundary><Plugins /></RouteErrorBoundary>} />
+                        <Route path="tools" element={<RouteErrorBoundary><Tools /></RouteErrorBoundary>} />
                         <Route path="prompts" element={<RouteErrorBoundary><Prompts /></RouteErrorBoundary>} />
                         <Route path="mail-accounts" element={<RouteErrorBoundary><MailAccounts /></RouteErrorBoundary>} />
                         <Route path="ai-providers" element={<RouteErrorBoundary><AIProviders /></RouteErrorBoundary>} />

@@ -169,9 +169,18 @@ function PluginResultDetail({ result }: { result: PluginResultEntry }) {
       {result.summary && (
         <p className="text-muted-foreground">{result.summary}</p>
       )}
-      {result.details && (
+      {(result.details || result.tools_used) && (
         <pre className="overflow-auto rounded bg-muted p-2 text-[11px] text-muted-foreground">
-          {JSON.stringify(result.details, null, 2)}
+          {JSON.stringify(
+            {
+              ...(result.tools_used && result.tools_used.length > 0
+                ? { tools_used: result.tools_used }
+                : {}),
+              ...(result.details || {}),
+            },
+            null,
+            2,
+          )}
         </pre>
       )}
     </div>

@@ -225,18 +225,72 @@ async def call_llm(
 ) -> tuple[BaseModel, int]:
     """Call an LLM and validate the response against a Pydantic schema.
 
+    Thin wrapper around ``call_llm_with_tools`` with no extra tools.
+    The LLM must call ``submit_result`` to return its response.
+
     Returns the validated response and total token usage.
-    Retries once if the response is invalid JSON.
+    """
+    result, tokens, _tools = await call_llm_with_tools(
+        provider_type=provider_type,
+        base_url=base_url,
+        model_name=model_name,
+        api_key=api_key,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        response_schema=response_schema,
+        tools=[],
+        tool_executor=_noop_tool_executor,
+        max_iterations=3,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        timeout=timeout,
+        user_id=user_id,
+    )
+    return result, tokens
+
+
+async def _noop_tool_executor(tool_name: str, **kwargs: Any) -> str:
+    """No-op tool executor for calls without extra tools."""
+    return f"Error: Unknown tool '{tool_name}'"
+
+
+async def call_llm_with_tools(
+    provider_type: str,
+    base_url: str,
+    model_name: str,
+    api_key: str | None,
+    system_prompt: str,
+    user_prompt: str,
+    response_schema: type[BaseModel],
+    tools: list[dict[str, Any]],
+    tool_executor: Any,
+    max_iterations: int = 5,
+    max_tokens: int | None = None,
+    temperature: float | None = None,
+    timeout: int | None = None,
+    user_id: str | None = None,
+) -> tuple[BaseModel, int, list[str]]:
+    """Call an LLM with tool-calling support and validate the final response.
+
+    Implements an agentic loop where the LLM can call tools to gather context
+    before submitting its final response via the ``submit_result`` tool.
+
+    The ``submit_result`` tool is automatically added to the tools list. Its
+    parameters schema is derived from ``response_schema``.
 
     Args:
-        max_tokens: Max response tokens. Defaults to ``settings.ai_max_tokens``.
-        temperature: Sampling temperature. Defaults to ``settings.ai_temperature``.
-        timeout: HTTP timeout in seconds. Defaults to ``settings.ai_timeout_seconds``.
+        tools: List of tool definitions in litellm/OpenAI format.
+        tool_executor: Async callable(tool_name, **kwargs) -> str that executes tools.
+        max_iterations: Maximum tool-calling rounds before forced fallback.
+        Other args: Same as ``call_llm``.
+
+    Returns:
+        Tuple of (validated response, total tokens used, list of tool names called).
 
     Raises:
-        ValueError: If the LLM returns invalid output after retry.
-        TransientLLMError: On transient provider errors (timeout, connection, rate limit).
-        PermanentLLMError: On permanent config errors (auth, not found).
+        ValueError: If the LLM fails to produce a valid result.
+        TransientLLMError: On transient provider errors.
+        PermanentLLMError: On permanent config errors.
     """
     from app.core.config import get_settings
 
@@ -244,10 +298,24 @@ async def call_llm(
     max_tokens = max_tokens if max_tokens is not None else settings.ai_max_tokens
     temperature = temperature if temperature is not None else settings.ai_temperature
     timeout = timeout if timeout is not None else settings.ai_timeout_seconds
-    # Build litellm model identifier
     model = _build_model_string(provider_type, model_name)
 
-    messages = [
+    # Build submit_result tool from the response schema
+    submit_result_tool: dict[str, Any] = {
+        "type": "function",
+        "function": {
+            "name": "submit_result",
+            "description": (
+                "Submit your final analysis result. Call this tool ONLY when you have "
+                "gathered enough information to make your decision. The parameters must "
+                "match the required output schema exactly."
+            ),
+            "parameters": response_schema.model_json_schema(),
+        },
+    }
+    all_tools = [*tools, submit_result_tool]
+
+    messages: list[dict[str, Any]] = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
@@ -256,109 +324,175 @@ async def call_llm(
     if api_key:
         optional_params["api_key"] = api_key
     if base_url:
-        optional_params["api_base"] = base_url
+        optional_params["api_base"] = _resolve_base_url(provider_type, base_url)
+
+    # Disable thinking for Ollama models (e.g. Qwen 3.5) to avoid
+    # excessive token usage and ensure tool calls work reliably.
+    if provider_type == "ollama":
+        optional_params["think"] = False
 
     total_tokens = 0
+    tools_used: list[str] = []
 
-    for attempt in range(2):
+    # Enable streaming for Ollama to prevent 504 gateway timeouts
+    # (openresty proxy has ~60s read timeout; streaming keeps connection alive)
+    use_streaming = provider_type == "ollama"
+
+    for iteration in range(max_iterations):
         try:
+            # Use "auto" for tool_choice — allows the model to either call tools
+            # or respond with content directly. "required" causes issues with models
+            # like GLM-4 that never call submit_result.
             completion_kwargs: dict[str, Any] = {
                 "model": model,
                 "messages": messages,
                 "max_tokens": max_tokens,
                 "temperature": temperature,
                 "timeout": timeout,
+                "tools": all_tools,
+                "tool_choice": "auto",
                 **optional_params,
             }
-            # Only use response_format for providers that support it reliably
-            if provider_type.lower() not in ("ollama", "anthropic"):
-                completion_kwargs["response_format"] = {"type": "json_object"}
 
-            response = await litellm.acompletion(**completion_kwargs)
-
-            content = response.choices[0].message.content
-            usage = response.usage
+            if use_streaming:
+                completion_kwargs["stream"] = True
+                stream_response = await litellm.acompletion(**completion_kwargs)
+                chunks: list[Any] = []
+                async for chunk in stream_response:
+                    chunks.append(chunk)
+                built = litellm.stream_chunk_builder(chunks)
+                if built is None:
+                    raise TransientLLMError("Stream returned no response")
+                response = built
+            else:
+                response = await litellm.acompletion(**completion_kwargs)
+            message = response.choices[0].message  # type: ignore[union-attr]
+            usage = response.usage  # type: ignore[union-attr]
             total_tokens += usage.total_tokens if usage else 0
 
-            # Parse and validate -- try to extract JSON from markdown code blocks
-            parsed = _parse_json_response(content)
-            validated = response_schema.model_validate(parsed)
+            # Check if the LLM wants to call tools
+            if message.tool_calls:
+                # Append assistant message with tool calls
+                messages.append(message.model_dump())
 
-            # Track token usage in Valkey
-            if user_id:
-                await _track_tokens(user_id, usage.total_tokens if usage else 0)
+                for tool_call in message.tool_calls:
+                    func_name = tool_call.function.name  # type: ignore[union-attr]
+                    try:
+                        func_args = json.loads(tool_call.function.arguments)  # type: ignore[union-attr]
+                    except json.JSONDecodeError:
+                        func_args = {}
 
-            logger.info(
-                "llm_call_success",
-                model=model,
-                tokens=usage.total_tokens if usage else 0,
-                attempt=attempt + 1,
-            )
-            return validated, total_tokens
+                    if func_name == "submit_result":
+                        # Final result — truncate overlong strings, then validate
+                        func_args = _truncate_to_schema(func_args, response_schema)
+                        try:
+                            validated = response_schema.model_validate(func_args)
+                        except ValidationError:
+                            # Invalid args — ask model to retry
+                            messages.append(
+                                {
+                                    "role": "tool",
+                                    "tool_call_id": tool_call.id,
+                                    "content": (
+                                        "Validation failed. Please call submit_result again with corrected values."
+                                    ),
+                                }
+                            )
+                            break
+                        if user_id:
+                            await _track_tokens(user_id, total_tokens)
+                        logger.info(
+                            "llm_tool_call_complete",
+                            model=model,
+                            total_tokens=total_tokens,
+                            iterations=iteration + 1,
+                            submit_via="submit_result",
+                        )
+                        return validated, total_tokens, tools_used
 
-        except (json.JSONDecodeError, ValidationError) as e:
-            if attempt == 0:
-                # Retry with explicit JSON instruction
-                logger.warning(
-                    "llm_invalid_output_retrying",
+                    # Execute the tool
+                    tools_used.append(str(func_name))
+                    tool_result = await tool_executor(func_name, **func_args)
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tool_call.id,
+                            "content": str(tool_result),
+                        }
+                    )
+
+                logger.debug(
+                    "llm_tool_iteration",
                     model=model,
-                    error=str(e),
+                    iteration=iteration + 1,
+                    tool_calls=[tc.function.name for tc in message.tool_calls],  # type: ignore[union-attr]
                 )
-                messages.append({"role": "assistant", "content": content if "content" in locals() else ""})
+            else:
+                # No tool calls — LLM returned content directly
+                # Try to parse as the response schema (fallback for models
+                # that don't always use tools)
+                content = message.content or ""
+                logger.debug(
+                    "llm_no_tool_calls",
+                    model=model,
+                    iteration=iteration + 1,
+                    content_length=len(content),
+                    content_preview=content[:500] if content else "",
+                )
+                if content.strip():
+                    try:
+                        parsed = _parse_json_response(content)
+                        parsed = _truncate_to_schema(parsed, response_schema)
+                        validated = response_schema.model_validate(parsed)
+                        if user_id:
+                            await _track_tokens(user_id, total_tokens)
+                        logger.info(
+                            "llm_tool_call_complete",
+                            model=model,
+                            total_tokens=total_tokens,
+                            iterations=iteration + 1,
+                            submit_via="direct_content",
+                        )
+                        return validated, total_tokens, tools_used
+                    except (json.JSONDecodeError, ValidationError):
+                        pass
+
+                # If we can't parse, ask the LLM to use submit_result
+                messages.append({"role": "assistant", "content": content})
                 messages.append(
                     {
                         "role": "user",
-                        "content": "Your response was not valid JSON matching the required schema. "
-                        "Please respond with valid JSON only, matching the exact schema requested.",
+                        "content": (
+                            "Please submit your final result using the submit_result tool. "
+                            "Do not respond with plain text."
+                        ),
                     }
                 )
-                continue
-            logger.error(
-                "llm_invalid_output_final",
-                model=model,
-                error=str(e),
-                attempt=attempt + 1,
-            )
-            raise ValueError(f"LLM returned invalid output after retry: {e}") from e
 
         except Exception as e:
-            # Classify the error as transient or permanent
             if is_transient_llm_error(e):
-                logger.warning(
-                    "llm_transient_error",
-                    model=model,
-                    error_type=type(e).__name__,
-                    error=str(e),
-                )
                 raise TransientLLMError(
                     f"Transient LLM error ({type(e).__name__}): {e}",
                     original_error=e,
                 ) from e
             elif is_permanent_llm_error(e):
-                logger.error(
-                    "llm_permanent_error",
-                    model=model,
-                    error_type=type(e).__name__,
-                    error=str(e),
-                )
                 raise PermanentLLMError(
                     f"Permanent LLM error ({type(e).__name__}): {e}",
                     original_error=e,
                 ) from e
             else:
-                # Unknown error type — treat as transient to be safe
-                logger.error(
-                    "llm_unknown_error",
-                    model=model,
-                    error_type=type(e).__name__,
-                    error=str(e),
-                )
                 raise TransientLLMError(
                     f"Unknown LLM error ({type(e).__name__}): {e}",
                     original_error=e,
                 ) from e
 
-    raise ValueError("LLM call failed after retries")
+    # Exhausted iterations — raise error
+    logger.warning(
+        "llm_tool_call_max_iterations",
+        model=model,
+        max_iterations=max_iterations,
+    )
+    raise ValueError(f"LLM failed to produce a valid result after {max_iterations} tool-calling iterations")
 
 
 async def test_llm_connection(
@@ -377,7 +511,9 @@ async def test_llm_connection(
     if api_key:
         optional_params["api_key"] = api_key
     if base_url:
-        optional_params["api_base"] = base_url
+        optional_params["api_base"] = _resolve_base_url(provider_type, base_url)
+    if provider_type == "ollama":
+        optional_params["think"] = False
 
     try:
         response = await litellm.acompletion(
@@ -415,6 +551,29 @@ def _build_model_string(provider_type: str, model_name: str) -> str:
     if provider_type == "openai":
         return f"openai/{model_name}"
     return model_name
+
+
+def _resolve_base_url(provider_type: str, base_url: str | None) -> str | None:
+    """Resolve the API base URL."""
+    return base_url
+
+
+def _truncate_to_schema(data: dict[str, Any], schema: type[BaseModel]) -> dict[str, Any]:
+    """Truncate string values that exceed the schema's maxLength constraints.
+
+    This prevents ValidationError from verbose LLMs that exceed field limits.
+    """
+    json_schema = schema.model_json_schema()
+    properties = json_schema.get("properties", {})
+
+    for field_name, field_schema in properties.items():
+        if field_name not in data:
+            continue
+        max_len = field_schema.get("maxLength")
+        if max_len and isinstance(data[field_name], str) and len(data[field_name]) > max_len:
+            data[field_name] = data[field_name][:max_len]
+
+    return data
 
 
 def _repair_json(text: str) -> str:

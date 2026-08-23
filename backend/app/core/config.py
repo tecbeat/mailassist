@@ -110,6 +110,7 @@ class Settings(BaseSettings):
     ai_temperature: float = Field(default=0.3, description="Default LLM temperature")
     ai_timeout_seconds: int = Field(default=120, description="LLM HTTP request timeout in seconds")
     ai_token_usage_ttl_days: int = Field(default=90, description="Token usage stats TTL in days")
+    ai_max_tool_calls: int = Field(default=5, description="Max tool-calling iterations per plugin execution")
     ai_pause_cooldown_seconds: int = Field(
         default=120,
         description="Seconds before auto-unpausing a paused AI provider",
@@ -218,6 +219,15 @@ class Settings(BaseSettings):
     # Rules engine
     rules_max_pattern_length: int = Field(default=500, description="Max regex pattern length for rule matching")
     rules_max_text_length: int = Field(default=51200, description="Max text length (bytes) to search against rules")
+
+    # Web tools
+    search_provider_url: str | None = Field(
+        default=None, description="SearXNG instance URL for web_search tool (e.g. 'https://search.example.com')"
+    )
+    tool_fetch_timeout: int = Field(default=10, description="HTTP timeout in seconds for fetch_url tool")
+    tool_fetch_max_content_length: int = Field(
+        default=8000, description="Max characters of fetched content returned to LLM"
+    )
 
     @field_validator("app_secret_key_old")
     @classmethod

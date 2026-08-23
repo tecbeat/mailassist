@@ -13,4 +13,5 @@ export interface PluginResultEntry {
   display_name: string;
   summary?: string | null;
   details?: Record<string, unknown> | null;
+  tools_used?: string[] | null;
 }

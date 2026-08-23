@@ -28,14 +28,3 @@ Summary: {{ mail.summary | sanitize_for_llm | truncate_text(500) }}
 {% if mail.key_points %}Key Points: {{ mail.key_points | join("; ") }}{% endif %}
 {% endfor %}
 === END SENDER EMAILS ===
-
-Respond ONLY with a JSON object, no additional text:
-{
-  "display_name": "Full Name",
-  "first_name": "First",
-  "last_name": "Last",
-  "emails": ["sender@example.com"],
-  "phones": ["(+49) 123 456789"],
-  "organization": "Company Name or null",
-  "title": "Job Title or null"
-}

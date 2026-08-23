@@ -21,12 +21,47 @@ class SampleSchema(BaseModel):
 
 
 def _make_litellm_response(content: str, total_tokens: int = 50):
-    """Build a mock litellm response object."""
+    """Build a mock litellm response object with plain text (no tool calls)."""
     usage = MagicMock()
     usage.total_tokens = total_tokens
 
     message = MagicMock()
     message.content = content
+    message.tool_calls = None
+
+    choice = MagicMock()
+    choice.message = message
+
+    response = MagicMock()
+    response.choices = [choice]
+    response.usage = usage
+    return response
+
+
+def _make_tool_call_response(func_args: dict, total_tokens: int = 50):
+    """Build a mock litellm response with a submit_result tool call."""
+    usage = MagicMock()
+    usage.total_tokens = total_tokens
+
+    tool_call = MagicMock()
+    tool_call.function.name = "submit_result"
+    tool_call.function.arguments = json.dumps(func_args)
+    tool_call.id = "call_test123"
+
+    message = MagicMock()
+    message.content = None
+    message.tool_calls = [tool_call]
+    message.model_dump = lambda: {
+        "role": "assistant",
+        "content": None,
+        "tool_calls": [
+            {
+                "id": "call_test123",
+                "type": "function",
+                "function": {"name": "submit_result", "arguments": json.dumps(func_args)},
+            }
+        ],
+    }
 
     choice = MagicMock()
     choice.message = message
@@ -63,8 +98,7 @@ class TestCallLLMParsing:
     @pytest.mark.asyncio
     async def test_anthropic_no_response_format(self):
         """Anthropic calls must not include response_format."""
-        valid = json.dumps({"label": "work", "confidence": 0.9})
-        mock_response = _make_litellm_response(valid, total_tokens=10)
+        mock_response = _make_tool_call_response({"label": "work", "confidence": 0.9}, total_tokens=10)
 
         with (
             patch(
@@ -88,9 +122,8 @@ class TestCallLLMParsing:
 
     @pytest.mark.asyncio
     async def test_valid_json_response(self):
-        """Valid JSON matching the schema is parsed and returned."""
-        valid = json.dumps({"label": "work", "confidence": 0.9})
-        mock_response = _make_litellm_response(valid, total_tokens=42)
+        """Valid tool call matching the schema is parsed and returned."""
+        mock_response = _make_tool_call_response({"label": "work", "confidence": 0.9}, total_tokens=42)
 
         with (
             patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_response),
@@ -114,13 +147,10 @@ class TestCallLLMParsing:
 
     @pytest.mark.asyncio
     async def test_invalid_json_retries_once(self):
-        """Invalid JSON on first attempt triggers a retry with corrective prompt."""
-        invalid = "Not JSON at all"
-        valid = json.dumps({"label": "spam", "confidence": 0.8})
-
+        """Plain text on first attempt triggers retry; tool call on second succeeds."""
         responses = [
-            _make_litellm_response(invalid, total_tokens=10),
-            _make_litellm_response(valid, total_tokens=30),
+            _make_litellm_response("Not a tool call", total_tokens=10),
+            _make_tool_call_response({"label": "spam", "confidence": 0.8}, total_tokens=30),
         ]
         call_count = 0
 
@@ -151,13 +181,12 @@ class TestCallLLMParsing:
 
     @pytest.mark.asyncio
     async def test_invalid_json_both_attempts_raises(self):
-        """If both attempts return invalid JSON, ValueError is raised."""
-        invalid = "still not JSON"
-        mock_resp = _make_litellm_response(invalid, total_tokens=5)
+        """If all iterations return plain text, ValueError is raised."""
+        mock_resp = _make_litellm_response("still not a tool call", total_tokens=5)
 
         with (
             patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_resp),
-            pytest.raises(ValueError, match="invalid output after retry"),
+            pytest.raises(ValueError, match="LLM failed to produce a valid result"),
         ):
             await call_llm(
                 provider_type="openai",
@@ -171,13 +200,10 @@ class TestCallLLMParsing:
 
     @pytest.mark.asyncio
     async def test_partial_json_missing_field_retries(self):
-        """JSON missing a required field triggers retry."""
-        partial = json.dumps({"confidence": 0.5})  # missing 'label'
-        valid = json.dumps({"label": "ok", "confidence": 0.6})
-
+        """Tool call with missing required field triggers retry."""
         responses = [
-            _make_litellm_response(partial, total_tokens=8),
-            _make_litellm_response(valid, total_tokens=12),
+            _make_tool_call_response({"confidence": 0.5}, total_tokens=8),  # missing 'label'
+            _make_tool_call_response({"label": "ok", "confidence": 0.6}, total_tokens=12),
         ]
         call_count = 0
 
@@ -226,12 +252,9 @@ class TestCallLLMParsing:
     @pytest.mark.asyncio
     async def test_validation_error_confidence_out_of_range(self):
         """Confidence > 1.0 fails Pydantic validation, triggers retry."""
-        bad = json.dumps({"label": "x", "confidence": 5.0})
-        good = json.dumps({"label": "x", "confidence": 0.7})
-
         responses = [
-            _make_litellm_response(bad, total_tokens=5),
-            _make_litellm_response(good, total_tokens=5),
+            _make_tool_call_response({"label": "x", "confidence": 5.0}, total_tokens=5),
+            _make_tool_call_response({"label": "x", "confidence": 0.7}, total_tokens=5),
         ]
         call_count = 0
 
@@ -259,12 +282,15 @@ class TestCallLLMParsing:
 
     @pytest.mark.asyncio
     async def test_no_api_key_omits_param(self):
-        """When api_key is None, it is not passed to litellm."""
-        valid = json.dumps({"label": "test", "confidence": 0.5})
-        mock_resp = _make_litellm_response(valid)
+        """When api_key is None, it is not passed to litellm. Ollama gets think=False and streaming."""
+        mock_resp = _make_tool_call_response({"label": "test", "confidence": 0.5})
+
+        async def _fake_stream(*args, **kwargs):
+            yield MagicMock()
 
         with (
-            patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, return_value=mock_resp) as mock_call,
+            patch("app.services.ai.litellm.acompletion", new_callable=AsyncMock, side_effect=_fake_stream) as mock_call,
+            patch("app.services.ai.litellm.stream_chunk_builder", return_value=mock_resp),
             patch("app.services.ai._track_tokens", new_callable=AsyncMock),
         ):
             await call_llm(
@@ -279,6 +305,8 @@ class TestCallLLMParsing:
 
         _, kwargs = mock_call.call_args
         assert "api_key" not in kwargs
+        assert kwargs.get("think") is False
+        assert kwargs.get("stream") is True
 
 
 class TestTokenTracking:

@@ -62,13 +62,6 @@ IMPORTANT: The sender matches a known contact: {{ contact.display_name }}{% if c
 
 Recipient account: {{ account_email }} ({{ account_name }})
 
-Respond ONLY with a JSON object, no additional text:
-{
-  "is_spam": false,
-  "confidence": 0.1,
-  "reason": "Brief explanation"
-}
-
 Rules for confidence values:
 - 0.0-0.3: Clearly legitimate (system emails, known contacts, normal correspondence)
 - 0.3-0.5: Slightly suspicious but probably legitimate

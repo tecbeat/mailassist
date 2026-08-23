@@ -43,29 +43,9 @@ Sender is a known contact: {{ contact.display_name }}{% if contact.organization 
 
 Current date: {{ current_date }}
 
-Respond ONLY with a JSON object, no additional text:
-{
-  "has_coupons": false,
-  "coupons": []
-}
-
-If has_coupons is true, include the coupons array. The "code" field is null when no explicit code is needed:
-{
-  "has_coupons": true,
-  "coupons": [
-    {
-      "code": "SAVE20",
-      "description": "20% off all items",
-      "valid_from": "2026-04-18",
-      "expires_at": "2026-04-30",
-      "store": "Example Store"
-    },
-    {
-      "code": null,
-      "description": "15% off everything — applied automatically at checkout",
-      "valid_from": null,
-      "expires_at": "2026-05-01",
-      "store": "Another Store"
-    }
-  ]
-}
+FIELD RULES:
+- "code": the promo/discount code string, or null when no explicit code is needed (auto-applied).
+- "description": what the discount provides.
+- "valid_from": start date (ISO 8601 date) or null if not mentioned.
+- "expires_at": expiry date (ISO 8601 date) or null if not mentioned.
+- "store": the merchant or store name.

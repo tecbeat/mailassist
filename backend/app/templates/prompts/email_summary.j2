@@ -48,11 +48,10 @@ Account: {{ account_email }} ({{ account_name }})
 {% if is_reply %}This is a reply in an existing thread ({{ thread_length }} messages).{% endif %}
 {% if is_forwarded %}This is a forwarded message.{% endif %}
 
-Respond ONLY with a JSON object, no additional text:
-{
-  "summary": "Vzdump backup of VM on tec2.teccave.de completed successfully.",
-  "key_points": ["Backup completed without errors", "VM 100 backed up"],
-  "urgency": "low",
-  "action_required": false,
-  "action_description": null
-}
+## TOOL USAGE
+
+Use the following tools when they can improve your summary:
+
+1. **get_plugin_results** — Check results from earlier plugins (spam score, labels assigned, calendar events detected). Incorporate relevant findings into key_points (e.g. "Calendar event created for March 15" or "Flagged as likely spam").
+2. **get_mail_metadata** — If the email mentions attachments or you need header details for context, fetch the extended metadata.
+3. **fetch_url** — If the email contains a link critical to understanding the content (e.g. a shared document link referenced as the main topic), fetch it for context. Only do this for clearly important links, not every URL.

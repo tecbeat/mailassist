@@ -56,6 +56,7 @@ class SettingsResponse(BaseModel):
     approval_modes: ApprovalModes
     plugin_order: list[str] | None = None
     plugin_provider_map: dict[str, str] | None = None
+    tool_modes: dict[str, str] | None = None
     updated_at: datetime
 
     model_config = {"from_attributes": True}
@@ -89,3 +90,4 @@ class SettingsUpdate(BaseModel):
     approval_modes: ApprovalModesUpdate | None = None
     plugin_order: list[str] | None = None
     plugin_provider_map: dict[str, str] | None = None
+    tool_modes: dict[str, str] | None = None

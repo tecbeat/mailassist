@@ -38,6 +38,7 @@ def _make_settings(*, user_id=None):
         approval_mode_otp="auto",
         plugin_order=None,
         plugin_provider_map=None,
+        tool_modes=None,
         updated_at=datetime.now(UTC),
     )
 

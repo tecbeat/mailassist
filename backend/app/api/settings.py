@@ -63,6 +63,7 @@ def _to_response(settings: UserSettings) -> SettingsResponse:
         ),
         plugin_order=settings.plugin_order,
         plugin_provider_map=settings.plugin_provider_map,
+        tool_modes=settings.tool_modes,
         updated_at=settings.updated_at,
     )
 
@@ -113,6 +114,11 @@ async def update_settings(
         settings.plugin_order = data.plugin_order
     if data.plugin_provider_map is not None:
         settings.plugin_provider_map = data.plugin_provider_map
+    if data.tool_modes is not None:
+        # Merge: only update provided keys
+        current = settings.tool_modes or {}
+        current.update(data.tool_modes)
+        settings.tool_modes = current
 
     await db.flush()
     logger.info("user_settings_updated", user_id=user_id)

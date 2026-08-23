@@ -319,6 +319,8 @@ async def _persist_plugin_data(approval: Approval) -> None:
                 location=data.get("location"),
                 description=data.get("description"),
                 is_all_day=data.get("is_all_day", False),
+                event_action=data.get("event_action", "create"),
+                existing_event_title=data.get("existing_event_title"),
                 mail_id=approval.mail_id,
                 own_session=True,
             )

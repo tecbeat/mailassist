@@ -23,7 +23,7 @@ from app.plugins.base import ActionResult, AIFunctionPlugin, MailContext, Pipeli
 from app.services.ai import (
     PermanentLLMError,
     TransientLLMError,
-    call_llm,
+    call_llm_with_tools,
     check_ai_circuit_breaker,
     update_provider_health,
 )
@@ -89,6 +89,7 @@ class PluginOutcome:
     auto_approved: bool = False
     result_summary: str | None = None
     result_details: dict[str, Any] | None = None
+    tools_used: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -196,16 +197,60 @@ async def execute_plugin(
     if provider.api_key:
         api_key = encryption.decrypt(provider.api_key)
 
-    # --- LLM call ---
+    # --- LLM call (always tool-calling mode) ---
+    tools_used: list[str] = []
     try:
-        ai_response, tokens_used = await call_llm(
+        from app.tools.registry import get_tool_registry
+
+        try:
+            tool_registry = get_tool_registry()
+            # Filter out disabled tools based on user settings
+            tool_modes = user_settings.tool_modes or {}
+            active_tools = [t for t in tool_registry.get_all_tools() if tool_modes.get(t.name, "enabled") != "disabled"]
+            litellm_tools = [t.to_litellm_tool() for t in active_tools]
+        except RuntimeError:
+            litellm_tools = []
+
+        # Append tool-calling instruction to system prompt
+        tool_system_prompt = (
+            system_prompt + "\n\n## Tools\n"
+            "You have access to tools that can help you gather additional context "
+            "before making your decision. Use them if the email content alone is "
+            "insufficient. When you have gathered enough information, call the "
+            "`submit_result` tool with your final analysis.\n"
+            "If you do not need additional context, call `submit_result` immediately."
+        )
+
+        # Inject pipeline/mail context into all tools so they can access it
+        if litellm_tools:
+            for _tool in tool_registry.get_all_tools():
+                _tool.set_context(pipeline=pipeline, mail_context=context, db=db)
+
+        # Tool-calling mode: LLM can call tools to gather context
+        async def _execute_tool(tool_name: str, **kwargs: Any) -> str:
+            tool = tool_registry.get_tool(tool_name)
+            if tool is None:
+                return f"Error: Unknown tool '{tool_name}'"
+            result = await tool.safe_execute(**kwargs)
+            log.debug(
+                "tool_executed",
+                plugin=plugin.name,
+                tool=tool_name,
+                is_error=result.is_error,
+            )
+            return result.content
+
+        ai_response, tokens_used, tools_used = await call_llm_with_tools(
             provider_type=provider.provider_type.value,
             base_url=provider.base_url,
             model_name=provider.model_name,
             api_key=api_key,
-            system_prompt=system_prompt,
+            system_prompt=tool_system_prompt,
             user_prompt=user_prompt,
             response_schema=plugin.get_response_schema(),
+            tools=litellm_tools,
+            tool_executor=_execute_tool,
+            max_iterations=get_settings().ai_max_tool_calls,
             max_tokens=provider.max_tokens,
             temperature=provider.temperature,
             user_id=context.user_id,
@@ -249,7 +294,7 @@ async def execute_plugin(
     if action_result.retry_prompt:
         log.info("plugin_reprompt_requested", plugin=plugin.name, retry_prompt=action_result.retry_prompt)
         try:
-            ai_response, retry_tokens = await call_llm(
+            ai_response, retry_tokens, retry_tools = await call_llm_with_tools(
                 provider_type=provider.provider_type.value,
                 base_url=provider.base_url,
                 model_name=provider.model_name,
@@ -257,12 +302,15 @@ async def execute_plugin(
                 system_prompt=system_prompt,
                 user_prompt=action_result.retry_prompt,
                 response_schema=plugin.get_response_schema(),
+                tools=litellm_tools,
+                tool_executor=_execute_tool,
                 max_tokens=provider.max_tokens,
                 temperature=provider.temperature,
                 user_id=context.user_id,
                 timeout=provider.timeout_seconds or user_settings.ai_timeout_seconds,
             )
             tokens_used += retry_tokens
+            tools_used.extend(retry_tools)
         except (TransientLLMError, PermanentLLMError, ValueError) as e:
             log.error("plugin_reprompt_failed", plugin=plugin.name, error=str(e))
             outcome.failed = True
@@ -345,6 +393,7 @@ async def execute_plugin(
     # Extract result summary for queue display
     outcome.result_summary = _extract_result_summary(plugin.name, ai_response)
     outcome.result_details = _extract_result_details(plugin.name, ai_response)
+    outcome.tools_used = tools_used
 
     log.info(
         "plugin_executed",
@@ -578,6 +627,8 @@ async def _persist_plugin_result(
             location=resp_cal.location,
             description=resp_cal.description,
             is_all_day=resp_cal.is_all_day,
+            event_action=resp_cal.event_action,
+            existing_event_title=resp_cal.existing_event_title,
             mail_id=mail_id,
             db=db,
         )

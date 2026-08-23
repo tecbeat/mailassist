@@ -47,11 +47,9 @@ Date: {{ date }}
 NOTE: The sender's email address already matched to contact: {{ contact.display_name }}{% if contact.organization %} ({{ contact.organization }}){% endif %} [ID: {{ contact.id }}]. Confirm this match if appropriate.
 {% endif %}
 
-Respond ONLY with a JSON object, no additional text:
-{
-  "contact_id": "uuid-of-matched-contact-or-null",
-  "contact_name": "Display Name or empty string if no match",
-  "confidence": 0.95,
-  "reasoning": "Brief explanation",
-  "is_new_contact_suggestion": false
-}
+## TOOL USAGE
+
+Use the following tools when they can improve your decision:
+
+1. **search_contacts** — If the sender's name or email partially matches but isn't in the list above, use `search_contacts` to search for variations (nicknames, maiden names, alternative spellings). The contact list above is limited; the full address book may contain more entries.
+2. **get_contact_details** — If you found a potential match, use `get_contact_details` to verify the full contact record (phone numbers, addresses, notes) before committing to a match.

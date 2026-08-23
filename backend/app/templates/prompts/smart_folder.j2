@@ -14,16 +14,16 @@ not in a generic "Newsletter" folder. A shipping notification from Amazon belong
 Ask: "What is this email ABOUT?" — not "What type of email is this?"
 
 STEP 3 - Apply these rules:
-1. ALWAYS prefer EXISTING folders — do not create duplicates or near-duplicates
+1. Prefer EXISTING folders when they clearly match — do not create duplicates or near-duplicates
 2. Match the email to the most SPECIFIC existing folder that fits
 3. If a parent folder exists but a more specific sub-folder would be better, suggest the sub-folder
-4. Only suggest a NEW folder when no existing folder fits at all
+4. CREATE a new folder when no existing folder fits the email's topic — do not force emails into unrelated folders
 5. New folder names MUST match the language and naming style of existing folders
 6. For new folders, use "{{ folder_separator }}" as path separator
 7. If you truly cannot determine a suitable folder, respond with "INBOX" and a low confidence
 8. Be consistent: similar emails should always go to the same folder
-9. Use a high confidence (0.8+) when an existing folder clearly matches
-10. Use low confidence (<0.7) when the best match is uncertain
+9. Use a high confidence (0.8+) when an existing folder clearly matches OR when a new folder is obviously appropriate
+10. Use low confidence (<0.7) only when genuinely uncertain between multiple options
 
 ANTI-PATTERNS (avoid these):
 - Do NOT dump all marketing/promotional emails into a single "Newsletter" folder — sort by topic instead
@@ -56,9 +56,9 @@ Sender is a known contact: {{ contact.display_name }}{% if contact.organization 
 
 Account: {{ account_name }} ({{ account_email }})
 
-Respond ONLY with a JSON object, no additional text:
-{
-  "folder": "Server{{ folder_separator }}Backups",
-  "confidence": 0.9,
-  "reason": "Automated backup status report from server"
-}
+## TOOL USAGE
+
+Use the following tools when they can improve your decision:
+
+1. **get_user_data** — If the folder list above seems incomplete or you need to verify the full folder hierarchy, call `get_user_data` with section "folders" to get the complete, up-to-date folder tree.
+2. **get_plugin_results** — Check what other plugins determined about this email (e.g. spam_detection, newsletter_detection, labeling). A spam email should go to Junk, a newsletter might go to a topic-specific folder rather than a generic "Newsletter" folder.

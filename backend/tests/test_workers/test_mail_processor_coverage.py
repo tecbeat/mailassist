@@ -259,7 +259,13 @@ async def test_pause_account_sets_pause_fields() -> None:
 async def test_pause_provider_sets_pause_fields() -> None:
     from app.workers.mail_processor import _pause_provider
 
+    provider_mock = MagicMock()
+    provider_mock.consecutive_errors = 0
+
     db = AsyncMock()
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = provider_mock
+    db.execute.return_value = result_mock
 
     @asynccontextmanager
     async def ctx():
@@ -269,6 +275,7 @@ async def test_pause_provider_sets_pause_fields() -> None:
         await _pause_provider(str(uuid4()), "llm down", _log())
     db.execute.assert_awaited_once()
     db.commit.assert_awaited_once()
+    assert provider_mock.consecutive_errors == 1
 
 
 @pytest.mark.asyncio

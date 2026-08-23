@@ -70,8 +70,9 @@ class SmartFolderPlugin(AIFunctionPlugin[SmartFolderResponse]):
                 success=True,
                 actions_taken=[],
                 retry_prompt=(
-                    f"The folder '{folder}' is not allowed. "
-                    f"Choose a different folder from the existing list: {existing}. "
+                    f"The folder '{folder}' is not allowed (excluded). "
+                    f"Choose a different existing folder or create a new one. "
+                    f"Existing folders: {existing}. "
                     "Respond with the same JSON format."
                 ),
             )
