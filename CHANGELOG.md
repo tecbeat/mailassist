@@ -2,6 +2,45 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.21.0-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.0-beta) - 2026-08-23
+
+### ⛰️  Features
+
+- Add calendar event update/cancel actions with dedup guidance - ([a78550b](https://git.teccave.de/tecbeat/mailassist/commit/a78550b2ad05e4cb7ca0803e561523de743838da))
+- Add tool usage guidance to plugin prompts - ([6abc7d4](https://git.teccave.de/tecbeat/mailassist/commit/6abc7d472e355622a0fc2229b4df45e4fa83dfa0))
+- Show tools used per plugin in mail queue results - ([5f4d484](https://git.teccave.de/tecbeat/mailassist/commit/5f4d48445319beb1b2311a6e867cf72050fd3139))
+- Add Tools settings page with enable/disable toggles - ([f857e9b](https://git.teccave.de/tecbeat/mailassist/commit/f857e9bfbcdca6294c80edc3a3e8651e0c6c2004))
+- Add web search and URL fetch tools (#176) - ([f347a63](https://git.teccave.de/tecbeat/mailassist/commit/f347a638ce7eb37fc236fd34bd775aee5149ca98))
+- Add calendar and contacts query tools (#175) - ([ccefd93](https://git.teccave.de/tecbeat/mailassist/commit/ccefd934177404b38af528d96ee67e667ee620aa))
+- Implement pipeline data access tools (#174) - ([6d87c39](https://git.teccave.de/tecbeat/mailassist/commit/6d87c39a9bd98dfc991fe49e126559f20c571ece))
+- Add LLM tool-calling infrastructure for plugins - ([4effb00](https://git.teccave.de/tecbeat/mailassist/commit/4effb0070a5e9568501536daece8825af67a468b))
+
+### 🐛 Bug Fixes
+
+- *(ai)* Ignore union-attr on tool_call.function for openai custom-tool types - ([fbf0540](https://git.teccave.de/tecbeat/mailassist/commit/fbf0540d2b5285068c9ded8ec8890e85ab0d34bb))
+- Use tool_choice=auto instead of required for LLM compatibility - ([cd0099b](https://git.teccave.de/tecbeat/mailassist/commit/cd0099b1dc54b4aec1d12612d06bfc54eeee2b57))
+- Resolve CI failures in typecheck, tests, and migration - ([c4f5c8d](https://git.teccave.de/tecbeat/mailassist/commit/c4f5c8d4b13bda0daf6a07033b35009a90921713))
+- Prevent premature provider pausing and Ollama 504 timeouts - ([421fa3e](https://git.teccave.de/tecbeat/mailassist/commit/421fa3e04faf4033edb839c44670bab361dc001e))
+- Show tools_used in plugin details JSON, allow smart_folder to create new folders - ([e3c0a95](https://git.teccave.de/tecbeat/mailassist/commit/e3c0a95e95ba8298ccbf4fdb6b7c3cd8d2143a08))
+- Sort imports in migration file - ([6a4a4f6](https://git.teccave.de/tecbeat/mailassist/commit/6a4a4f6140e16b003ef26c5090d408992486ac4c))
+- Correct migration down_revision and format plugin_executor - ([7c6589b](https://git.teccave.de/tecbeat/mailassist/commit/7c6589b69a0b0c53ec5e3534c1111f13d3426570))
+- Pass tools and tool_executor to reprompt call - ([edc0337](https://git.teccave.de/tecbeat/mailassist/commit/edc0337506c952c90332d0a976693f55cf5fd310))
+- Update tests for tool-calling mode and fix formatting - ([adefe60](https://git.teccave.de/tecbeat/mailassist/commit/adefe605b3cd624070c1e44c5f2628dd3641474e))
+- Handle validation errors in submit_result and fix tests - ([0f6c876](https://git.teccave.de/tecbeat/mailassist/commit/0f6c87634198dd7a3e943dd4f317906cc1cb7311))
+- Disable thinking for Ollama models and enforce tool usage - ([6ca8edb](https://git.teccave.de/tecbeat/mailassist/commit/6ca8edb0a32c2c347148ebdbf1959b9858a35a7c))
+- Handle uninitialized tool registry gracefully in tests - ([921d054](https://git.teccave.de/tecbeat/mailassist/commit/921d05413fbced6b26ce66ff02ba19198cdf38ad))
+
+### 🚜 Refactor
+
+- Unify LLM calls to always use tool-calling - ([8bc7db8](https://git.teccave.de/tecbeat/mailassist/commit/8bc7db8750ea24d56ea3225e161d8f18c3c932a8))
+- Remove JSON response format instructions from prompt templates - ([7150d6a](https://git.teccave.de/tecbeat/mailassist/commit/7150d6a9fb0a9b8eae01f24a063f7b786133df39))
+
+### 🎨 Styling
+
+- Format tool_modes migration - ([70612c7](https://git.teccave.de/tecbeat/mailassist/commit/70612c75d171754dc281d12184c6b7bfdc892d69))
+- Format test file - ([bd091f2](https://git.teccave.de/tecbeat/mailassist/commit/bd091f2af949d00a65644b31c8971d617796aa8d))
+- Format calendar and contacts tools - ([fd6b4d2](https://git.teccave.de/tecbeat/mailassist/commit/fd6b4d29b26fc0de308b3fa358a38958484b985e))
+
 ## [2.20.12-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.20.12-beta) - 2026-08-22
 
 ### 🐛 Bug Fixes
