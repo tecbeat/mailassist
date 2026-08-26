@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### 🐛 Bug Fixes
 
+- *(deps)* Update all non-major dependencies - ([b6900c3](https://git.teccave.de/tecbeat/mailassist/commit/b6900c3476b18bd8e25b9250c877fc92ae684cba))
 - *(deps)* Update python:3.14-slim docker digest to 83ff1d2 - ([9621e1c](https://git.teccave.de/tecbeat/mailassist/commit/9621e1c82f88f53297dc4d413aba8ed3d3cc7a89))
 
 ### ⚙️ Miscellaneous Tasks
