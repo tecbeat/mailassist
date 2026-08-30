@@ -11,7 +11,7 @@ dependencies = [
     "sqlalchemy[asyncio]==2.0.52",
     "alembic==1.19.1",
     "asyncpg==0.31.0",
-    "pydantic==2.13.4",
+    "pydantic==2.13.5",
     "pydantic-settings>=2.9.1",
     "arq>=0.26.1",
     "httpx==0.28.1",
