@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 
 - *(deps)* Update all non-major dependencies - ([8b5dcb5](https://git.teccave.de/tecbeat/mailassist/commit/8b5dcb5757945551c63da2411a517513fb13aad7))
 
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Update gitlab-ci - ([132ab43](https://git.teccave.de/tecbeat/mailassist/commit/132ab437623f184fd8763c694c4b4c3a08b8d623))
+
 ## [2.21.3-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.3-beta) - 2026-08-28
 
 ### 🐛 Bug Fixes
