@@ -1,5 +1,4 @@
 ---
-# Opt into GitLab project features managed by the teccave templater.
 gitlab_features:
   wiki: true
 
