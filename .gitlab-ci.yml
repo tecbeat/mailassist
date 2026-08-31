@@ -32,7 +32,7 @@ build_image:
 
 pages:
   stage: deploy
-  image: node:24-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df
+  image: node:24-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e
   needs: []
   rules:
     - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
@@ -51,7 +51,7 @@ pages:
 
 pages:preview:
   stage: deploy
-  image: node:24-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df
+  image: node:24-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e
   needs: []
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
@@ -73,7 +73,7 @@ pages:preview:
 
 backend_lint:
   stage: lint
-  image: python:3.14-slim@sha256:83ff1d245a3d57d04152252d3ef9cb361494d0b3395abd65a5ebe91c401c8e83
+  image: python:3.14-slim@sha256:cae66f2ef0ec51a9891263eeee7f987dacf0a9879e8aa9353d5606e0530619a5
   needs: []
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
@@ -93,7 +93,7 @@ backend_lint:
 
 backend_typecheck:
   stage: lint
-  image: python:3.14-slim@sha256:83ff1d245a3d57d04152252d3ef9cb361494d0b3395abd65a5ebe91c401c8e83
+  image: python:3.14-slim@sha256:cae66f2ef0ec51a9891263eeee7f987dacf0a9879e8aa9353d5606e0530619a5
   needs: []
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
@@ -112,7 +112,7 @@ backend_typecheck:
 
 backend_unittest:
   stage: unittest
-  image: python:3.14-slim@sha256:83ff1d245a3d57d04152252d3ef9cb361494d0b3395abd65a5ebe91c401c8e83
+  image: python:3.14-slim@sha256:cae66f2ef0ec51a9891263eeee7f987dacf0a9879e8aa9353d5606e0530619a5
   needs: []
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
@@ -142,7 +142,7 @@ backend_unittest:
 
 frontend_unittest:
   stage: unittest
-  image: node:24-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43
+  image: node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf
   needs: []
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
@@ -158,7 +158,7 @@ frontend_unittest:
 
 backend_migration_test:
   stage: systemtest
-  image: python:3.14-slim@sha256:83ff1d245a3d57d04152252d3ef9cb361494d0b3395abd65a5ebe91c401c8e83
+  image: python:3.14-slim@sha256:cae66f2ef0ec51a9891263eeee7f987dacf0a9879e8aa9353d5606e0530619a5
   needs: []
   rules:
     - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
