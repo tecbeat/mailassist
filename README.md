@@ -8,6 +8,7 @@
 [![Latest Release](https://git.teccave.de/tecbeat/mailassist/-/badges/release.svg)](https://git.teccave.de/tecbeat/mailassist/-/releases)
 [![Coverage Report](https://git.teccave.de/tecbeat/mailassist/badges/main/coverage.svg)](https://git.teccave.de/tecbeat/mailassist/-/commits/main)
 [![License](https://img.shields.io/badge/license-GPLv3-blue)](./LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-wiki-blue)](https://git.teccave.de/tecbeat/mailassist/-/wikis/home)
 
 </div>
 
@@ -24,6 +25,8 @@ docker compose up -d
 ```
 
 The web UI is available at `http://localhost:8000`. Log in through your OIDC provider, add a mail account, and point it at an AI provider. That's it.
+
+Full documentation — installation, configuration, concepts, per-plugin guides, and operations — lives in the [project Wiki](https://git.teccave.de/tecbeat/mailassist/-/wikis/home).
 
 #### Prerequisites
 

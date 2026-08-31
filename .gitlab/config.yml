@@ -1,5 +1,11 @@
 ---
+gitlab_features:
+  wiki: true
+
 repo:
+  links:
+    Wiki: "https://git.teccave.de/tecbeat/mailassist/-/wikis/home"
+
   description: "MailAssist - Self-hosted, AI-powered email management platform with IMAP, CardDAV, CalDAV and pluggable AI pipeline."
   command: "docker compose up -d"
   feature:

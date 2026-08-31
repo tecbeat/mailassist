@@ -30,47 +30,6 @@ build_image:
     - job: changelogger
       artifacts: true
 
-pages:
-  stage: deploy
-  image: node:24-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e
-  needs: []
-  rules:
-    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
-  script:
-    - cd docs
-    - npm ci
-    - npx docusaurus build --out-dir ../public
-  artifacts:
-    paths:
-      - public
-  environment:
-    name: documentation/production
-    url: https://tecbeat.pages.teccave.de/mailassist
-  tags:
-    - teccave
-
-pages:preview:
-  stage: deploy
-  image: node:24-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e
-  needs: []
-  rules:
-    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
-  script:
-    - cd docs
-    - npm ci
-    - DOCUSAURUS_BASE_URL="/mailassist/$CI_COMMIT_REF_SLUG/" npx docusaurus build --out-dir ../public
-  artifacts:
-    paths:
-      - public
-  pages:
-    path_prefix: $CI_COMMIT_REF_SLUG
-  environment:
-    name: documentation/$CI_COMMIT_REF_SLUG
-    url: https://tecbeat.pages.teccave.de/mailassist/$CI_COMMIT_REF_SLUG
-    on_stop: pages:preview:stop
-  tags:
-    - teccave
-
 backend_lint:
   stage: lint
   image: python:3.14-slim@sha256:cae66f2ef0ec51a9891263eeee7f987dacf0a9879e8aa9353d5606e0530619a5
@@ -314,18 +273,3 @@ cleanup_image:
 cleanup_helm:
   rules:
     - when: never
-
-pages:preview:stop:
-  stage: cleanup
-  image: alpine:latest@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
-  needs:
-    - job: cleanup_image
-      artifacts: false
-  rules:
-    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
-      when: always
-  script:
-    - "true"
-  environment:
-    name: documentation/$CI_COMMIT_REF_SLUG
-    action: stop
