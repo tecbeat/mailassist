@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.21.5-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.5-beta) - 2026-08-31
+
+### 📚 Documentation
+
+- Migrate documentation from GitLab Pages to Wiki - ([57bbcaf](https://git.teccave.de/tecbeat/mailassist/commit/57bbcafd6ecf401cf8d1a31085201da68d2cf263))
+
+### 🎨 Styling
+
+- Drop redundant comment in gitlab config - ([9421970](https://git.teccave.de/tecbeat/mailassist/commit/9421970cc95febf9b8106c8037363fa6745d4e53))
+
+## [2.21.5-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.5-beta) - 2026-08-31
+
 ## [2.21.4-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.4-beta) - 2026-08-31
 
 ### 🐛 Bug Fixes
