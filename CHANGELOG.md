@@ -2,7 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.21.5-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.5-beta) - 2026-08-31
+## [2.21.6-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.6-beta) - 2026-09-01
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update valkey/valkey:9-alpine docker digest to 15568b9 - ([e492d3d](https://git.teccave.de/tecbeat/mailassist/commit/e492d3d9b32e3164791435abeb6037124ffcadbb))
 
 ### 📚 Documentation
 
@@ -11,6 +15,10 @@ All notable changes to this project will be documented in this file.
 ### 🎨 Styling
 
 - Drop redundant comment in gitlab config - ([9421970](https://git.teccave.de/tecbeat/mailassist/commit/9421970cc95febf9b8106c8037363fa6745d4e53))
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Update valkey/valkey:9-alpine Docker digest to 15568b9 - ([cf3d77f](https://git.teccave.de/tecbeat/mailassist/commit/cf3d77f27d68981ed4905a905989b9fb18d8c535))
 
 ## [2.21.5-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.5-beta) - 2026-08-31
 
