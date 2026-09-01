@@ -215,7 +215,7 @@ integration_systemtest:
   services:
     - name: postgres:18-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
       alias: postgres
-    - name: valkey/valkey:9-alpine@sha256:de31910896150d5e754a07d57d227cfdde4e258ddd0d1aa4607f2d2f95843715
+    - name: valkey/valkey:9-alpine@sha256:15568b9cb7eb67f4aed4de018c23f13d344e0e6437b31fe8fb8823dc81ebb3a9
       alias: valkey
   variables:
     POSTGRES_USER: mailassist
