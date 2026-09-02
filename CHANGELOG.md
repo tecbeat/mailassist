@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### 🐛 Bug Fixes
 
+- *(deps)* Update all non-major dependencies - ([448c7c0](https://git.teccave.de/tecbeat/mailassist/commit/448c7c0aa4fa71865b90786d54b0bada1862ab1f))
 - *(deps)* Update valkey/valkey:9-alpine docker digest to a174b89 - ([609e841](https://git.teccave.de/tecbeat/mailassist/commit/609e8410059482ee18e37eb15480f905bb8a2653))
 
 ## [2.21.9-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.9-beta) - 2026-09-02
