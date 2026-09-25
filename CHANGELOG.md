@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.21.11-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.11-beta) - 2026-09-25
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update all non-major dependencies - ([1475a0b](https://git.teccave.de/tecbeat/mailassist/commit/1475a0b5f8c98400fea62e5758516cb02e42b37f))
+- *(deps)* Update all non-major dependencies - ([c9480de](https://git.teccave.de/tecbeat/mailassist/commit/c9480debd41c397a102bf5d4b4dbb6fa045723ba))
+
 ## [2.21.10-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.10-beta) - 2026-09-02
 
 ### 🐛 Bug Fixes
