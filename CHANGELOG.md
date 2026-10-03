@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.21.13-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.13-beta) - 2026-10-03
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update node.js to ebfe2f9 - ([cafe513](https://git.teccave.de/tecbeat/mailassist/commit/cafe513b6e6a33f21ade7b54aaee1c02b3e2c590))
+
 ## [2.21.12-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.12-beta) - 2026-10-03
 
 ### 🐛 Bug Fixes
