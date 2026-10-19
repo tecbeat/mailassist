@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.21.16-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.16-beta) - 2026-10-19
+
+### 🐛 Bug Fixes
+
+- *(deps)* Keep python 3.14 until fastuuid ships cp315 wheels - ([3f8ab0a](https://git.teccave.de/tecbeat/mailassist/commit/3f8ab0a16f5809a754f15c33ab3196c8453132a1))
+- *(deps)* Update dependency vitest to v5 - ([9564aad](https://git.teccave.de/tecbeat/mailassist/commit/9564aadf48c6ac7b89f0f0193a82480cf0699b74))
+- *(deps)* Update all non-major dependencies - ([f3c1112](https://git.teccave.de/tecbeat/mailassist/commit/f3c1112c2574c339d394865f7495c7e4512f4dde))
+- *(deps)* Update node.js to 44fce69 - ([f3f4ad4](https://git.teccave.de/tecbeat/mailassist/commit/f3f4ad4a5df165378742fdb6047388bc792c43aa))
+- *(deps)* Update python:3.14-slim docker digest to a2b82f3 - ([5b07197](https://git.teccave.de/tecbeat/mailassist/commit/5b07197862c0e94ccf0f6992a961cdf2e0cc71d5))
+- *(deps)* Update postgres:18-alpine docker digest to 77f5851 - ([607b51a](https://git.teccave.de/tecbeat/mailassist/commit/607b51ad3389b08dcb7da7f4dc5e46fa02fe0e30))
+- *(deps)* Update valkey/valkey:9-alpine docker digest to 4833287 - ([74a0fc8](https://git.teccave.de/tecbeat/mailassist/commit/74a0fc8c5137d7689f2f976f4dce9f3e0c0da697))
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Update gitlab-ci - ([d5130a4](https://git.teccave.de/tecbeat/mailassist/commit/d5130a4007ac5b7e73c5b7105de69a799287ead0))
+
 ## [2.21.15-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.15-beta) - 2026-10-12
 
 ### 🐛 Bug Fixes
