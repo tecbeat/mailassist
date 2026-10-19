@@ -1,5 +1,5 @@
 # Stage 1: Build frontend
-FROM node:24-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f AS frontend-builder
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS frontend-builder
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm ci --ignore-scripts
@@ -7,10 +7,10 @@ COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: Python backend + static frontend
-FROM python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170 AS production
+FROM python:3.15-slim@sha256:2da676046630d7bf14c6764ae1143dc7fa0377a53f94bf5a642f0b214aca5bce AS production
 
 # Install uv for fast dependency resolution
-COPY --from=ghcr.io/astral-sh/uv:0.13.0@sha256:cdc6093146eb3ff6a40107b38f008b789e050e77ad87865e381d9917da55a168 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.1@sha256:4a1f3666816dafadd20ceb71eac9a7d56d7ef30279f7d64048519ab901ada336 /uv /usr/local/bin/uv
 
 # Install runtime system dependencies (curl for healthchecks)
 RUN apt-get update \
