@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.21.17-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.17-beta) - 2026-10-21
+
+### 🐛 Bug Fixes
+
+- *(deps)* Update node.js to 6a1c190 - ([43ed74c](https://git.teccave.de/tecbeat/mailassist/commit/43ed74cc5be885f4c90a704310c71a8fbcd1b4d6))
+
+### ⚙️ Miscellaneous Tasks
+
+- *(deps)* Update gitlab-ci - ([eed5a9b](https://git.teccave.de/tecbeat/mailassist/commit/eed5a9beae1c18f29fb8a977df952d230212d375))
+
 ## [2.21.16-beta](https://git.teccave.de/tecbeat/mailassist/-/releases/v2.21.16-beta) - 2026-10-19
 
 ### 🐛 Bug Fixes
